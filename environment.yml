@@ -18,21 +18,20 @@ dependencies:
   - pip:
       - customtkinter
       - packaging
+      - aiohttp
+      - colorama
+      - psutil
+      - pyserial
+      - python-dotenv
+      - SpeechRecognition
+      - keyboard
+      - PyAudio
       - pillow
       - PyPDF2
       - numpy
       - pandas
-      - PyAudio
-      - SpeechRecognition
-      - keyboard
-      - psutil
-      - aiohttp
-      - python-dotenv
-      - colorama
-      - pyserial
       - pynvml
       - opencv-python
-      - Pillow
       - face_recognition
       - mediapipe
       - google-generativeai
@@ -40,8 +39,9 @@ dependencies:
       - pydantic
       - langchain
       - langchain-google-genai
+      - llama-cpp-python
       - flask
-      - flask-cor
+      - flask-cors
       - flask-socketio
       - werkzeug
       - requests
