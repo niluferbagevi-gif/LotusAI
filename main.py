@@ -2,6 +2,7 @@ import tkinter as tk
 from tkinter import messagebox, ttk
 import sys
 import os
+import platform
 import traceback
 import logging
 import threading
@@ -65,10 +66,20 @@ class LauncherApp:
         screen_width = self.root.winfo_screenwidth()
         screen_height = self.root.winfo_screenheight()
 
-        if (
+        scale_override = os.environ.get("LOTUS_UI_SCALE")
+        if scale_override:
+            try:
+                target_scale = float(scale_override)
+            except ValueError:
+                target_scale = 2.5
+
+        is_wsl = "microsoft" in platform.uname().release.lower()
+        is_4k_screen = (
             abs(screen_width - target_resolution[0]) / target_resolution[0] <= tolerance
             and abs(screen_height - target_resolution[1]) / target_resolution[1] <= tolerance
-        ):
+        )
+
+        if is_4k_screen or is_wsl or scale_override:
             self.root.tk.call("tk", "scaling", target_scale)
             self.window_width = int(self.base_window_width * target_scale)
             self.window_height = int(self.base_window_height * target_scale)
