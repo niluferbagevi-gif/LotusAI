@@ -69,6 +69,13 @@ class LauncherApp:
             except ValueError:
                 pass
 
+        predefined_scales = {
+            (3840, 2160): 2.5,
+        }
+        predefined_scale = predefined_scales.get((screen_width, screen_height))
+        if predefined_scale:
+            return predefined_scale
+
         scale_by_width = screen_width / 1920
         scale_by_height = screen_height / 1080
 
