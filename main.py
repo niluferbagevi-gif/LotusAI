@@ -43,7 +43,7 @@ class LauncherApp:
         
         screen_width = root.winfo_screenwidth()
         screen_height = root.winfo_screenheight()
-        self.ui_scale = self.calculate_ui_scale(screen_width, screen_height)
+        self.ui_scale = self.calculate_ui_scale(screen_width, screen_height, root)
         self.root.tk.call("tk", "scaling", self.ui_scale)
 
         self.window_width = int(base_width * self.ui_scale)
@@ -60,11 +60,25 @@ class LauncherApp:
         self.setup_ui()
 
     @staticmethod
-    def calculate_ui_scale(screen_width, screen_height):
-        """Ekran çözünürlüğüne göre ölçek faktörü hesaplar."""
+    def calculate_ui_scale(screen_width, screen_height, root):
+        """Ekran çözünürlüğü ve DPI bilgisine göre ölçek faktörü hesaplar."""
+        env_scale = os.environ.get("LOTUS_UI_SCALE")
+        if env_scale:
+            try:
+                return float(env_scale)
+            except ValueError:
+                pass
+
         scale_by_width = screen_width / 1920
         scale_by_height = screen_height / 1080
-        return max(0.85, min(scale_by_width, scale_by_height, 1.6))
+
+        try:
+            dpi = root.winfo_fpixels("1i")
+        except tk.TclError:
+            dpi = 96
+
+        dpi_scale = dpi / 96
+        return max(0.85, min(scale_by_width, scale_by_height, dpi_scale, 1.8))
 
     def setup_ui(self):
         """Arayüz elemanlarını profesyonel bir görünümle oluşturur."""
