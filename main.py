@@ -69,6 +69,10 @@ class LauncherApp:
             except ValueError:
                 pass
 
+        system_model = LauncherApp.get_system_model()
+        if system_model and "Zenbook Pro Duo UX582ZW" in system_model:
+            return 2.5
+
         predefined_scales = {
             (3840, 2160): 2.5,
         }
@@ -86,6 +90,18 @@ class LauncherApp:
 
         dpi_scale = dpi / 96
         return max(0.85, min(scale_by_width, scale_by_height, dpi_scale, 1.8))
+
+    @staticmethod
+    def get_system_model():
+        """Cihaz modelini tespit eder (varsa)."""
+        dmi_path = "/sys/devices/virtual/dmi/id/product_name"
+        try:
+            if os.path.exists(dmi_path):
+                with open(dmi_path, "r", encoding="utf-8") as handle:
+                    return handle.read().strip()
+        except OSError:
+            return None
+        return None
 
     def setup_ui(self):
         """Arayüz elemanlarını profesyonel bir görünümle oluşturur."""
