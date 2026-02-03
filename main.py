@@ -42,6 +42,7 @@ class LauncherApp:
         self.base_window_height = 550
         self.window_width = self.base_window_width
         self.window_height = self.base_window_height
+        self.ui_scale = 1.0
         self.configure_display_scaling()
         
         # Pencere Boyutları ve Konumu
@@ -80,58 +81,103 @@ class LauncherApp:
         )
 
         if is_4k_screen or is_wsl or scale_override:
+            self.ui_scale = target_scale
             self.root.tk.call("tk", "scaling", target_scale)
             self.window_width = int(self.base_window_width * target_scale)
             self.window_height = int(self.base_window_height * target_scale)
         else:
+            self.ui_scale = 1.0
             self.root.tk.call("tk", "scaling", 1.0)
 
     def setup_ui(self):
         """Arayüz elemanlarını profesyonel bir görünümle oluşturur."""
         # Başlık ve Versiyon
-        tk.Label(self.root, text=Config.PROJECT_NAME.upper(), font=("Segoe UI", 36, "bold"), 
-                 bg="#1a1a2e", fg="#e94560").pack(pady=(30, 0))
+        tk.Label(
+            self.root,
+            text=Config.PROJECT_NAME.upper(),
+            font=("Segoe UI", int(36 * self.ui_scale), "bold"),
+            bg="#1a1a2e",
+            fg="#e94560"
+        ).pack(pady=(int(30 * self.ui_scale), 0))
         
-        tk.Label(self.root, text=f"AI Operating System v{Config.VERSION}", 
-                 font=("Segoe UI", 10), bg="#1a1a2e", fg="#95a5a6").pack(pady=(0, 20))
+        tk.Label(
+            self.root,
+            text=f"AI Operating System v{Config.VERSION}",
+            font=("Segoe UI", int(10 * self.ui_scale)),
+            bg="#1a1a2e",
+            fg="#95a5a6"
+        ).pack(pady=(0, int(20 * self.ui_scale)))
 
         # Bilgi Paneli (Frame)
         info_frame = tk.Frame(self.root, bg="#16213e", bd=1, relief="flat")
-        info_frame.pack(fill="x", padx=40, pady=10)
+        info_frame.pack(
+            fill="x",
+            padx=int(40 * self.ui_scale),
+            pady=int(10 * self.ui_scale)
+        )
 
         gpu_status = "AKTİF" if Config.USE_GPU else "PASİF"
         gpu_color = "#27ae60" if Config.USE_GPU else "#f39c12"
         
-        tk.Label(info_frame, text=f"Donanım Hızlandırma: {gpu_status}", font=("Segoe UI", 9), 
-                 bg="#16213e", fg=gpu_color).pack(pady=5)
+        tk.Label(
+            info_frame,
+            text=f"Donanım Hızlandırma: {gpu_status}",
+            font=("Segoe UI", int(9 * self.ui_scale)),
+            bg="#16213e",
+            fg=gpu_color
+        ).pack(pady=int(5 * self.ui_scale))
         
         if Config.USE_GPU:
-            tk.Label(info_frame, text=f"GPU: {Config.GPU_INFO}", font=("Segoe UI", 8, "italic"), 
-                     bg="#16213e", fg="#bdc3c7").pack(pady=(0, 5))
+            tk.Label(
+                info_frame,
+                text=f"GPU: {Config.GPU_INFO}",
+                font=("Segoe UI", int(8 * self.ui_scale), "italic"),
+                bg="#16213e",
+                fg="#bdc3c7"
+            ).pack(pady=(0, int(5 * self.ui_scale)))
 
         # Mod Seçimi Alanı
-        tk.Label(self.root, text="Çalışma Modunu Seçiniz", font=("Segoe UI", 11, "bold"), 
-                 bg="#1a1a2e", fg="#ffffff").pack(pady=(20, 10))
+        tk.Label(
+            self.root,
+            text="Çalışma Modunu Seçiniz",
+            font=("Segoe UI", int(11 * self.ui_scale), "bold"),
+            bg="#1a1a2e",
+            fg="#ffffff"
+        ).pack(pady=(int(20 * self.ui_scale), int(10 * self.ui_scale)))
 
         # Butonlar
         self.btn_online = self.create_styled_button("🌐 ONLINE (Gemini Pro)", "#0f3460", "online")
-        self.btn_online.pack(pady=10)
+        self.btn_online.pack(pady=int(10 * self.ui_scale))
 
         self.btn_local = self.create_styled_button("💻 LOCAL (Ollama/Llama 3.1)", "#16213e", "local")
-        self.btn_local.pack(pady=10)
+        self.btn_local.pack(pady=int(10 * self.ui_scale))
 
         # Durum Göstergesi
         self.status_var = tk.StringVar(value="Sistem Başlatılmaya Hazır")
-        self.status_label = tk.Label(self.root, textvariable=self.status_var, font=("Segoe UI", 9), 
-                                     bg="#0f3460", fg="#bdc3c7", height=2)
+        self.status_label = tk.Label(
+            self.root,
+            textvariable=self.status_var,
+            font=("Segoe UI", int(9 * self.ui_scale)),
+            bg="#0f3460",
+            fg="#bdc3c7",
+            height=2
+        )
         self.status_label.pack(side="bottom", fill="x")
 
     def create_styled_button(self, text, color, mode):
         """Özel tasarım ve hover efektli buton."""
         btn = tk.Button(
-            self.root, text=text, bg=color, fg="white", 
-            font=("Segoe UI", 11, "bold"), width=30, height=2, 
-            bd=0, cursor="hand2", activebackground="#e94560", activeforeground="white",
+            self.root,
+            text=text,
+            bg=color,
+            fg="white",
+            font=("Segoe UI", int(11 * self.ui_scale), "bold"),
+            width=30,
+            height=2,
+            bd=0,
+            cursor="hand2",
+            activebackground="#e94560",
+            activeforeground="white",
             command=lambda: self.pre_launch_check(mode)
         )
         btn.bind("<Enter>", lambda e: btn.config(bg="#e94560"))
