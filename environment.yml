@@ -15,7 +15,7 @@ dependencies:
   - cmake
   - dlib
   - portaudio
-  - numpy=1.22.5
+  - numpy=1.23.5
   - pandas=1.5.3
   - pip:
       - customtkinter
