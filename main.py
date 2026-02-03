@@ -91,6 +91,10 @@ class LauncherApp:
         dpi_scale = dpi / 96
         return max(0.85, min(scale_by_width, scale_by_height, dpi_scale, 1.8))
 
+    def scale_font(self, family, size, *styles):
+        """UI ölçeğine göre yazı tipi boyutunu ayarlar."""
+        return (family, max(8, int(size * self.ui_scale)), *styles)
+
     @staticmethod
     def get_system_model():
         """Cihaz modelini tespit eder (varsa)."""
@@ -106,11 +110,11 @@ class LauncherApp:
     def setup_ui(self):
         """Arayüz elemanlarını profesyonel bir görünümle oluşturur."""
         # Başlık ve Versiyon
-        tk.Label(self.root, text=Config.PROJECT_NAME.upper(), font=("Segoe UI", 36, "bold"), 
+        tk.Label(self.root, text=Config.PROJECT_NAME.upper(), font=self.scale_font("Segoe UI", 36, "bold"), 
                  bg="#1a1a2e", fg="#e94560").pack(pady=(30, 0))
         
         tk.Label(self.root, text=f"AI Operating System v{Config.VERSION}", 
-                 font=("Segoe UI", 10), bg="#1a1a2e", fg="#95a5a6").pack(pady=(0, 20))
+                 font=self.scale_font("Segoe UI", 10), bg="#1a1a2e", fg="#95a5a6").pack(pady=(0, 20))
 
         # Bilgi Paneli (Frame)
         info_frame = tk.Frame(self.root, bg="#16213e", bd=1, relief="flat")
@@ -119,15 +123,15 @@ class LauncherApp:
         gpu_status = "AKTİF" if Config.USE_GPU else "PASİF"
         gpu_color = "#27ae60" if Config.USE_GPU else "#f39c12"
         
-        tk.Label(info_frame, text=f"Donanım Hızlandırma: {gpu_status}", font=("Segoe UI", 9), 
+        tk.Label(info_frame, text=f"Donanım Hızlandırma: {gpu_status}", font=self.scale_font("Segoe UI", 9), 
                  bg="#16213e", fg=gpu_color).pack(pady=5)
         
         if Config.USE_GPU:
-            tk.Label(info_frame, text=f"GPU: {Config.GPU_INFO}", font=("Segoe UI", 8, "italic"), 
+            tk.Label(info_frame, text=f"GPU: {Config.GPU_INFO}", font=self.scale_font("Segoe UI", 8, "italic"), 
                      bg="#16213e", fg="#bdc3c7").pack(pady=(0, 5))
 
         # Mod Seçimi Alanı
-        tk.Label(self.root, text="Çalışma Modunu Seçiniz", font=("Segoe UI", 11, "bold"), 
+        tk.Label(self.root, text="Çalışma Modunu Seçiniz", font=self.scale_font("Segoe UI", 11, "bold"), 
                  bg="#1a1a2e", fg="#ffffff").pack(pady=(20, 10))
 
         # Butonlar
@@ -139,7 +143,7 @@ class LauncherApp:
 
         # Durum Göstergesi
         self.status_var = tk.StringVar(value="Sistem Başlatılmaya Hazır")
-        self.status_label = tk.Label(self.root, textvariable=self.status_var, font=("Segoe UI", 9), 
+        self.status_label = tk.Label(self.root, textvariable=self.status_var, font=self.scale_font("Segoe UI", 9), 
                                      bg="#0f3460", fg="#bdc3c7", height=2)
         self.status_label.pack(side="bottom", fill="x")
 
@@ -147,7 +151,7 @@ class LauncherApp:
         """Özel tasarım ve hover efektli buton."""
         btn = tk.Button(
             self.root, text=text, bg=color, fg="white", 
-            font=("Segoe UI", 11, "bold"), width=30, height=2, 
+            font=self.scale_font("Segoe UI", 11, "bold"), width=30, height=2, 
             bd=0, cursor="hand2", activebackground="#e94560", activeforeground="white",
             command=lambda: self.pre_launch_check(mode)
         )
