@@ -38,13 +38,19 @@ class LauncherApp:
         self.root.title(f"{Config.PROJECT_NAME} v{Config.VERSION} - Launcher")
         
         # Pencere Boyutları ve Konumu
-        self.window_width = 500
-        self.window_height = 550
+        base_width = 500
+        base_height = 550
         
         screen_width = root.winfo_screenwidth()
         screen_height = root.winfo_screenheight()
-        center_x = int(screen_width/2 - self.window_width/2)
-        center_y = int(screen_height/2 - self.window_height/2)
+        self.ui_scale = self.calculate_ui_scale(screen_width, screen_height)
+        self.root.tk.call("tk", "scaling", self.ui_scale)
+
+        self.window_width = int(base_width * self.ui_scale)
+        self.window_height = int(base_height * self.ui_scale)
+
+        center_x = int(screen_width / 2 - self.window_width / 2)
+        center_y = int(screen_height / 2 - self.window_height / 2)
         
         self.root.geometry(f'{self.window_width}x{self.window_height}+{center_x}+{center_y}')
         self.root.configure(bg="#1a1a2e") # Koyu Lacivert/Modern tema
@@ -52,6 +58,13 @@ class LauncherApp:
         
         self.root.protocol("WM_DELETE_WINDOW", self.on_closing)
         self.setup_ui()
+
+    @staticmethod
+    def calculate_ui_scale(screen_width, screen_height):
+        """Ekran çözünürlüğüne göre ölçek faktörü hesaplar."""
+        scale_by_width = screen_width / 1920
+        scale_by_height = screen_height / 1080
+        return max(0.85, min(scale_by_width, scale_by_height, 1.6))
 
     def setup_ui(self):
         """Arayüz elemanlarını profesyonel bir görünümle oluşturur."""
