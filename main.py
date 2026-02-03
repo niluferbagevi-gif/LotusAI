@@ -36,11 +36,14 @@ class LauncherApp:
     def __init__(self, root):
         self.root = root
         self.root.title(f"{Config.PROJECT_NAME} v{Config.VERSION} - Launcher")
+
+        self.base_window_width = 500
+        self.base_window_height = 550
+        self.window_width = self.base_window_width
+        self.window_height = self.base_window_height
+        self.configure_display_scaling()
         
         # Pencere Boyutları ve Konumu
-        self.window_width = 500
-        self.window_height = 550
-        
         screen_width = root.winfo_screenwidth()
         screen_height = root.winfo_screenheight()
         center_x = int(screen_width/2 - self.window_width/2)
@@ -52,6 +55,25 @@ class LauncherApp:
         
         self.root.protocol("WM_DELETE_WINDOW", self.on_closing)
         self.setup_ui()
+
+    def configure_display_scaling(self):
+        """4K/250% ölçekli ekranlar için önerilen Tk ölçeklendirmesi."""
+        target_resolution = (3840, 2160)
+        target_scale = 2.5
+        tolerance = 0.02
+
+        screen_width = self.root.winfo_screenwidth()
+        screen_height = self.root.winfo_screenheight()
+
+        if (
+            abs(screen_width - target_resolution[0]) / target_resolution[0] <= tolerance
+            and abs(screen_height - target_resolution[1]) / target_resolution[1] <= tolerance
+        ):
+            self.root.tk.call("tk", "scaling", target_scale)
+            self.window_width = int(self.base_window_width * target_scale)
+            self.window_height = int(self.base_window_height * target_scale)
+        else:
+            self.root.tk.call("tk", "scaling", 1.0)
 
     def setup_ui(self):
         """Arayüz elemanlarını profesyonel bir görünümle oluşturur."""
