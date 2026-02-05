@@ -5,7 +5,7 @@ channels:
   - conda-forge
   - defaults
 dependencies:
-  - python=3.11  # KRİTİK GÜNCELLEME: TTS numpy çakışmasını çözmek için 3.11 şart
+  - python=3.11  # KRİTİK: TTS ve çoğu yeni AI kütüphanesi için en kararlı sürüm
   - pip
   - cudatoolkit=11.8
   - pytorch-cuda=11.8
@@ -17,57 +17,61 @@ dependencies:
   - ffmpeg
   - portaudio
   - tk
-  - numpy>=1.24.3  # Modern kütüphaneler için güncel sürüm
+  - numpy>=1.24.3
   - pandas>=2.0.0
   - dlib
   - pip:
-      # --- Temel Sistem & Donanım ---
+      # --- Temel Sistem & Yardımcı Araçlar ---
       - psutil
       - GPUtil
       - pynvml
       - keyboard
       - pyserial
-      - cudf-cu11  # AccountingManager içindeki cuDF GPU hızlandırması için
+      - cudf-cu11     # GPU hızlandırmalı DataFrame (AccountingManager için)
       - python-dotenv
       - colorama
+      - termcolor     # EKLENDİ: Terminal renkli çıktıları için (Debug modunda sık kullanılır)
       - packaging
       - aiohttp
+      - openpyxl      # EKLENDİ: Pandas'ın Excel (.xlsx) dosyalarını okuyup yazması için zorunludur (Accounting)
+      - setuptools    # EKLENDİ: Bazı paketlerin derlenmesi için gerekli
 
       # --- Ses İşleme (STT & TTS) ---
       - PyAudio
       - SpeechRecognition
       - edge-tts
       - pygame
-      - coqui-tts  # GÜNCELLEME: 'TTS' yerine güncel olan 'coqui-tts' paketi kullanıldı
+      - coqui-tts
+      - pydub         # EKLENDİ: Ses dosyalarını formatlamak/kesmek (WAV <-> MP3) için ffmpeg wrapper'ı
 
       # --- Görüntü İşleme & Computer Vision ---
       - opencv-python
       - Pillow
       - face_recognition
       - mediapipe
+      - scikit-learn  # EKLENDİ: Görüntü/Veri analizi ve makine öğrenimi algoritmaları için temel kütüphane
 
-      # --- Yapay Zeka & NLP ---
+      # --- Yapay Zeka & NLP (LLM Stack) ---
       - google-generativeai
-      - chromadb>=0.4.24  # Güncel numpy ile uyumlu
+      - chromadb>=0.4.24
       - langchain
+      - langchain-community # EKLENDİ: LangChain v0.1+ sonrası araçlar buraya taşındı (ZORUNLU)
       - langchain-google-genai
       - llama-cpp-python
       - transformers
       - sentence-transformers
       - huggingface-hub
-      - accelerate    # EKLENDİ: Transformers için kritik
-      - safetensors   # EKLENDİ: Model yükleme hatalarını önler
+      - accelerate
+      - safetensors
+      - bitsandbytes  # EKLENDİ: Yerel modelleri (Llama/Transformers) 8-bit/4-bit yükleyip RAM tasarrufu yapmak için
 
-      # --- Web & API ---
-      - wikipedia
+      # --- Web, API & Scraping ---
       - flask
       - flask-cors
       - flask-socketio
       - werkzeug
       - requests
       - beautifulsoup4
-
-      # --- İnternet & Sosyal Medya ---
       - googlesearch-python
       - wikipedia
       - instaloader
@@ -75,12 +79,14 @@ dependencies:
       - pytrends
       - selenium
       - webdriver-manager
+      - fake-useragent # EKLENDİ: Scraping işlemlerinde (Google/Instagram) 403 hatası almamak için kimlik gizleme
 
-      # --- Finans & Veri Analizi ---
+      # --- Finans & Kripto ---
       - ccxt
       - ta
       - mplfinance
       - matplotlib
+      - yfinance      # EKLENDİ: Hisse senedi verileri için (FinanceManager genelde buna ihtiyaç duyar)
 
       # --- Dosya Yönetimi ---
       - python-docx
