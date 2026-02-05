@@ -181,14 +181,23 @@ class Config:
             logger.error(f"❌ Geçersiz sağlayıcı modu: {mode}")
 
     @classmethod
-    def validate_critical_settings(cls) -> bool:
-        """Hayati ayarların ve sistem bütünlüğünün kontrolü."""
+    def validate_critical_settings(cls, strict: bool = True) -> bool:
+        """Hayati ayarların ve sistem bütünlüğünün kontrolü.
+
+        strict=True iken eksik ayarlar başlatmayı engeller.
+        strict=False iken yalnızca uyarı loglanır (özellikle ilk açılışta gereksiz panik önlenir).
+        """
         is_valid = True
         
         # API Anahtarı Kontrolü
         if cls.AI_PROVIDER == "gemini" and not cls._MAIN_KEY:
-            logger.error("❌ KRİTİK HATA: Ana GEMINI_API_KEY tanımlanmamış!")
-            is_valid = False
+            if strict:
+                logger.error("❌ KRİTİK HATA: Ana GEMINI_API_KEY tanımlanmamış!")
+                is_valid = False
+            else:
+                logger.warning(
+                    "⚠️ GEMINI_API_KEY tanımlı değil. Online mod seçilirse sistem başlatılmaz; local mod kullanılabilir."
+                )
         
         # Patron Görseli Kontrolü
         if cls.LIVE_VISUAL_CHECK and not cls.PATRON_IMAGE_PATH.exists():
@@ -200,7 +209,7 @@ class Config:
         return is_valid
 
 # Başlangıç Doğrulaması ve Hazırlık
-if not Config.validate_critical_settings():
+if not Config.validate_critical_settings(strict=False):
     logger.critical("🚨 Kritik ayarlar eksik! Sistem kararsız olabilir.")
 else:
     logger.info(f"✅ {Config.PROJECT_NAME} v{Config.VERSION} yapılandırması başarıyla tamamlandı.")
