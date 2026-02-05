@@ -26,6 +26,7 @@ dependencies:
       - pynvml
       - keyboard
       - pyserial
+      - cudf-cu11  # AccountingManager içindeki cuDF GPU hızlandırması için
       - python-dotenv
       - colorama
       - packaging
