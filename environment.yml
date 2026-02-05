@@ -19,6 +19,7 @@ dependencies:
   - tk
   - numpy>=1.24.3  # Modern kütüphaneler için güncel sürüm
   - pandas>=2.0.0
+  - dlib
   - pip:
       # --- Temel Sistem & Donanım ---
       - psutil
@@ -42,7 +43,6 @@ dependencies:
       # --- Görüntü İşleme & Computer Vision ---
       - opencv-python
       - Pillow
-      - dlib
       - face_recognition
       - mediapipe
 
@@ -55,8 +55,11 @@ dependencies:
       - transformers
       - sentence-transformers
       - huggingface-hub
+      - accelerate    # EKLENDİ: Transformers için kritik
+      - safetensors   # EKLENDİ: Model yükleme hatalarını önler
 
       # --- Web & API ---
+      - wikipedia
       - flask
       - flask-cors
       - flask-socketio
