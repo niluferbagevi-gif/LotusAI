@@ -1,4 +1,5 @@
 import tkinter as tk
+import tkinter.font as tkfont
 from tkinter import messagebox, ttk
 import sys
 import os
@@ -38,6 +39,7 @@ class LauncherApp:
         self.root.title(f"{Config.PROJECT_NAME} v{Config.VERSION} - Launcher")
         self.ui_scale = self.detect_ui_scale()
         self.root.tk.call("tk", "scaling", self.ui_scale)
+        self.fonts = self.build_fonts()
         
         # Pencere Boyutları ve Konumu
         self.window_width = self.scaled(500)
@@ -73,20 +75,41 @@ class LauncherApp:
         resolution_scale = min(screen_width / 1920, screen_height / 1080)
         ui_scale = max(1.0, min(2.5, max(dpi_scale, resolution_scale)))
 
+        # WSL bazı durumlarda fiziksel 4K ekranı mantıksal çözünürlükte (örn. 1536x864) raporlayabilir.
+        # Bu durumda kullanıcı tarafındaki yüksek ölçek için okunabilirliği koru.
+        if "WSL_DISTRO_NAME" in os.environ and 1450 <= screen_width <= 1650 and 800 <= screen_height <= 920:
+            ui_scale = max(ui_scale, 2.5)
+
         # 4K + 250% ölçekli cihazlarda (örn. Asus Zenbook Pro Duo) daha okunaklı görünüm
         if screen_width >= 3800 and screen_height >= 2100:
             ui_scale = max(ui_scale, 2.5)
 
         return ui_scale
 
+
+    def scaled_font_size(self, base_size):
+        """Punto yerine piksel tabanlı font boyutu üretir (Tk scaling farklarını dengeler)."""
+        return -max(8, int(base_size * self.ui_scale))
+
+    def build_fonts(self):
+        """Arayüzde kullanılacak ölçekli fontları oluşturur."""
+        return {
+            "title": tkfont.Font(family="Segoe UI", size=self.scaled_font_size(36), weight="bold"),
+            "subtitle": tkfont.Font(family="Segoe UI", size=self.scaled_font_size(10)),
+            "body": tkfont.Font(family="Segoe UI", size=self.scaled_font_size(11), weight="bold"),
+            "meta": tkfont.Font(family="Segoe UI", size=self.scaled_font_size(9)),
+            "meta_italic": tkfont.Font(family="Segoe UI", size=self.scaled_font_size(8), slant="italic"),
+            "button": tkfont.Font(family="Segoe UI", size=self.scaled_font_size(11), weight="bold"),
+        }
+
     def setup_ui(self):
         """Arayüz elemanlarını profesyonel bir görünümle oluşturur."""
         # Başlık ve Versiyon
-        tk.Label(self.root, text=Config.PROJECT_NAME.upper(), font=("Segoe UI", self.scaled(18), "bold"), 
+        tk.Label(self.root, text=Config.PROJECT_NAME.upper(), font=self.fonts["title"], 
                  bg="#1a1a2e", fg="#e94560").pack(pady=(self.scaled(30), 0))
         
         tk.Label(self.root, text=f"AI Operating System v{Config.VERSION}", 
-                 font=("Segoe UI", self.scaled(10)), bg="#1a1a2e", fg="#95a5a6").pack(pady=(0, self.scaled(20)))
+                 font=self.fonts["subtitle"], bg="#1a1a2e", fg="#95a5a6").pack(pady=(0, self.scaled(20)))
 
         # Bilgi Paneli (Frame)
         info_frame = tk.Frame(self.root, bg="#16213e", bd=1, relief="flat")
@@ -95,15 +118,15 @@ class LauncherApp:
         gpu_status = "AKTİF" if Config.USE_GPU else "PASİF"
         gpu_color = "#27ae60" if Config.USE_GPU else "#f39c12"
         
-        tk.Label(info_frame, text=f"Donanım Hızlandırma: {gpu_status}", font=("Segoe UI", self.scaled(9)), 
+        tk.Label(info_frame, text=f"Donanım Hızlandırma: {gpu_status}", font=self.fonts["meta"], 
                  bg="#16213e", fg=gpu_color).pack(pady=self.scaled(5))
         
         if Config.USE_GPU:
-            tk.Label(info_frame, text=f"GPU: {Config.GPU_INFO}", font=("Segoe UI", self.scaled(8), "italic"), 
+            tk.Label(info_frame, text=f"GPU: {Config.GPU_INFO}", font=self.fonts["meta_italic"], 
                      bg="#16213e", fg="#bdc3c7").pack(pady=(0, self.scaled(5)))
 
         # Mod Seçimi Alanı
-        tk.Label(self.root, text="Çalışma Modunu Seçiniz", font=("Segoe UI", self.scaled(11), "bold"), 
+        tk.Label(self.root, text="Çalışma Modunu Seçiniz", font=self.fonts["body"], 
                  bg="#1a1a2e", fg="#ffffff").pack(pady=(self.scaled(20), self.scaled(10)))
 
         # Butonlar
@@ -115,7 +138,7 @@ class LauncherApp:
 
         # Durum Göstergesi
         self.status_var = tk.StringVar(value="Sistem Başlatılmaya Hazır")
-        self.status_label = tk.Label(self.root, textvariable=self.status_var, font=("Segoe UI", self.scaled(9)), 
+        self.status_label = tk.Label(self.root, textvariable=self.status_var, font=self.fonts["meta"], 
                                      bg="#0f3460", fg="#bdc3c7", height=max(1, int(2 * self.ui_scale / 1.5)))
         self.status_label.pack(side="bottom", fill="x")
 
@@ -123,7 +146,7 @@ class LauncherApp:
         """Özel tasarım ve hover efektli buton."""
         btn = tk.Button(
             self.root, text=text, bg=color, fg="white", 
-            font=("Segoe UI", self.scaled(11), "bold"), width=max(20, int(30 * self.ui_scale / 1.6)), height=max(2, int(2 * self.ui_scale / 1.5)), 
+            font=self.fonts["body"], width=max(20, int(30 * self.ui_scale / 1.6)), height=max(2, int(2 * self.ui_scale / 1.5)), 
             bd=0, cursor="hand2", activebackground="#e94560", activeforeground="white",
             command=lambda: self.pre_launch_check(mode)
         )
