@@ -5,7 +5,7 @@ import os
 import traceback
 import logging
 import threading
-import requests # Ollama kontrolü için
+import requests
 from config import Config
 
 # --- LOGLAMA YAPILANDIRMASI (Config ile Uyumlu) ---
@@ -22,7 +22,6 @@ start_lotus_system = None
 import_error_message = ""
 
 try:
-    # Proje kök dizinini yola ekle
     sys.path.append(os.getcwd())
     from lotus_system import start_lotus_system
 except ImportError as e:
@@ -35,19 +34,39 @@ except Exception as e:
 class LauncherApp:
     def __init__(self, root):
         self.root = root
+        
+        # --- 4K / HIDPI ÖLÇEKLEME AYARLARI ---
+        # WSL üzerinde otomatik DPI algılama bazen başarısız olabilir.
+        # Asus Zenbook 4K %250 ölçek için manuel çarpan: 2.5
+        self.SCALE_FACTOR = 2.5
+        
+        # Tkinter iç ölçeklendirmesini ayarla (Yazı tipleri ve widget'lar için)
+        # Bu, Linux/WSL ortamında widget'ların büyümesini sağlar.
+        try:
+            self.root.tk.call('tk', 'scaling', self.SCALE_FACTOR)
+        except:
+            pass
+            
         self.root.title(f"{Config.PROJECT_NAME} v{Config.VERSION} - Launcher")
         
-        # Pencere Boyutları ve Konumu
-        self.window_width = 500
-        self.window_height = 550
+        # Temel Boyutlar (Ölçeklenmemiş)
+        base_width = 500
+        base_height = 550
         
+        # Ölçeklenmiş Boyutlar (4K Ekranda düzgün görünmesi için çarpıyoruz)
+        self.window_width = int(base_width * self.SCALE_FACTOR)
+        self.window_height = int(base_height * self.SCALE_FACTOR)
+        
+        # Ekran boyutlarını al
         screen_width = root.winfo_screenwidth()
         screen_height = root.winfo_screenheight()
+        
+        # Ortala
         center_x = int(screen_width/2 - self.window_width/2)
         center_y = int(screen_height/2 - self.window_height/2)
         
         self.root.geometry(f'{self.window_width}x{self.window_height}+{center_x}+{center_y}')
-        self.root.configure(bg="#1a1a2e") # Koyu Lacivert/Modern tema
+        self.root.configure(bg="#1a1a2e")
         self.root.resizable(False, False)
         
         self.root.protocol("WM_DELETE_WINDOW", self.on_closing)
@@ -55,16 +74,22 @@ class LauncherApp:
 
     def setup_ui(self):
         """Arayüz elemanlarını profesyonel bir görünümle oluşturur."""
+        
+        # Font boyutlarını DPI ölçeğine göre çok abartmamak için 
+        # tk scaling komutu zaten fontları büyütür, bu yüzden 
+        # font puanlarını (size) orijinal tutuyoruz veya hafif revize ediyoruz.
+        
         # Başlık ve Versiyon
         tk.Label(self.root, text=Config.PROJECT_NAME.upper(), font=("Segoe UI", 36, "bold"), 
-                 bg="#1a1a2e", fg="#e94560").pack(pady=(30, 0))
+                 bg="#1a1a2e", fg="#e94560").pack(pady=(int(30*self.SCALE_FACTOR/2), 0))
         
         tk.Label(self.root, text=f"AI Operating System v{Config.VERSION}", 
-                 font=("Segoe UI", 10), bg="#1a1a2e", fg="#95a5a6").pack(pady=(0, 20))
+                 font=("Segoe UI", 10), bg="#1a1a2e", fg="#95a5a6").pack(pady=(0, int(20*self.SCALE_FACTOR/2)))
 
         # Bilgi Paneli (Frame)
         info_frame = tk.Frame(self.root, bg="#16213e", bd=1, relief="flat")
-        info_frame.pack(fill="x", padx=40, pady=10)
+        # Paddingleri de ölçeğe göre biraz rahatlatıyoruz
+        info_frame.pack(fill="x", padx=int(40*self.SCALE_FACTOR/2), pady=int(10*self.SCALE_FACTOR/2))
 
         gpu_status = "AKTİF" if Config.USE_GPU else "PASİF"
         gpu_color = "#27ae60" if Config.USE_GPU else "#f39c12"
@@ -78,14 +103,15 @@ class LauncherApp:
 
         # Mod Seçimi Alanı
         tk.Label(self.root, text="Çalışma Modunu Seçiniz", font=("Segoe UI", 11, "bold"), 
-                 bg="#1a1a2e", fg="#ffffff").pack(pady=(20, 10))
+                 bg="#1a1a2e", fg="#ffffff").pack(pady=(int(20*self.SCALE_FACTOR/2), int(10*self.SCALE_FACTOR/2)))
 
         # Butonlar
         self.btn_online = self.create_styled_button("🌐 ONLINE (Gemini Pro)", "#0f3460", "online")
-        self.btn_online.pack(pady=10)
+        # Buton arası boşlukları ayarla
+        self.btn_online.pack(pady=int(10*self.SCALE_FACTOR/3))
 
         self.btn_local = self.create_styled_button("💻 LOCAL (Ollama/Llama 3.1)", "#16213e", "local")
-        self.btn_local.pack(pady=10)
+        self.btn_local.pack(pady=int(10*self.SCALE_FACTOR/3))
 
         # Durum Göstergesi
         self.status_var = tk.StringVar(value="Sistem Başlatılmaya Hazır")
@@ -95,6 +121,9 @@ class LauncherApp:
 
     def create_styled_button(self, text, color, mode):
         """Özel tasarım ve hover efektli buton."""
+        # Buton genişliği ve yüksekliği karakter bazlıdır, pixel bazlı DEĞİLDİR.
+        # Bu yüzden width/height değerlerini scale factor ile çarpmıyoruz, 
+        # çünkü tk scaling zaten fontu büyüttüğü için buton otomatik büyüyecek.
         btn = tk.Button(
             self.root, text=text, bg=color, fg="white", 
             font=("Segoe UI", 11, "bold"), width=30, height=2, 
@@ -142,14 +171,11 @@ class LauncherApp:
         self.status_var.set(f"LotusAI {mode.upper()} modu yükleniyor...")
         self.root.update()
         
-        # Görsel bir veda çıktı terminale
         self.print_banner(mode)
         
-        # Arayüzü kapat
         self.root.destroy()
         
         try:
-            # Lotus Ana Sistemini Başlat
             start_lotus_system(mode)
         except Exception as e:
             logger.error(f"Sistem Çalışma Hatası: {str(e)}\n{traceback.format_exc()}")
@@ -173,7 +199,8 @@ class LauncherApp:
 
 if __name__ == "__main__":
     root = tk.Tk()
-    # Windows'ta ikon desteği (eğer varsa)
+    
+    # WSLg veya X Server ikon desteği
     # if os.path.exists("static/favicon.ico"): root.iconbitmap("static/favicon.ico")
     
     app = LauncherApp(root)
