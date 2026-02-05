@@ -194,10 +194,6 @@ class Config:
             if strict:
                 logger.error("❌ KRİTİK HATA: Ana GEMINI_API_KEY tanımlanmamış!")
                 is_valid = False
-            else:
-                logger.warning(
-                    "⚠️ GEMINI_API_KEY tanımlı değil. Online mod seçilirse sistem başlatılmaz; local mod kullanılabilir."
-                )
         
         # Patron Görseli Kontrolü
         if cls.LIVE_VISUAL_CHECK and not cls.PATRON_IMAGE_PATH.exists():
