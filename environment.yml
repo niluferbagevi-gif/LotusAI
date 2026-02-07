@@ -1,0 +1,172 @@
+name: lts
+channels:
+  - pytorch
+  - nvidia
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.11  # KRİTİK: TTS ve çoğu yeni AI kütüphanesi için en kararlı sürüm
+  - pip
+  - cudatoolkit=11.8
+  - pytorch-cuda=11.8
+  - pytorch
+  - torchvision
+  - torchaudio
+  - cmake
+  - git
+  - ffmpeg
+  - portaudio
+  - tk
+  - numpy>=1.24.3
+  - pandas>=2.0.0
+  - dlib
+  - pip:
+      # --- Temel Sistem & Yardımcı Araçlar ---
+      - psutil
+      - GPUtil
+      - pynvml
+      - keyboard
+      - pyserial
+      - cudf-cu11     # GPU hızlandırmalı DataFrame (AccountingManager için)
+      - python-dotenv
+      - colorama
+      - termcolor     # EKLENDİ: Terminal renkli çıktıları için (Debug modunda sık kullanılır)
+      - packaging
+      - aiohttp
+      - openpyxl      # EKLENDİ: Pandas'ın Excel (.xlsx) dosyalarını okuyup yazması için zorunludur (Accounting)
+      - setuptools    # EKLENDİ: Bazı paketlerin derlenmesi için gerekli
+
+      # --- Ses İşleme (STT & TTS) ---
+      - PyAudio
+      - SpeechRecognition
+      - edge-tts
+      - pygame
+      - coqui-tts
+      - pydub         # EKLENDİ: Ses dosyalarını formatlamak/kesmek (WAV <-> MP3) için ffmpeg wrapper'ı
+
+      # --- Görüntü İşleme & Computer Vision ---
+      - opencv-python
+      - Pillow
+      - face_recognition
+      - mediapipe
+      - scikit-learn  # EKLENDİ: Görüntü/Veri analizi ve makine öğrenimi algoritmaları için temel kütüphane
+
+      # --- Yapay Zeka & NLP (LLM Stack) ---
+      - google-generativeai
+      - chromadb>=0.4.24
+      - langchain
+      - langchain-community # EKLENDİ: LangChain v0.1+ sonrası araçlar buraya taşındı (ZORUNLU)
+      - langchain-google-genai
+      - llama-cpp-python
+      - transformers
+      - sentence-transformers
+      - huggingface-hub
+      - accelerate
+      - safetensors
+      - bitsandbytes  # EKLENDİ: Yerel modelleri (Llama/Transformers) 8-bit/4-bit yükleyip RAM tasarrufu yapmak için
+
+      # --- Web, API & Scraping ---
+      - flask
+      - flask-cors
+      - flask-socketio
+      - werkzeug
+      - requests
+      - beautifulsoup4
+      - googlesearch-python
+      - wikipedia
+      - instaloader
+      - facebook-scraper
+      - pytrends
+      - selenium
+      - webdriver-manager
+      - fake-useragent # EKLENDİ: Scraping işlemlerinde (Google/Instagram) 403 hatası almamak için kimlik gizleme
+
+      # --- Finans & Kripto ---
+      - ccxt
+      - ta
+      - mplfinance
+      - matplotlib
+      - yfinance      # EKLENDİ: Hisse senedi verileri için (FinanceManager genelde buna ihtiyaç duyar)
+
+      # --- Dosya Yönetimi ---
+      - python-docx
+      - PyPDF2
+      - PyYAML
+
+
+# name: lts
+# channels:
+#   - pytorch
+#   - nvidia
+#   - conda-forge
+#   - defaults
+# dependencies:
+#   - python=3.10
+#   - pip
+#   - cudatoolkit=11.8
+#   - pytorch
+#   - torchvision
+#   - torchaudio
+#   - pytorch-cuda=11.8
+#   - cmake
+#   - dlib
+#   - portaudio  # PyAudio için gerekli sistem kütüphanesi
+#   - pip:
+#     # TEMEL SİSTEM & DONANIM
+#     - PyAudio==0.2.14
+#     - SpeechRecognition==3.10.4
+#     - keyboard==0.13.5
+#     - psutil==5.9.8
+#     - aiohttp==3.9.3
+#     - python-dotenv==1.0.1
+#     - colorama==0.4.6
+#     - pyserial==3.5
+#     - pynvml==11.5.0
+    
+#     # GÖRÜNTÜ İŞLEME
+#     - opencv-python==4.9.0.80
+#     - Pillow==10.2.0
+#     - face_recognition==1.3.0
+#     - mediapipe==0.10.11
+    
+#     # AI & AJAN YÖNETİMİ
+#     - google-generativeai==0.4.1
+#     - chromadb==0.4.24
+#     - pydantic==2.6.4
+#     - langchain==0.1.12
+#     - langchain-google-genai==1.0.1
+#     - llama-cpp-python --extra-index-url https://abetlen.github.io/llama-cpp-python/whl/cu118
+    
+#     # WEB & API
+#     - flask==3.0.2
+#     - flask-cors==4.0.0
+#     - flask-socketio==5.3.6
+#     - werkzeug==3.0.1
+    
+#     # İNTERNET & OTOMASYON
+#     - requests==2.31.0
+#     - beautifulsoup4==4.12.3
+#     - googlesearch-python==1.2.3
+#     - wikipedia==1.4.0
+#     - instaloader==4.11
+#     - facebook-scraper
+#     - pytrends==4.9.2
+#     - selenium==4.18.1
+#     - webdriver-manager==4.0.1
+    
+#     # FİNANS & ANALİZ (KRİTİK VERSİYONLAR)
+#     - numpy==1.24.3
+#     - pandas==1.5.3
+#     - ccxt==4.2.66
+#     - ta==0.11.0
+#     - mplfinance==0.12.10b0
+#     - matplotlib==3.8.3
+    
+#     # SES (TTS)
+#     - edge-tts==6.1.10
+#     - pygame==2.5.2
+#     - tts==0.22.0
+    
+#     # DOSYA & DİĞER
+#     - python-docx==1.1.0
+#     - PyYAML==6.0.1

@@ -1,0 +1,874 @@
+{
+    "KAHVALTI": [
+        {
+            "name": "Serpme Kahvaltı (Kişi Başı)",
+            "price": "425,00 TL",
+            "desc": "4 çeşit peynir (eski kaşar, çeçil, beyaz peynir ve misket peyniri ceviz ve kuru kayısı parçaları ile..) taze peynirli karadut reçeli, 2 çeşit reçel, bal, kaymak, fındık parçalı çikolata, fıstık parçalı fıstık ezmesi, tereyağı, ev salçası, acuka, 2 çeşit zeytin, haydari, mütebbel, çeri domates, salatalık, soslu sosis, haşlanmış köy yumurtası, sigara böreği, keçi bacağı pişisi, 3 peynirli çörek, baharatlı elma dilim patates kızartması, simit, baget ekmek, form bisküvi, 1 demlik çay ve su.",
+            "image": "68b865bcb11de_kahvaltii-2.jpg"
+        },
+        {
+            "name": "Kahvaltı Tabağı",
+            "price": "350,00 TL",
+            "desc": "4 çeşit peynir (eski kaşar, çeçil, misket peyniri ve beyaz peynir) çeri domates, salatalık, kaymak, bal, reçel, çikolata, ev salçası, tereyağı, haşlanmış yumurta, 2 çeşit zeytin, sosis, keçi bacağı pişisi, sigara böreği, elma dilim patates parçaları, form bisküvi, baget ekmek, 1 fincan çay ve su.",
+            "image": "68b865f15d0d1_mini-kahvalti.jpg"
+        },
+        {
+            "name": "Simit Tabağı",
+            "price": "275,00 TL",
+            "desc": "1 adet simit,1 haşlanmış yumurta, beyaz peynir, siyah ve biberli yeşil zeytin, çeri domates, salatalık, yeşillik, 1 adet su ve 1 adet çay ile servis edilir.",
+            "image": "68b865d84d117_simit-tabagi.jpg"
+        },
+        {
+            "name": "Menemen",
+            "price": "170,00 TL",
+            "desc": "Taze domates, yeşil biber ve yumurta ile hazırlanan geleneksel menemen.",
+            "image": "68b94c414e5e2_menemen.jpg"
+        },
+        {
+            "name": "Kaşarlı Menemen",
+            "price": "180,00 TL",
+            "desc": "Bol kaşar peyniri eklenmiş enfes menemen.",
+            "image": "68b94c414e5e2_menemen.jpg"
+        },
+        {
+            "name": "Kavurmalı Menemen",
+            "price": "250,00 TL",
+            "desc": "Tereyağında kavrulmuş kavurma ile hazırlanan lezzetli menemen.",
+            "image": "68b94c414e5e2_menemen.jpg"
+        },
+        {
+            "name": "Sucuklu Menemen",
+            "price": "220,00 TL",
+            "desc": "Baharatlı sucuklarla hazırlanan menemen.",
+            "image": "68b94c414e5e2_menemen.jpg"
+        },
+        {
+            "name": "Sucuklu Kaşarlı Menemen",
+            "price": "230,00 TL",
+            "desc": "Sucuk ve kaşarın buluştuğu nefis menemen.",
+            "image": "68b94c414e5e2_menemen.jpg"
+        },
+        {
+            "name": "Kavurmalı Yumurta",
+            "price": "250,00 TL",
+            "desc": "Tereyağında kavurma ve yumurtanın eşsiz uyumu.",
+            "image": "68b94cbf7bf6a_kavurmali-yumurta.jpg"
+        },
+        {
+            "name": "Sucuklu Yumurta",
+            "price": "250,00 TL",
+            "desc": "Tavada sucuk ve yumurtanın enfes birleşimi.",
+            "image": "68b94cdf04de8_sucuklu-yumurta.jpg"
+        },
+        {
+            "name": "Pastırmalı Yumurta",
+            "price": "260,00 TL",
+            "desc": "Pastırma ile hazırlanan geleneksel sahanda yumurta",
+            "image": "68b94cf7958a1_pastirmali-yumurta.jpg"
+        },
+        {
+            "name": "Sahanda Yumurta",
+            "price": "125,00 TL",
+            "desc": "Tereyağında klasik sahanda yumurta.",
+            "image": "68b94d1401caf_sahanda-yumurta-kasarli-yumurta.jpg"
+        },
+        {
+            "name": "Kaşarlı Yumurta",
+            "price": "150,00 TL",
+            "desc": "Eritilmiş kaşar peyniriyle lezzetlendirilmiş sahanda yumurta.",
+            "image": "68b94d29e0f76_sahanda-yumurta-kasarli-yumurta.jpg"
+        },
+        {
+            "name": "Sahanda Sucuk",
+            "price": "200,00 TL",
+            "desc": "Tereyağında kızarmış sucuk dilimleri ile servis edilen sahanda sucuk.",
+            "image": "68b94d45e2829_sahanda-sucuk.jpg"
+        },
+        {
+            "name": "Sahanda Kavurma",
+            "price": "275,00 TL",
+            "desc": "Kızarmış kavurma parçaları ile hazırlanan sahanda yumurta.",
+            "image": "68b94d5d44143_sahanda-kavurma.jpg"
+        },
+        {
+            "name": "Omlet",
+            "price": "150,00 TL",
+            "desc": "Klasik tereyağlı omlet.",
+            "image": "68b94d7da1cc8_omlet--ve-omlet-cesitleri.jpg"
+        },
+        {
+            "name": "Kaşarlı Omlet",
+            "price": "170,00 TL",
+            "desc": "Bol kaşar peyniriyle hazırlanan nefis omlet.",
+            "image": "68b94d7da1cc8_omlet--ve-omlet-cesitleri.jpg"
+        },
+        {
+            "name": "Karışık Omlet",
+            "price": "200,00 TL",
+            "desc": "Peynir, sucuk, mantar ve sebzelerle hazırlanan özel omlet.",
+            "image": "68b94d7da1cc8_omlet--ve-omlet-cesitleri.jpg"
+        },
+        {
+            "name": "Kahvaltı Sıcak Tabağı (2 Kişilik)",
+            "price": "200,00 TL",
+            "desc": "Sigara böreği, keçi bacağı, üç peynirli börek ve baharatlı elma dilim patates ile iki kişilik sıcak kahvaltı tabağı.",
+            "image": "68b94de1d7c2a_kahvalti-sicak-tabagi.jpg"
+        },
+        {
+            "name": "Kahvaltı Peynir Tabağı (2 Kişilik)",
+            "price": "175,00 TL",
+            "desc": "Beyaz peynir, eski kaşar, misket peynir, çeçil, ceviz, kuru kayısı ve yeşillik ile servis edilir.",
+            "image": "68b94df7dfbc4_kahvalti-peynir-tabagi-(2-kisilik).jpg"
+        },
+        {
+            "name": "Keçi Bacağı",
+            "price": "100,00 TL",
+            "desc": "6 adet çıtır çıtır kızarmış keçi bacağı.",
+            "image": "68ca92b59f65d_keci-bacagi.jpg"
+        },
+        {
+            "name": "Üç Peynirli Börek Tabağı",
+            "price": "150,00 TL",
+            "desc": "4 adet üç peynirli börek ile servis edilir.",
+            "image": "68b94e271d62e_uc-peynirli-borek-tabagi.jpg"
+        },
+        {
+            "name": "Simit",
+            "price": "30,00 TL",
+            "desc": "Taze günlük simit.",
+            "image": "68ca926258ae1_simit.jpg"
+        }
+    ],
+    "BAŞLANGIÇLAR": [
+        {
+            "name": "Günün Çorbası",
+            "price": "100,00 TL",
+            "desc": "Günün çorbasını personele sorunuz.",
+            "image": "68b865062768d_corba.jpg"
+        }
+    ],
+    "APERATİFLER": [
+        {
+            "name": "Türk Sandviç",
+            "price": "200,00 TL",
+            "desc": "Ciabatta ekmeği, acuka sosu, marul, domates, salatalık, beyaz peynir ve sarımsaklı mayonez.",
+            "image": "68ca8c7e3ce61_turk.jpg"
+        },
+        {
+            "name": "İngiliz Sandviç",
+            "price": "250,00 TL",
+            "desc": "Ciabatta ekmeği, Cheddar peyniri, tavada kızarmış yumurta, türk pastırması, sarımsaklı mayonez, chipotle sos, domates dilimi ve tereyağı.",
+            "image": "68ca8b8ceac05_ingiliz-sandvic.jpg"
+        },
+        {
+            "name": "German Sandviç",
+            "price": "250,00 TL",
+            "desc": "Ciabatta ekmeği, Kaşar peyniri, hindi füme jambon, roka, reilish sos, mayonez, domates dilim, turşu dilim.",
+            "image": "68ca8c1365b9d_german.jpg"
+        },
+        {
+            "name": "İtaly Sandviç",
+            "price": "255,00 TL",
+            "desc": "Zeytinli Ciabatta rustik ekmeği, italyan salamı, hellim peyniri, roka, domates, pesto sos, mayonez.",
+            "image": "68ca8c951da95_italy.jpg"
+        },
+        {
+            "name": "Kaşarlı Tost",
+            "price": "175,00 TL",
+            "desc": "Bol kaşar peyniriyle hazırlanan tost, yeşillik ve patates kızartması ile servis edilir.",
+            "image": "68b94e5cc7d6b_kasarli-tost.jpg"
+        },
+        {
+            "name": "Sucuklu Tost",
+            "price": "200,00 TL",
+            "desc": "Baharatlı sucuklarla hazırlanan tost, yeşillik ve patates kızartması ile servis edilir.",
+            "image": "68b94e8f313b1_karisik-sucuklu-tost.jpg"
+        },
+        {
+            "name": "Karışık Tost",
+            "price": "225,00 TL",
+            "desc": "Kaşar peyniri ve sucukla hazırlanan karışık tost, yeşillik ve patates kızartması ile servis edilir.",
+            "image": "68b94eaed5367_karisik-sucuklu-tost.jpg"
+        },
+         {
+            "name": "Mix Tost",
+            "price": "225,00 TL",
+            "desc": "Kaşar ve sucuklu tost, patates ile.",
+            "image": "mix_tost.jpg"
+        },
+        {
+            "name": "Mix Tabağı",
+            "price": "300,00 TL",
+            "desc": "5 parça hot çıtır tavuk, 2 parça çıtır hellim, 2 parça sigara böreği, 2 parça çıtır soğan halkası ve patates kızartması ile servis edilir.",
+            "image": "68b94ec56b3f4_mix-tabagi.jpg"
+        },
+        {
+            "name": "Patates Kızartması",
+            "price": "150,00 TL",
+            "desc": "Kızarmış çıtır patatesler, sıcak ve lezzetli.",
+            "image": "68b86564d493d_patates-kizartmasi.jpg"
+        },
+        {
+            "name": "Nugget Tabağı",
+            "price": "150,00 TL",
+            "desc": "6 parça tavuk nugget, patates kızartması ile servis edilir.",
+            "image": ""
+        },
+        {
+            "name": "Pastırmalı Paçanga Böreği",
+            "price": "275,00 TL",
+            "desc": "Pastırmalı paçanga böreği, yeşillik, domates ve salatalık ile servis edilir.",
+            "image": "68b94f07d2be3_pastirmali-pacanga-boregi.jpg"
+        },
+        {
+            "name": "Avcı Böreği",
+            "price": "250,00 TL",
+            "desc": "Avcı böreği, yeşillik, domates ve salatalık ile servis edilir.",
+            "image": "68b94f1b757c8_avci-boregi.jpg"
+        },
+        {
+            "name": "Karışık Börek Tabağı",
+            "price": "300,00 TL",
+            "desc": "1 adet pastırmalı paçanga böreği, 1 adet avcı böreği, 2 adet sigara böreği, yeşillik, domates ve salatalık ile servis edilir.",
+            "image": "68b94f354817e_karisik-borek-tabagi.jpg"
+        },
+         {
+            "name": "Sigara Böreği",
+            "price": "150,00 TL",
+            "desc": "4 adet çıtır börek.",
+            "image": "sigara_boregi.jpg"
+        },
+        {
+            "name": "Yoğurt",
+            "price": "75,00 TL",
+            "desc": "Taze günlük yoğurt, sade ve doğal.",
+            "image": "68ca944e38743_yogurt.jpg"
+        }
+    ],
+    "BURGER & WRAP": [
+        {
+            "name": "Etli Wrap",
+            "price": "475,00 TL",
+            "desc": "Biftek parçaları, kapya ve çarliston biber, domates, mozerella, cheddar, soya sosu, Chilipette sos, patates kızartması ve yeşillik ile servis edilir.",
+            "image": "68b94faaa92f3_etli-wrap.jpg"
+        },
+        {
+            "name": "Cheeseburger",
+            "price": "390,00 TL",
+            "desc": "140 gr köfte, cheddar peynir, fırın ekmek, relish sos, karamelize soğan, kornişon turşu, marul, domates ve hamburger sosu ile patates kızartması ve 2 adet çıtır halka soğan ile servis edilir.",
+            "image": "68b94fe686235_cheeseburger.jpg"
+        },
+        {
+            "name": "Hamburger",
+            "price": "375,00 TL",
+            "desc": "140 gr köfte, fırın ekmek, relish sos, karamelize soğan, kornişon turşu, marul, domates ve hamburger sosu ile patates kızartması ve 2 adet çıtır halka soğan ile servis edilir.",
+            "image": "68b94fd0d591c_hamburger.jpg"
+        },
+        {
+            "name": "Çocuk Hamburger Menü",
+            "price": "350,00 TL",
+            "desc": "Hamburger ve yanında küçük porsiyon patates kızartması ile servis edilir.",
+            "image": ""
+        },
+        {
+            "name": "Tavuklu Wrap",
+            "price": "325,00 TL",
+            "desc": "Piliç bonfile, kapya ve çarliston biber, soğan, mozerella, cheddar, Chilipette sos, patates kızartması ve yeşillik ile servis edilir.",
+            "image": "68b94fbd671c0_tavuklu-wrap.jpg"
+        },
+        {
+            "name": "Chicken Burger",
+            "price": "325,00 TL",
+            "desc": "110 gr piliç, cheddar peynir, fırın ekmek, relish sos, karamelize soğan, kornişon turşu, marul, domates ve hamburger sosu ile patates kızartması ve 2 adet çıtır halka soğan ile servis edilir.",
+            "image": "68b94ffe5db20_chicken-burger.jpg"
+        }
+    ],
+    "TAVUKLU MENÜLER": [
+        {
+            "name": "Bağevi Special Beyaz",
+            "price": "425,00 TL",
+            "desc": "Tavuk bonfile parçaları, kapya ve çarliston biber, köz patlıcan, soğan, soya sosu, tereyağı, patates ve baharatlarla güveçte kaşarlı servis edilir.",
+            "image": "68c935fc0fe2f_bagevi-special-beyaz.jpg"
+        },
+        {
+            "name": "Güveçte Kremalı Mantarlı Tavuk",
+            "price": "325,00 TL",
+            "desc": "Krema, soya sosu, mantar, muskat ve tavuk bonfile güveçte servis edilir.",
+            "image": "68b94f4aec470_guvecte-kremali-mantarli-tavuk.jpg"
+        },
+        {
+            "name": "Köri Soslu Tavuk",
+            "price": "350,00 TL",
+            "desc": "Tavuk bonfile parçaları, kremalı köri sosu, patates püresi, pilav ve yeşil salata ile servis edilir..",
+            "image": "68c937abbe0a1_kori-soslu-tavuk.jpg"
+        },
+        {
+            "name": "Soya Soslu Tavuk",
+            "price": "350,00 TL",
+            "desc": "Soya sosu ile pişirilmiş tavuk bonfile parçaları, arabiata makarna ve yeşil salata ile servis edilir..",
+            "image": "68c939468fda9_soya-soslu-tavuk.jpg"
+        },
+        {
+            "name": "Acılı Tavuk",
+            "price": "350,00 TL",
+            "desc": "Çok acı hot sos ile pişirilmiş tavuk bonfile parçaları, kremalı makarna ve yeşil salata ile servis edilir...",
+            "image": "68c93b163a81f_acili-tavuk.jpg"
+        }
+    ],
+    "ET YEMEKLERİ (PREMIUM)": [
+        {
+            "name": "Bagevi Special (Et)",
+            "price": "800,00 TL",
+            "desc": "180 Gram marine edilmiş bonfile parçaları ile patlıcan, çarliston biber, kapya biber, beyaz soğan,soya sosu,domatesin vokta sotelenmesi ile yapılan enfes yemeğimiz. kibrit patates ve mozarella peyniri ile servis edilir.",
+            "image": "68ecc93a97338_special.jpg"
+        },
+        {
+            "name": "Çökertme Kebabı",
+            "price": "800,00 TL",
+            "desc": "Kibrit patates üzerinde tava yoğurdu, domates sos ve 180 gram marine edilmiş bonfile parçaları. tereyağı ile servis edilir.",
+            "image": "68ecc948215b9_cokertme.jpg"
+        }
+    ],
+    "PİDE & PİZZA": [
+        {
+            "name": "Bağevi Pide (SPESİYAL)",
+            "price": "430,00 TL",
+            "desc": "Kuşbaşı, kavurma, pastırma, kaşar, yeşillik ve jalapeno turşusu ile servis edilir.",
+            "image": "68b950d6630fa_bagevi-pide.jpg"
+        },
+        {
+            "name": "Karışık Pide",
+            "price": "400,00 TL",
+            "desc": "Kıyma, kuşbaşı, kaşar, sucuk, yeşillik ve jalapeno turşusu ile servis edilir.",
+            "image": "68b951495c23d_karisik-pide.jpg"
+        },
+        {
+            "name": "Kavurmalı Pide",
+            "price": "390,00 TL",
+            "desc": "Yeşillik ve jalapeno turşusu ile servis edilir.",
+            "image": "68e79315da6da_donerli-pide.jpg"
+        },
+        {
+            "name": "Taş Fırın Pizza",
+            "price": "385,00 TL",
+            "desc": "Pizza sosu, dana salam, dana sosis, sucuk, mantar, zeytin, mısır, domates ve mozerella peyniri ile servis edilir.",
+            "image": "68b951b57e255_tas-firin-pizza.jpg"
+        },
+        {
+            "name": "Dönerli Pide",
+            "price": "380,00 TL",
+            "desc": "Yaprak döner ve döner sosu ile hazırlanmış kapalı pide, yeşillik ve jalapeno turşusu ile servis edilir.",
+            "image": "68b950e622153_donerli-pide.jpg"
+        },
+        {
+            "name": "Sucuklu Kaşarlı Pide",
+            "price": "350,00 TL",
+            "desc": "Yeşillik ve jalapeno turşusu ile servis edilir.",
+            "image": "68b9516c992a2_sucuklu-kasarli-pide.jpg"
+        },
+        {
+            "name": "Kuşbaşılı Kaşarlı Pide",
+            "price": "345,00 TL",
+            "desc": "Yeşillik ve jalapeno turşusu ile servis edilir.",
+            "image": "68b95132a4a43_kusbasili-kasarli-pide.jpg"
+        },
+        {
+            "name": "Kuşbaşılı Pide",
+            "price": "335,00 TL",
+            "desc": "Yeşillik ve jalapeno turşusu ile servis edilir.",
+            "image": "68b95120c0c55_kusbasili-pide.jpg"
+        },
+        {
+            "name": "Kıymalı Kaşarlı Pide",
+            "price": "335,00 TL",
+            "desc": "Yeşillik ve jalapeno turşusu ile servis edilir.",
+            "image": "68b95159500b9_kiymali-kasarli-pide.jpg"
+        },
+        {
+            "name": "Kıymalı Pide",
+            "price": "325,00 TL",
+            "desc": "Yeşillik ve jalapeno turşusu ile servis edilir.",
+            "image": "68b950f938623_kiymali-pide.jpg"
+        },
+        {
+            "name": "Kaşarlı Pide",
+            "price": "300,00 TL",
+            "desc": "Yeşillik ve jalapeno turşusu ile servis edilir.",
+            "image": "68b9510d439fa_kasarli-pide.jpg"
+        },
+        {
+            "name": "Çocuk Pizza Menü",
+            "price": "350,00 TL",
+            "desc": "Pizza sosu, dana salam, dana sosis, sucuk, mantar, zeytin, mısır, domates, mozerella ve içecek ile servis edilir.",
+            "image": ""
+        }
+    ],
+    "IZGARALAR": [
+        {
+            "name": "Karışık Izgara",
+            "price": "525,00 TL",
+            "desc": "2 adet köfte, 2 parça tavuk but ızgara, 1 parça sucuk, patates kızartması, pilav, domates ve biber ile servis edilir.",
+            "image": "68b950bc22fe9_karisik-izgara.jpg"
+        },
+        {
+            "name": "Pastırmalı Köfte",
+            "price": "495,00 TL",
+            "desc": "100 gr 2 adet pastırmalı köfte, pilav, patates kızartması ve közlenmiş domates ve biber ile servis edilir.",
+            "image": "68ecc91fdb8ee_pasyermali-kofte.jpg"
+        },
+        {
+            "name": "Bağevi Sarma",
+            "price": "450,00 TL",
+            "desc": "Taş fırın lavasına sarılı 200 gr köfte, yoğurt, domates sos, tereyağı, közlenmiş biber ve domates dilimi ile servis edilir.",
+            "image": "68b9503854edf_bagevi-sarma.jpg"
+        },
+        {
+            "name": "Pideli Köfte",
+            "price": "450,00 TL",
+            "desc": "8 parça toplamda 200 gr köfte, tırnak pide, yoğurt, domates sosu, tereyağı, köz biber ve domates dilimi ile servis edilir.",
+            "image": "68b9502ad2b54_pideli-kofte.jpg"
+        },
+        {
+            "name": "Kaşarlı Köfte",
+            "price": "450,00 TL",
+            "desc": "100 gr 2 adet kaşarlı köfte, pilav, patates kızartması ve közlenmiş domates ve biber ile servis edilir.",
+            "image": "68ecc90966fc2_kasarli-kofte.jpg"
+        },
+        {
+            "name": "Köfte (Kasap)",
+            "price": "425,00 TL",
+            "desc": "50 gr 4 adet kasap köfte, pilav, patates kızartması ve közlenmiş domates ve biber ile servis edilir.",
+            "image": "68b95016daddb_kofte.jpg"
+        },
+        {
+            "name": "Piliç (Izgara But)",
+            "price": "400,00 TL",
+            "desc": "100 gr 2 adet kemiksiz piliç but, pilav, patates kızartması ve közlenmiş domates ve biber ile servis edilir.",
+            "image": "68b950985340d_pilic.jpg"
+        },
+        {
+            "name": "Izgara Sucuk",
+            "price": "400,00 TL",
+            "desc": "50 gr 4 parça sucuk, patates kızartması ve közlenmiş domates ve biber ile servis edilir.",
+            "image": ""
+        },
+        {
+            "name": "Güveç Köfte",
+            "price": "385,00 TL",
+            "desc": "8 parça 200 gr köfte, tereyağında pişmiş domates, kapya ve çarliston biberli sos ve kaşar ile servis edilir.",
+            "image": "68b9504946e1b_guvec-kofte-.jpg"
+        }
+    ],
+    "MAKARNALAR": [
+        {
+            "name": "Etli Arabiata",
+            "price": "400,00 TL",
+            "desc": "Baharatlı domates sosu ve enfes bonfile parçacıklarının mükemmel uyumu. Etli Arabiata, İtalyan lezzetini doyasıya yaşamak isteyenler için kaçırılmayacak bir seçenek. Acılıdır.",
+            "image": "68ca90a019260_etli-arabiata.jpg"
+        },
+        {
+            "name": "Tagliatelle",
+            "price": "320,00 TL",
+            "desc": "Taze tagliatelle makarnamız, kremalı mantar sosu, baharatlar ve piliç bonfile ile buluştu parmesan peyniri ile lezzetlendirildi.",
+            "image": "68ca90fae016c_tagliatelle.jpg"
+        },
+        {
+            "name": "Mantı",
+            "price": "300,00 TL",
+            "desc": "Üzerine sarımsaklı yoğurt ve tereyağlı klasik sosumuz gezdirilerek hazırlanan mantı.",
+            "image": "68ca9b1d0dcdf_manti.jpg"
+        },
+        {
+            "name": "Pesto Soslu Makarna",
+            "price": "270,00 TL",
+            "desc": "Pesto sosu ve krema ile yapılan penne makarnamız parmesan ile lezzetlendirildi.",
+            "image": "68ca90cebb7ca_pesto-soslu.jpg"
+        }
+    ],
+    "SALATALAR": [
+        {
+            "name": "Hellim Peynirli Salata",
+            "price": "250,00 TL",
+            "desc": "Mevsim yeşillikleri üstünde kızarmış hellim dilimleri.",
+            "image": "68c94dc366e85_hellim-peynirli-bagevi-salata.jpg"
+        },
+        {
+            "name": "Tavuklu Sezar Salata",
+            "price": "250,00 TL",
+            "desc": "Izgara tavuk but, mevsim yeşillikleri, kroton parçaları, çeri domates ve Sezar sos ile servis edilir.",
+            "image": "68c93ed8d1efc_tavuklu-sezar-salata.jpg"
+        },
+        {
+            "name": "Ton Balıklı Salata",
+            "price": "250,00 TL",
+            "desc": "Ton balığı, mevsim yeşillikleri, çeri domates, salatalık, kroton parçaları ve zeytinyağı ile servis edilir.",
+            "image": ""
+        },
+        {
+            "name": "Tulum Peynirli Bağevi",
+            "price": "220,00 TL",
+            "desc": "Balzamıklı zeytinyağı, mevsim yeşillik, çeri domates, salatalık, kroton parçaları, İzmir tulum peyniri ile servis edilir.",
+            "image": "68c94d8102f9c_tulum-peynirli-bagevi-salataa.jpg"
+        },
+        {
+            "name": "Diyet Kuru Meyveli",
+            "price": "220,00 TL",
+            "desc": "Balzamıklı zeytinyağı, kuru incir, dut, kayısı, ceviz, badem, kroton, çeri domates ve salatalık ile servis edilir.",
+            "image": "68c9402a946a3_diyet-kuru-meyveli-salata.jpg"
+        },
+        {
+            "name": "Mevsim Salata",
+            "price": "150,00 TL",
+            "desc": "Mevsim yeşillikleri, domates, salatalık ile servis edilir.",
+            "image": "68c940cf3a720_mevsim-salata.jpg"
+        },
+        {
+            "name": "Çoban Salata",
+            "price": "150,00 TL",
+            "desc": "Çiftlik domates, salatalık, çarliston biber, beyaz soğan ve zeytinyağı ile servis edilir.",
+            "image": ""
+        }
+    ],
+    "TATLILAR": [
+        {
+            "name": "Fıstık Rüyası",
+            "price": "250,00 TL",
+            "desc": "Fıstık parçacıklı pasta.",
+            "image": "68b9520588ad8_fistik-ruyasi.jpg"
+        },
+        {
+            "name": "Frambuazlı Cheesecake",
+            "price": "235,00 TL",
+            "desc": "Frambuaz aromalı cheesecake.",
+            "image": "68b951cccc0e7_frambuazli-cheesecake.jpg"
+        },
+        {
+            "name": "Limonlu Cheesecake",
+            "price": "235,00 TL",
+            "desc": "Kremalı limonlu cheesecake.",
+            "image": "68b951dd59267_limonlu-cheesecake.jpg"
+        },
+        {
+            "name": "Profiterol Pasta",
+            "price": "225,00 TL",
+            "desc": "Çikolatalı ve kremalı profiterol tabak.",
+            "image": "68ca7fd796b6a_profiterol-pasta.jpg"
+        },
+        {
+            "name": "Devil's Cake",
+            "price": "215,00 TL",
+            "desc": "Çikolatalı ve yoğun lezzetli pasta.",
+            "image": "68e793a9c4eec_adsiz.jpg"
+        },
+        {
+            "name": "Tiramisu",
+            "price": "190,00 TL",
+            "desc": "Klasik İtalyan tatlısı.",
+            "image": "68b95214ca434_tiramisu.jpg"
+        },
+        {
+            "name": "Mozaik Pasta",
+            "price": "175,00 TL",
+            "desc": "Çikolata ve bisküvinin eşsiz uyumuyla hazırlanan Mozaik Pasta, her diliminde nostaljik bir lezzet şöleni sunuyor.",
+            "image": "68b952a13d9a6_mozaik-pasta.jpg"
+        },
+        {
+            "name": "Fırın Sütlaç",
+            "price": "175,00 TL",
+            "desc": "Fındık tozu ile servis edilir.",
+            "image": "68b95225754c1_firin-sutlac.jpg"
+        },
+        {
+            "name": "Biscoff Cocoa-Mazing",
+            "price": "80,00 TL",
+            "desc": "İçerisinde Lotus Biscoff kreması, üzerinde sütlü kakao kaplaması ve karamelize bisküvi parçaları.",
+            "image": "68ca82c7d8c3b_biscoff-cocoa-mazing.jpg"
+        },
+        {
+            "name": "Nutzilla",
+            "price": "80,00 TL",
+            "desc": "Sütlü kakao kaplama, fındık kreması dolgu ve fındık çıtırları.",
+            "image": "68ca83449476a_nutzilla.jpg"
+        },
+        {
+            "name": "Strawjelly Jam",
+            "price": "80,00 TL",
+            "desc": "Üzerinde beyaz çikolata kaplaması ve kurutulmuş çilek parçaları, içinde çilek sos dolgusu.",
+            "image": "68ca83b8c31b4_strawjelly-jam.jpg"
+        },
+        {
+            "name": "Queen V",
+            "price": "80,00 TL",
+            "desc": "Vanilya aromalı ve pasta kreması dolgulu, çizgili bitter çikolata süslemeli.",
+            "image": "68ca842dd06c1_queen-v.jpg"
+        },
+        {
+            "name": "Willamon Tell",
+            "price": "80,00 TL",
+            "desc": "İçerisinde elmalı tarçınlı dolgu, üzerinde tarçın ve şeker kaplaması.",
+            "image": "68ca847807099_willamon-tell.jpg"
+        },
+        {
+            "name": "Choc Almighty",
+            "price": "80,00 TL",
+            "desc": "Bitter kakaolu kaplama üzerinde gerçek sütlü Belçika çikolata parçaları.",
+            "image": "68ca84c6bbeb4_choc-almighty.jpg"
+        }
+    ],
+    "SOĞUK İÇECEKLER": [
+        {
+            "name": "Cold Brew Macchiato",
+            "price": "160,00 TL",
+            "desc": "Özel soğuk demleme kahvemizin yoğun lezzeti, yumuşacık süt köpüğü ve tatlı karamel dokunuşuyla buluşuyor.",
+            "image": "68ca891d06c0c_cold-brew-macchiato.jpg"
+        },
+        {
+            "name": "Cold Brew",
+            "price": "140,00 TL",
+            "desc": "Uzun demlenme süreciyle elde edilen Cold Brew'umuz, benzersiz yumuşaklığı ve yoğun aromasıyla sizi ferahlatacak.",
+            "image": "68ca88adc43ec_cold-brew.jpg"
+        },
+        {
+            "name": "Portakal Suyu",
+            "price": "135,00 TL",
+            "desc": "Taze sıkılmış portakal suyu.",
+            "image": "68c9471024a71_portakal-suyu.jpg"
+        },
+        {
+            "name": "Soğuk Nescafe",
+            "price": "130,00 TL",
+            "desc": "Soğuk kahve içeceği.",
+            "image": "68ca8738228a9_soguk-nescafe.jpg"
+        },
+        {
+            "name": "Churchill",
+            "price": "120,00 TL",
+            "desc": "Soğuk kahve bazlı içecek.",
+            "image": "68ca962fe68d7_chircill.jpg"
+        },
+        {
+            "name": "Şişe İçecekler",
+            "price": "95,00 TL",
+            "desc": "Çeşitli şişe içecekler.",
+            "image": "68c948a1ba99f_frutti-extra.jpg"
+        },
+        {
+            "name": "Ice Tea",
+            "price": "90,00 TL",
+            "desc": "Lipton Ice Tea..",
+            "image": "68c944b4d298f_ice-tea.jpg"
+        },
+        {
+            "name": "Kutu İçecek",
+            "price": "90,00 TL",
+            "desc": "Pepsi Cola, Yedigün, 7-up, Tropicana",
+            "image": "68c9443ce16d9_kola.jpg"
+        },
+        {
+            "name": "Uludağ Gazoz",
+            "price": "85,00 TL",
+            "desc": "Gazlı içecek.",
+            "image": "68c94690cd8d0_gazoz.jpg"
+        },
+        {
+            "name": "Şıra",
+            "price": "85,00 TL",
+            "desc": "Meyve parçacıklı kuru üzüm şırası..",
+            "image": "68c947bda5340_sira.jpg"
+        },
+        {
+            "name": "Limonata",
+            "price": "75,00 TL",
+            "desc": "Pınar Limonata..",
+            "image": "68c945dd542c2_limonata.jpg"
+        },
+        {
+            "name": "Şalgam",
+            "price": "75,00 TL",
+            "desc": "Acılı ve ferahlatıcı şalgam suyu.",
+            "image": "68c94754c3660_salgam.jpg"
+        },
+        {
+            "name": "Ayran",
+            "price": "70,00 TL",
+            "desc": "Eker ayran..",
+            "image": "68c9457581fd4_ayran.jpg"
+        },
+        {
+            "name": "Meyveli Soda",
+            "price": "65,00 TL",
+            "desc": "Karışık meyveli gazlı içecek.",
+            "image": "68c9453549b2b_maden-suyu.jpg"
+        },
+        {
+            "name": "Sade Soda",
+            "price": "60,00 TL",
+            "desc": "Doğal maden suyu.",
+            "image": "sade_soda.jpg"
+        },
+        {
+            "name": "Su (1,5 LT)",
+            "price": "50,00 TL",
+            "desc": "1,5 litre su.",
+            "image": "68ca96b830883_6326f5ca-6ea8-4889-b034-bbc9a72599e0.jpg"
+        },
+        {
+            "name": "Su (0,5 LT)",
+            "price": "20,00 TL",
+            "desc": "0,5 litre su.",
+            "image": "68b866eef1686_cam-su.jpg"
+        }
+    ],
+    "SICAK İÇECEKLER": [
+        {
+            "name": "Demlik Çay (Büyük)",
+            "price": "500,00 TL",
+            "desc": "Ortalama 20 bardak çay.",
+            "image": "68ee6907167ff_buyuk-demlik.jpg"
+        },
+        {
+            "name": "Demlik Çay (Küçük)",
+            "price": "350,00 TL",
+            "desc": "Ortalama 10-13 bardak çay.",
+            "image": "68ee68fcb8a5e_kucuk-demlik.jpg"
+        },
+        {
+            "name": "Flat White",
+            "price": "160,00 TL",
+            "desc": "Sütlü kahve.",
+            "image": "68ca8e11d832c_flat-white.jpg"
+        },
+        {
+            "name": "Cortado",
+            "price": "160,00 TL",
+            "desc": "Yoğun aromalı espresso ve süt karışımı.",
+            "image": "68ca8db1deb00_cortado.jpg"
+        },
+        {
+            "name": "Espresso Macchiato",
+            "price": "160,00 TL",
+            "desc": "Kısa espresso üzerine süt.",
+            "image": "68ca97e350a5c_latte-macchiato.jpg"
+        },
+        {
+            "name": "Chai Tea Latte",
+            "price": "150,00 TL",
+            "desc": "Baharatlı sütlü çay kahve.",
+            "image": ""
+        },
+        {
+            "name": "Cappuccino",
+            "price": "150,00 TL",
+            "desc": "Sütlü köpüklü kahve.",
+            "image": "68b8641ebdba1_cappucino.jpg"
+        },
+        {
+            "name": "Latte Macchiato",
+            "price": "150,00 TL",
+            "desc": "Katman katman lezzet: Yoğun espresso, sıcak süt ve hafif süt köpüğünün mükemmel uyumu.",
+            "image": "68ca989b8e0ce_latte-macchiato.jpg"
+        },
+        {
+            "name": "Double Espresso",
+            "price": "150,00 TL",
+            "desc": "Çift espresso.",
+            "image": "68ca8d9b41e13_esspersso.jpg"
+        },
+        {
+            "name": "Double Sütlü Türk Kahvesi",
+            "price": "140,00 TL",
+            "desc": "Çift porsiyon sütlü Türk kahvesi.",
+            "image": ""
+        },
+        {
+            "name": "Americano",
+            "price": "135,00 TL",
+            "desc": "Sade espresso kahve.",
+            "image": "68ca8da55f1fa_americano.jpg"
+        },
+        {
+            "name": "Filtre Kahve",
+            "price": "125,00 TL",
+            "desc": "Filtre kahve.",
+            "image": "68b8640d749c4_filtre-kahve.jpg"
+        },
+        {
+            "name": "Kış Çayı",
+            "price": "125,00 TL",
+            "desc": "Kış aromalı bitkisel çay.",
+            "image": "68b863f4ea7e9_kis-cayi.jpg"
+        },
+        {
+            "name": "Double Türk Kahvesi",
+            "price": "120,00 TL",
+            "desc": "Çift porsiyon Türk kahvesi.",
+            "image": ""
+        },
+        {
+            "name": "Yeşil Çay",
+            "price": "120,00 TL",
+            "desc": "Yeşil çay.",
+            "image": "68b863d743fac_limonlu-yesil-cay.jpg"
+        },
+        {
+            "name": "Ada Çayı",
+            "price": "120,00 TL",
+            "desc": "Ada çayı bitkisel karışımı.",
+            "image": "68b863edb86ab_ada-cayi.jpg"
+        },
+        {
+            "name": "Espresso",
+            "price": "120,00 TL",
+            "desc": "Klasik espresso.",
+            "image": "68ca8d9b41e13_esspersso.jpg"
+        },
+        {
+            "name": "Kuşburnu Çayı",
+            "price": "110,00 TL",
+            "desc": "Kuşburnu aromalı sıcak çay.",
+            "image": "68ca8dece665e_kusbrnu.jpg"
+        },
+        {
+            "name": "Damla Sakızlı Türk Kahvesi",
+            "price": "95,00 TL",
+            "desc": "Damla sakızı aromalı Türk kahvesi.",
+            "image": "68c94bac4b132_damla-kahve.jpg"
+        },
+        {
+            "name": "Sütlü Türk Kahvesi",
+            "price": "90,00 TL",
+            "desc": "Süt ile hazırlanmış Türk kahvesi.",
+            "image": "68c94b2612eee_sutlu-turk.jpg"
+        },
+        {
+            "name": "Nescafe",
+            "price": "90,00 TL",
+            "desc": "Hazır Nescafe.",
+            "image": "68ca959c0068b_nescafe.jpg"
+        },
+        {
+            "name": "Türk Kahvesi",
+            "price": "80,00 TL",
+            "desc": "Klasik Türk kahvesi.",
+            "image": "68c94aa090313_turk-kahvesi.jpg"
+        },
+        {
+            "name": "Fincan Çay",
+            "price": "60,00 TL",
+            "desc": "Fincan ile servis edilen çay.",
+            "image": "68b863899b322_63d3ac7e8dac7_fincan-cay.jpg"
+        },
+        {
+            "name": "Çay",
+            "price": "40,00 TL",
+            "desc": "Sıcak çay.",
+            "image": "68c94a8fe3027_cay.jpg"
+        },
+        {
+            "name": "Cafe Creme",
+            "price": "0,00 TL",
+            "desc": "Cafe Creme",
+            "image": "68ca881a7acfb_cafe-creme.jpg"
+        }
+    ]
+}
