@@ -129,6 +129,10 @@ class Config:
         "KERBEROS": {"key": os.getenv("GEMINI_API_KEY_KERBEROS", _MAIN_KEY), "model": GEMINI_MODEL_PRO},
         "GAYA": {"key": os.getenv("GEMINI_API_KEY_GAYA", _MAIN_KEY), "model": GEMINI_MODEL_DEFAULT}
     }
+    GEMINI_API_KEY = _MAIN_KEY or next(
+        (cfg.get("key") for cfg in AGENT_CONFIGS.values() if cfg.get("key")),
+        ""
+    )
 
     # --- OLLAMA (YEREL AI) AYARLARI ---
     TEXT_MODEL = os.getenv("TEXT_MODEL", "llama3.1")
@@ -187,15 +191,27 @@ class Config:
         
         # API Anahtarı Kontrolü
         if cls.AI_PROVIDER == "gemini" and not cls._MAIN_KEY:
-            logger.error("❌ KRİTİK HATA: Ana GEMINI_API_KEY tanımlanmamış!")
-            is_valid = False
+            any_agent_key = any(
+                cfg.get("key")
+                for cfg in cls.AGENT_CONFIGS.values()
+            )
+            if not any_agent_key:
+                logger.error("❌ KRİTİK HATA: Ana GEMINI_API_KEY tanımlanmamış!")
+                is_valid = False
+            else:
+                logger.warning("⚠️ Ana GEMINI_API_KEY boş, ancak ajan anahtarları mevcut. Sistem ajan anahtarlarıyla devam edecek.")
         
-        # Patron Görseli Kontrolü
-        if cls.LIVE_VISUAL_CHECK and not cls.PATRON_IMAGE_PATH.exists():
-            logger.warning(f"⚠️ Görsel doğrulama (Patron) aktif ancak dosya yok: {cls.PATRON_IMAGE_PATH}")
-
         # Dizinlerin Yazılabilirliği
         cls.initialize_directories()
+
+        # Patron Görseli Kontrolü
+        if cls.LIVE_VISUAL_CHECK and not cls.PATRON_IMAGE_PATH.exists():
+            candidate_images = list(cls.FACES_DIR.glob("*.jpg")) + list(cls.FACES_DIR.glob("*.png"))
+            if len(candidate_images) == 1:
+                cls.PATRON_IMAGE_PATH = candidate_images[0]
+                logger.info(f"ℹ️ Patron görseli bulunamadı, mevcut tek görsel kullanılıyor: {cls.PATRON_IMAGE_PATH}")
+            else:
+                logger.warning(f"⚠️ Görsel doğrulama (Patron) aktif ancak dosya yok: {cls.PATRON_IMAGE_PATH}")
             
         return is_valid
 

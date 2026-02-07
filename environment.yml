@@ -24,7 +24,7 @@ dependencies:
       # --- Temel Sistem & Yardımcı Araçlar ---
       - psutil
       - GPUtil
-      - pynvml
+      - nvidia-ml-py
       - keyboard
       - pyserial
       - cudf-cu11     # GPU hızlandırmalı DataFrame (AccountingManager için)

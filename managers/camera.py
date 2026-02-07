@@ -27,11 +27,17 @@ CUDA_AVAILABLE = False
 try:
     _test_cv2 = cv2.__version__
     # CUDA desteği kontrolü
-    if cv2.cuda.getCudaEnabledDeviceCount() > 0:
-        CUDA_AVAILABLE = True
-        logger.info(f"🚀 GPU/CUDA Desteği Aktif: {cv2.cuda.getDevice() if hasattr(cv2.cuda, 'getDevice') else 'Tespit Edildi'}")
+    if hasattr(cv2, "cuda"):
+        try:
+            if cv2.cuda.getCudaEnabledDeviceCount() > 0:
+                CUDA_AVAILABLE = True
+                logger.info(f"🚀 GPU/CUDA Desteği Aktif: {cv2.cuda.getDevice() if hasattr(cv2.cuda, 'getDevice') else 'Tespit Edildi'}")
+            else:
+                logger.warning("⚠️ OpenCV CUDA modülü mevcut, ancak CUDA cihazı bulunamadı. CPU modunda devam ediliyor.")
+        except cv2.error:
+            logger.warning("⚠️ OpenCV CUDA desteği bu derlemede aktif değil. CUDA özellikleri kapalı.")
     else:
-        logger.warning("⚠️ CUDA uyumlu GPU bulunamadı. CPU modunda devam ediliyor.")
+        logger.warning("⚠️ OpenCV CUDA modülü bulunamadı. CUDA özellikleri kapalı.")
 except Exception as e:
     CV2_AVAILABLE = False
     logger.error(f"❌ OpenCV hatası: {e}")
