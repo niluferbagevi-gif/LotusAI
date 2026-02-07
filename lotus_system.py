@@ -260,8 +260,18 @@ if Config.USE_XTTS:
             logger.info("🔊 XTTS Kullanıma Hazır.")
         else:
             logger.warning("⚠️ CUDA bulunamadı, XTTS CPU modunda çalışacak veya devre dışı kalabilir.")
+    except ImportError as e:
+        if "isin_mps_friendly" in str(e):
+            logger.error(
+                "XTTS Başlatılamadı: transformers/pytorch_utils uyumsuzluğu (isin_mps_friendly). "
+                "XTTS devre dışı bırakılıyor, EdgeTTS kullanılacak."
+            )
+        else:
+            logger.error(f"XTTS Başlatılamadı (ImportError): {e}")
+        Config.USE_XTTS = False
     except Exception as e:
         logger.error(f"XTTS Başlatılamadı: {e}")
+        Config.USE_XTTS = False
 
 async def edge_stream(text, voice):
     try:
