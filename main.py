@@ -1,5 +1,6 @@
 import tkinter as tk
-from tkinter import messagebox, ttk
+from tkinter import messagebox, ttk, font as tkfont
+import locale
 import sys
 import os
 import traceback
@@ -16,6 +17,20 @@ logging.basicConfig(
     format='%(asctime)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger("LotusLauncher")
+
+
+def ensure_turkish_locale():
+    """Türkçe karakter desteği için uygun locale ayarla."""
+    candidates = ["tr_TR.UTF-8", "tr_TR.utf8", "tr_TR"]
+    for candidate in candidates:
+        try:
+            locale.setlocale(locale.LC_ALL, candidate)
+            os.environ.setdefault("LANG", candidate)
+            os.environ.setdefault("LC_ALL", candidate)
+            return candidate
+        except locale.Error:
+            continue
+    return None
 
 # --- SİSTEM BAŞLATICI FONKSİYONU ---
 start_lotus_system = None
@@ -34,6 +49,8 @@ except Exception as e:
 class LauncherApp:
     def __init__(self, root):
         self.root = root
+
+        ensure_turkish_locale()
         
         # --- 4K / HIDPI ÖLÇEKLEME AYARLARI ---
         # WSL üzerinde otomatik DPI algılama bazen başarısız olabilir.
@@ -48,6 +65,7 @@ class LauncherApp:
             pass
             
         self.root.title(f"{Config.PROJECT_NAME} v{Config.VERSION} - Launcher")
+        self._set_default_font()
         
         # Temel Boyutlar (Ölçeklenmemiş)
         base_width = 500
@@ -71,6 +89,17 @@ class LauncherApp:
         
         self.root.protocol("WM_DELETE_WINDOW", self.on_closing)
         self.setup_ui()
+
+    def _set_default_font(self):
+        """Türkçe karakterleri sorunsuz gösterebilecek bir varsayılan font seç."""
+        preferred_fonts = ["Noto Sans", "DejaVu Sans", "Arial", "Segoe UI"]
+        available_fonts = {name.lower(): name for name in tkfont.families(self.root)}
+        for font_name in preferred_fonts:
+            actual = available_fonts.get(font_name.lower())
+            if actual:
+                default_font = tkfont.nametofont("TkDefaultFont")
+                default_font.configure(family=actual)
+                break
 
     def setup_ui(self):
         """Arayüz elemanlarını profesyonel bir görünümle oluşturur."""
