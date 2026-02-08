@@ -24,7 +24,8 @@ dependencies:
       # --- Temel Sistem & Yardımcı Araçlar ---
       - psutil
       - GPUtil
-      - pynvml
+      # - pynvml
+      - nvidia-ml-py
       - keyboard
       - pyserial
       - cudf-cu11     # GPU hızlandırmalı DataFrame (AccountingManager için)
@@ -57,7 +58,6 @@ dependencies:
       - langchain
       - langchain-community # EKLENDİ: LangChain v0.1+ sonrası araçlar buraya taşındı (ZORUNLU)
       - langchain-google-genai
-      - llama-cpp-python
       - transformers
       - sentence-transformers
       - huggingface-hub
@@ -76,6 +76,7 @@ dependencies:
       - wikipedia
       - instaloader
       - facebook-scraper
+      - lxml_html_clean
       - pytrends
       - selenium
       - webdriver-manager
@@ -135,7 +136,6 @@ dependencies:
 #     - pydantic==2.6.4
 #     - langchain==0.1.12
 #     - langchain-google-genai==1.0.1
-#     - llama-cpp-python --extra-index-url https://abetlen.github.io/llama-cpp-python/whl/cu118
     
 #     # WEB & API
 #     - flask==3.0.2

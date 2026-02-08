@@ -25,46 +25,50 @@ from config import Config
 # --- LOGGING SETUP ---
 logger = logging.getLogger("LotusAI.Media")
 
-# Opsiyonel kütüphaneler için güvenli yükleme protokolü
+# --- KÜTÜPHANE YÜKLEMELERİ (Detaylı Hata Gösterimi ile) ---
+
+# 1. Google Search
 try:
     from googlesearch import search
     SEARCH_AVAILABLE = True
-except ImportError:
+except ImportError as e:
     SEARCH_AVAILABLE = False
-    logger.warning("⚠️ MediaManager: 'googlesearch-python' eksik. Web araması kısıtlı.")
+    logger.warning(f"⚠️ MediaManager: 'googlesearch-python' yüklenemedi. Detay: {e}")
 
+# 2. Instagram (Instaloader)
 try:
     import instaloader
     INSTAGRAM_AVAILABLE = True
-except ImportError:
+except ImportError as e:
     INSTAGRAM_AVAILABLE = False
-    logger.warning("⚠️ MediaManager: 'instaloader' eksik. Instagram analizi devre dışı.")
+    logger.warning(f"⚠️ MediaManager: 'instaloader' yüklenemedi. Detay: {e}")
 
+# 3. Facebook Scraper (Sorunlu olan kısım)
 try:
     from facebook_scraper import get_posts
     FACEBOOK_AVAILABLE = True
-except ImportError:
+except Exception as e: 
     FACEBOOK_AVAILABLE = False
-    logger.warning("⚠️ MediaManager: 'facebook-scraper' eksik. Facebook verileri pasif.")
+    # Hata mesajını analiz edip kullanıcıya net çözüm önerelim
+    error_msg = str(e)
+    if "lxml.html.clean" in error_msg:
+        logger.warning("⚠️ MediaManager: 'lxml_html_clean' eksik. Çözüm için terminalde: 'pip install lxml_html_clean' çalıştırın.")
+    else:
+        logger.warning(f"⚠️ MediaManager: 'facebook-scraper' yüklenemedi. Detay: {e}")
 
+# 4. Google Trends (Pytrends)
 try:
     from pytrends.request import TrendReq
     TRENDS_AVAILABLE = True
-except ImportError:
+except ImportError as e:
     TRENDS_AVAILABLE = False
-    logger.warning("⚠️ MediaManager: 'pytrends' eksik. Google Trends pasif.")
+    logger.warning(f"⚠️ MediaManager: 'pytrends' yüklenemedi. Detay: {e}")
+
 
 class MediaManager:
     """
     LotusAI Medya, İçerik ve Sosyal Medya Yöneticisi.
-    
-    Yetenekler:
-    - GPU Hızlandırma: Yerel yapay zeka görevleri için donanım algılama ve CUDA desteği.
-    - Gündem Analizi: Google Trends ve Web araması ile Türkiye gündemi takibi.
-    - Sosyal Medya İzleme: Instagram ve Facebook üzerinden marka ve rakip analizi.
-    - AI İçerik Üretimi: Gemini API (2.5 Flash) ile profesyonel strateji geliştirme.
-    - Görsel Tasarım: Pollinations AI ile yüksek kaliteli görsel konseptler.
-    - Pazarlama Takvimi: Özel günlere duyarlı dinamik içerik planlama.
+    v2.5 - Gelişmiş Hata Ayıklama ve GPU Desteği
     """
     
     def __init__(self):
@@ -81,7 +85,9 @@ class MediaManager:
         self.target_insta = getattr(Config, 'INSTAGRAM_ACCOUNT_ID', "lotusbagevi")
         self.target_fb = getattr(Config, 'FACEBOOK_PAGE_ID', "niluferbagevi")
         self.competitors = getattr(Config, 'COMPETITORS', [])
-        self.api_key = getattr(Config, 'GEMINI_API_KEY', "")
+        
+        # API Key Yönetimi (Config'deki düzeltmeyi kullanır)
+        self.api_key = getattr(Config, '_MAIN_KEY', "")
         
         # Dizinler
         self.static_dir = Path(getattr(Config, 'STATIC_DIR', './static'))
@@ -115,13 +121,16 @@ class MediaManager:
             logger.info("MediaManager: Torch bulunamadı, CPU modunda çalışıyor.")
             return "cpu"
         
-        if torch.cuda.is_available():
-            gpu_name = torch.cuda.get_device_name(0)
-            logger.info(f"🚀 MediaManager: GPU Algılandı ({gpu_name}). Hızlandırma aktif.")
-            return "cuda"
-        elif hasattr(torch.backends, "mps") and torch.backends.mps.is_available():
-            logger.info("🚀 MediaManager: Apple Silicon GPU (MPS) Algılandı.")
-            return "mps"
+        try:
+            if torch.cuda.is_available():
+                gpu_name = torch.cuda.get_device_name(0)
+                logger.info(f"🚀 MediaManager: GPU Algılandı ({gpu_name}). Hızlandırma aktif.")
+                return "cuda"
+            elif hasattr(torch.backends, "mps") and torch.backends.mps.is_available():
+                logger.info("🚀 MediaManager: Apple Silicon GPU (MPS) Algılandı.")
+                return "mps"
+        except Exception as e:
+            logger.warning(f"Donanım tarama hatası: {e}")
         
         logger.info("MediaManager: GPU bulunamadı, standart CPU modunda.")
         return "cpu"
@@ -143,6 +152,7 @@ class MediaManager:
         """Instagram istemcisini başlatır."""
         try:
             self.L = instaloader.Instaloader()
+            # Bot algılanmasını önlemek için User-Agent güncellemesi
             self.L.context._session.headers.update({
                 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
             })
@@ -153,7 +163,6 @@ class MediaManager:
     def ai_content_advisor(self, context_data: str) -> str:
         """
         Gemini API kullanarak profesyonel içerik stratejisi önerir.
-        Gelecekte yerel model entegrasyonu için GPU hazırlığı yapılmıştır.
         """
         if not self.api_key:
             return "⚠️ Gemini API anahtarı yapılandırılmamış."
@@ -167,7 +176,9 @@ class MediaManager:
                 "systemInstruction": {"parts": [{"text": system_prompt}]}
             }
             
-            url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key={self.api_key}"
+            # API URL'sini dinamik tutuyoruz, Config'den model bilgisi çekilebilir
+            model = getattr(Config, 'GEMINI_MODEL', 'gemini-1.5-flash')
+            url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={self.api_key}"
             
             for delay in [1, 2, 4]:
                 try:
@@ -177,6 +188,9 @@ class MediaManager:
                         return result.get('candidates', [{}])[0].get('content', {}).get('parts', [{}])[0].get('text', "Öneri oluşturulamadı.")
                     elif response.status_code == 429:
                         time.sleep(delay)
+                    else:
+                        logger.debug(f"Gemini API Hatası: {response.text}")
+                        break
                 except Exception as e:
                     logger.debug(f"Gemini API Denemesi Başarısız: {e}")
                     time.sleep(delay)
@@ -287,12 +301,14 @@ class MediaManager:
                 text = (post.get('text') or "Görsel paylaşım")[:80]
                 return f"📝 En Son: {text}..."
             return "Paylaşım bulunamadı."
-        except:
-            return "Facebook verilerine ulaşılamadı."
+        except Exception as e:
+            logger.warning(f"Facebook veri hatası: {e}")
+            return f"Facebook verilerine ulaşılamadı. ({str(e)[:50]}...)"
 
     def check_competitors(self) -> str:
         """Rakip analiz özeti döner."""
-        if not self.is_insta_active or not self.competitors: return "Rakip takibi yapılamıyor."
+        if not self.is_insta_active or not self.competitors or not hasattr(self, 'L'): 
+            return "Rakip takibi yapılamıyor."
         summary = []
         for comp in self.competitors:
             try:

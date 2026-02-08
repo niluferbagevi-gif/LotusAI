@@ -1,0 +1,13 @@
+2026-02-09 01:28:16,144 - [INFO] - LotusAI.Config - (config.py:65) - 🚀 Donanım Hızlandırma Aktif: NVIDIA GeForce RTX 3070 Ti Laptop GPU (1 GPU tespit edildi)
+2026-02-09 01:28:16,144 - [INFO] - LotusAI.Config - (config.py:128) - ⚠️ Ana GEMINI_API_KEY eksik. ATLAS anahtarı varsayılan olarak atandı.
+2026-02-09 01:28:16,145 - [INFO] - LotusAI.Config - (config.py:207) - ✅ LotusAI v2.5.1 yapılandırması başarıyla tamamlandı.
+2026-02-09 01:28:17,510 - [INFO] - LotusSystem - (lotus_system.py:43) - 🚀 GPU Algılandı: NVIDIA GeForce RTX 3070 Ti Laptop GPU
+2026-02-09 01:28:19,532 - [INFO] - LotusAI.Security - (security.py:30) - 🚀 GPU Desteği (CUDA) tespit edildi. Yüz tanıma GPU üzerinden çalışacak.
+2026-02-09 01:28:19,535 - [WARNING] - LotusAI.Camera - (camera.py:34) - ⚠️ CUDA uyumlu GPU bulunamadı. CPU modunda devam ediliyor.
+2026-02-09 01:28:20,752 - [INFO] - LotusAI.Finance - (finance.py:49) - 🚀 GPU Desteği Aktif: NVIDIA GeForce RTX 3070 Ti Laptop GPU
+2026-02-09 01:28:25,242 - [INFO] - LotusAI.Messaging - (messaging.py:44) - 🚀 MessagingManager: GPU (CUDA) hızlandırma desteği algılandı.
+2026-02-09 01:28:25,242 - [WARNING] - LotusAI.Messaging - (messaging.py:64) - ⚠️ MessagingManager: SİMÜLASYON MODU AKTİF (Kimlik bilgileri eksik).
+2026-02-09 01:28:28,576 - [INFO] - LotusSystem - (lotus_system.py:270) - 🔊 XTTS (GPU) Modeli Yükleniyor...
+2026-02-09 01:28:28,581 - [INFO] - TTS.utils.manage - (manage.py:418) - tts_models/multilingual/multi-dataset/xtts_v2 is already downloaded.
+2026-02-09 01:28:29,543 - [INFO] - TTS.tts.models - (__init__.py:9) - Using model: xtts
+2026-02-09 01:28:38,506 - [INFO] - LotusSystem - (lotus_system.py:273) - 🔊 XTTS Kullanıma Hazır.

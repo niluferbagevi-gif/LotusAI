@@ -20,9 +20,9 @@ logging.basicConfig(
     handlers=[
         logging.StreamHandler(sys.stdout),
         RotatingFileHandler(
-            LOG_DIR / "lotus_system.log", 
+            LOG_DIR / "lotus_system.log",
             maxBytes=15 * 1024 * 1024, # 15MB
-            backupCount=10, 
+            backupCount=10,
             encoding="utf-8"
         )
     ]
@@ -32,7 +32,7 @@ logger = logging.getLogger("LotusAI.Config")
 # --- ORTAM DEĞİŞKENLERİ YÜKLEME ---
 ENV_PATH = BASE_DIR / ".env"
 if not ENV_PATH.exists():
-    logger.warning("⚠️ '.env' dosyası bulunamadı! Lütfen API anahtarlarını içeren bir .env dosyası oluşturun veya config.py içindeki HARDCODED_KEY alanını kullanın.")
+    logger.warning("⚠️ '.env' dosyası bulunamadı! Varsayılan ayarlar kullanılacak.")
 else:
     load_dotenv(dotenv_path=ENV_PATH)
 
@@ -53,7 +53,10 @@ def check_hardware():
     has_cuda = False
     gpu_name = "N/A"
     try:
-        # PyTorch importu bazen hatalı sürücülerde çökebilir, bu yüzden korumalı yapıyoruz
+        # Pynvml uyarısını bastırmak için filtreleme
+        import warnings
+        warnings.filterwarnings("ignore", category=FutureWarning, module="torch")
+        
         import torch
         if torch.cuda.is_available():
             has_cuda = True
@@ -72,11 +75,11 @@ HAS_CUDA, GPU_NAME = check_hardware()
 class Config:
     """
     LotusAI Merkezi Yapılandırma Sınıfı.
-    Sürüm 2.5 - Gelişmiş Güvenlik ve Dinamik Ajan Yönetimi
+    Sürüm 2.5.1 - Akıllı Anahtar Yönetimi
     """
     # --- GENEL SİSTEM BİLGİLERİ ---
     PROJECT_NAME = "LotusAI"
-    VERSION = "2.5"
+    VERSION = "2.5.1"
     DEBUG_MODE = get_bool_env("DEBUG_MODE", True)
     WORK_DIR = Path(os.getenv("WORK_DIR", BASE_DIR))
 
@@ -90,26 +93,20 @@ class Config:
     MODELS_DIR = WORK_DIR / "models"
     DATA_DIR = WORK_DIR / "core" / "data"
 
-    # Dizinleri Güvenli Şekilde Oluştur
     REQUIRED_DIRS = [UPLOAD_DIR, LOG_DIR, VOICES_DIR, STATIC_DIR, FACES_DIR, MODELS_DIR, DATA_DIR]
     
     @classmethod
     def initialize_directories(cls):
-        """Sistem için gerekli dizinleri oluşturur ve erişim yetkilerini kontrol eder."""
+        """Sistem için gerekli dizinleri oluşturur."""
         for folder in cls.REQUIRED_DIRS:
             try:
                 folder.mkdir(parents=True, exist_ok=True)
-                # Yazma testi yap
-                test_file = folder / ".write_test"
-                test_file.touch()
-                test_file.unlink()
             except Exception as e:
                 logger.error(f"❌ Dizin hazırlama hatası ({folder.name}): {e}")
 
     # --- SİSTEM ZAMANLAMALARI ---
     CONVERSATION_TIMEOUT = get_int_env("CONVERSATION_TIMEOUT", 60)
     SYSTEM_CHECK_INTERVAL = get_int_env("SYSTEM_CHECK_INTERVAL", 300)
-    BACKUP_INTERVAL = get_int_env("BACKUP_INTERVAL", 3600)
 
     # --- AI SAĞLAYICI AYARLARI ---
     AI_PROVIDER = os.getenv("AI_PROVIDER", "gemini").lower()
@@ -120,10 +117,25 @@ class Config:
     GEMINI_MODEL_DEFAULT = os.getenv("GEMINI_MODEL", "gemini-1.5-flash")
     GEMINI_MODEL_PRO = os.getenv("GEMINI_MODEL_PRO", "gemini-1.5-pro")
     
-    # !!! API KEY BURAYA !!!
-    # Eğer .env dosyası çalışmıyorsa anahtarınızı tırnak içine yazabilirsiniz.
-    HARDCODED_KEY = "" 
-    _MAIN_KEY = os.getenv("GEMINI_API_KEY", HARDCODED_KEY)
+    # --- AKILLI ANAHTAR YÖNETİMİ ---
+    # 1. Önce doğrudan ana key'i kontrol et
+    _MAIN_KEY = os.getenv("GEMINI_API_KEY")
+
+    # 2. Eğer ana key yoksa, ajan keylerinden birini (Atlas) ana key yap
+    if not _MAIN_KEY:
+        _MAIN_KEY = os.getenv("GEMINI_API_KEY_ATLAS")
+        if _MAIN_KEY:
+            logger.info("⚠️ Ana GEMINI_API_KEY eksik. ATLAS anahtarı varsayılan olarak atandı.")
+    
+    # 3. Hala yoksa diğerlerini dene
+    if not _MAIN_KEY:
+        _MAIN_KEY = os.getenv("GEMINI_API_KEY_SIDAR") or \
+                    os.getenv("GEMINI_API_KEY_KURT") or \
+                    os.getenv("GEMINI_API_KEY_KERBEROS")
+
+    HARDCODED_KEY = "" # Acil durumlar için buraya yazılabilir
+    if not _MAIN_KEY and HARDCODED_KEY:
+        _MAIN_KEY = HARDCODED_KEY
 
     # Ajan Yapılandırması
     AGENT_CONFIGS: Dict[str, Any] = {
@@ -141,7 +153,6 @@ class Config:
     OLLAMA_URL = os.getenv("OLLAMA_URL", "http://localhost:11434/api")
 
     # --- MANAGER (YÖNETİCİ) ÖZEL AYARLARI ---
-    CAMERA_INDEX = get_int_env("CAMERA_INDEX", 0)
     FACE_REC_MODEL = "cnn" if USE_GPU else "hog"
     LIVE_VISUAL_CHECK = get_bool_env("LIVE_VISUAL_CHECK", True)
     PATRON_IMAGE_PATH = FACES_DIR / os.getenv("PATRON_IMAGE_PATH", "patron.jpg")
@@ -150,13 +161,9 @@ class Config:
     DEFAULT_CURRENCY = os.getenv("DEFAULT_CURRENCY", "TRY")
 
     USE_XTTS = get_bool_env("USE_XTTS", False)
-    META_ACCESS_TOKEN = os.getenv("META_ACCESS_TOKEN", "")
-    WHATSAPP_PHONE_ID = os.getenv("WHATSAPP_PHONE_ID", "")
-
-    # --- GÜVENLİK VE ERİŞİM KONTROLÜ ---
-    ALLOWED_HOSTS: List[str] = os.getenv("ALLOWED_HOSTS", "localhost,127.0.0.1").split(",")
+    
+    # --- GÜVENLİK ---
     API_AUTH_ENABLED = get_bool_env("API_AUTH_ENABLED", True)
-    SECRET_KEY = os.getenv("SECRET_KEY", "lotus_secret_default_key_change_me")
 
     @classmethod
     def get_agent_settings(cls, agent_name: str) -> Dict[str, str]:
@@ -164,47 +171,38 @@ class Config:
         name_upper = agent_name.upper()
         if name_upper in cls.AGENT_CONFIGS:
             config = cls.AGENT_CONFIGS[name_upper].copy()
-            if not config.get("key"):
+            # Eğer ajanın kendi key'i yoksa ve main key varsa, main key ata
+            if not config.get("key") and cls._MAIN_KEY:
                 config["key"] = cls._MAIN_KEY
             return config
         
-        dynamic_key = os.getenv(f"GEMINI_API_KEY_{name_upper}", cls._MAIN_KEY)
-        return {"key": dynamic_key, "model": cls.GEMINI_MODEL_DEFAULT}
+        return {"key": cls._MAIN_KEY, "model": cls.GEMINI_MODEL_DEFAULT}
 
     @classmethod
     def set_provider_mode(cls, mode: str):
         valid_modes = ["gemini", "ollama"]
         if mode.lower() in valid_modes:
             cls.AI_PROVIDER = mode.lower()
-            logger.info(f"🔄 AI Sağlayıcı Değiştirildi: {cls.AI_PROVIDER.upper()}")
         else:
             logger.error(f"❌ Geçersiz sağlayıcı modu: {mode}")
 
     @classmethod
     def validate_critical_settings(cls) -> bool:
         """Hayati ayarların ve sistem bütünlüğünün kontrolü."""
-        is_valid = True
+        cls.initialize_directories()
         
         # API Anahtarı Kontrolü
         if cls.AI_PROVIDER == "gemini" and not cls._MAIN_KEY:
-            logger.error("❌ KRİTİK HATA: Ana GEMINI_API_KEY tanımlanmamış!")
-            logger.error("👉 Lütfen .env dosyasını veya config.py içerisindeki HARDCODED_KEY alanını kontrol edin.")
-            # Hata olsa bile True dönerek uygulamanın açılmasını (kısıtlı modda) sağlıyoruz.
-            # is_valid = False # Devre dışı bırakıldı, böylece app çökmez.
-        
-        # Dizinlerin Hazırlanması
-        cls.initialize_directories()
-        
-        # Görsel Doğrulama Uyarısı
-        if cls.LIVE_VISUAL_CHECK and not cls.PATRON_IMAGE_PATH.exists():
-            logger.warning(f"⚠️ Görsel doğrulama (Patron) aktif ancak dosya yok: {cls.PATRON_IMAGE_PATH}")
-            # Bu bir çökme sebebi olmamalı
+            logger.error("❌ KRİTİK HATA: Hiçbir GEMINI API Key bulunamadı!")
+            logger.error("👉 .env dosyasını kontrol edin.")
+            return False # Gemini modunda key yoksa başlatma
             
-        return is_valid
+        return True
 
 # Başlangıç Doğrulaması
 if not Config.validate_critical_settings():
-    logger.critical("🚨 Kritik ayarlar eksik! Sistem kısıtlı modda çalışabilir.")
+    if Config.AI_PROVIDER == "gemini":
+        logger.critical("🚨 Kritik API anahtarları eksik! Sistem çalışmayabilir.")
 else:
     logger.info(f"✅ {Config.PROJECT_NAME} v{Config.VERSION} yapılandırması başarıyla tamamlandı.")
 
