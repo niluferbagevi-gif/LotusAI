@@ -25,8 +25,8 @@ def ensure_turkish_locale():
     for candidate in candidates:
         try:
             locale.setlocale(locale.LC_ALL, candidate)
-            os.environ.setdefault("LANG", candidate)
-            os.environ.setdefault("LC_ALL", candidate)
+            os.environ["LANG"] = candidate
+            os.environ["LC_ALL"] = candidate
             return candidate
         except locale.Error:
             continue
@@ -51,6 +51,7 @@ class LauncherApp:
         self.root = root
 
         ensure_turkish_locale()
+        self._configure_tk_encoding()
         
         # --- 4K / HIDPI ÖLÇEKLEME AYARLARI ---
         # WSL üzerinde otomatik DPI algılama bazen başarısız olabilir.
@@ -65,7 +66,8 @@ class LauncherApp:
             pass
             
         self.root.title(f"{Config.PROJECT_NAME} v{Config.VERSION} - Launcher")
-        self._set_default_font()
+        self.ui_font_family = self._select_font_family()
+        self._set_default_font(self.ui_font_family)
         
         # Temel Boyutlar (Ölçeklenmemiş)
         base_width = 500
@@ -90,16 +92,27 @@ class LauncherApp:
         self.root.protocol("WM_DELETE_WINDOW", self.on_closing)
         self.setup_ui()
 
-    def _set_default_font(self):
-        """Türkçe karakterleri sorunsuz gösterebilecek bir varsayılan font seç."""
-        preferred_fonts = ["Noto Sans", "DejaVu Sans", "Arial", "Segoe UI"]
+    def _configure_tk_encoding(self):
+        """Tk/Tcl tarafında UTF-8 kodlamasını kullan."""
+        try:
+            self.root.tk.call("encoding", "system", "utf-8")
+        except tk.TclError:
+            pass
+
+    def _select_font_family(self):
+        """Türkçe karakterleri sorunsuz gösterebilecek bir font aile adı seç."""
+        preferred_fonts = ["Noto Sans", "DejaVu Sans", "Arial", "Liberation Sans", "Segoe UI"]
         available_fonts = {name.lower(): name for name in tkfont.families(self.root)}
         for font_name in preferred_fonts:
             actual = available_fonts.get(font_name.lower())
             if actual:
-                default_font = tkfont.nametofont("TkDefaultFont")
-                default_font.configure(family=actual)
-                break
+                return actual
+        return tkfont.nametofont("TkDefaultFont").actual("family")
+
+    def _set_default_font(self, font_family):
+        """Türkçe karakterleri sorunsuz gösterebilecek bir varsayılan font seç."""
+        default_font = tkfont.nametofont("TkDefaultFont")
+        default_font.configure(family=font_family)
 
     def setup_ui(self):
         """Arayüz elemanlarını profesyonel bir görünümle oluşturur."""
@@ -109,11 +122,11 @@ class LauncherApp:
         # font puanlarını (size) orijinal tutuyoruz veya hafif revize ediyoruz.
         
         # Başlık ve Versiyon
-        tk.Label(self.root, text=Config.PROJECT_NAME.upper(), font=("Segoe UI", 36, "bold"), 
+        tk.Label(self.root, text=Config.PROJECT_NAME.upper(), font=(self.ui_font_family, 36, "bold"), 
                  bg="#1a1a2e", fg="#e94560").pack(pady=(int(30*self.SCALE_FACTOR/2), 0))
         
         tk.Label(self.root, text=f"AI Operating System v{Config.VERSION}", 
-                 font=("Segoe UI", 10), bg="#1a1a2e", fg="#95a5a6").pack(pady=(0, int(20*self.SCALE_FACTOR/2)))
+                 font=(self.ui_font_family, 10), bg="#1a1a2e", fg="#95a5a6").pack(pady=(0, int(20*self.SCALE_FACTOR/2)))
 
         # Bilgi Paneli (Frame)
         info_frame = tk.Frame(self.root, bg="#16213e", bd=1, relief="flat")
@@ -123,15 +136,15 @@ class LauncherApp:
         gpu_status = "AKTİF" if Config.USE_GPU else "PASİF"
         gpu_color = "#27ae60" if Config.USE_GPU else "#f39c12"
         
-        tk.Label(info_frame, text=f"Donanım Hızlandırma: {gpu_status}", font=("Segoe UI", 9), 
+        tk.Label(info_frame, text=f"Donanım Hızlandırma: {gpu_status}", font=(self.ui_font_family, 9), 
                  bg="#16213e", fg=gpu_color).pack(pady=5)
         
         if Config.USE_GPU:
-            tk.Label(info_frame, text=f"GPU: {Config.GPU_INFO}", font=("Segoe UI", 8, "italic"), 
+            tk.Label(info_frame, text=f"GPU: {Config.GPU_INFO}", font=(self.ui_font_family, 8, "italic"), 
                      bg="#16213e", fg="#bdc3c7").pack(pady=(0, 5))
 
         # Mod Seçimi Alanı
-        tk.Label(self.root, text="Çalışma Modunu Seçiniz", font=("Segoe UI", 11, "bold"), 
+        tk.Label(self.root, text="Çalışma Modunu Seçiniz", font=(self.ui_font_family, 11, "bold"), 
                  bg="#1a1a2e", fg="#ffffff").pack(pady=(int(20*self.SCALE_FACTOR/2), int(10*self.SCALE_FACTOR/2)))
 
         # Butonlar
@@ -144,7 +157,7 @@ class LauncherApp:
 
         # Durum Göstergesi
         self.status_var = tk.StringVar(value="Sistem Başlatılmaya Hazır")
-        self.status_label = tk.Label(self.root, textvariable=self.status_var, font=("Segoe UI", 9), 
+        self.status_label = tk.Label(self.root, textvariable=self.status_var, font=(self.ui_font_family, 9), 
                                      bg="#0f3460", fg="#bdc3c7", height=2)
         self.status_label.pack(side="bottom", fill="x")
 
@@ -155,7 +168,7 @@ class LauncherApp:
         # çünkü tk scaling zaten fontu büyüttüğü için buton otomatik büyüyecek.
         btn = tk.Button(
             self.root, text=text, bg=color, fg="white", 
-            font=("Segoe UI", 11, "bold"), width=30, height=2, 
+            font=(self.ui_font_family, 11, "bold"), width=30, height=2, 
             bd=0, cursor="hand2", activebackground="#e94560", activeforeground="white",
             command=lambda: self.pre_launch_check(mode)
         )
