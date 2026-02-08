@@ -1,5 +1,6 @@
 import tkinter as tk
 from tkinter import messagebox, ttk, font as tkfont
+import codecs
 import locale
 import sys
 import os
@@ -31,6 +32,16 @@ def ensure_turkish_locale():
         except locale.Error:
             continue
     return None
+
+
+def normalize_text(text):
+    """Kaçış dizilerini (\\uXXXX) gerçek Unicode karakterlerine çevir."""
+    if isinstance(text, str) and ("\\u" in text or "\\U" in text):
+        try:
+            return codecs.decode(text, "unicode_escape")
+        except Exception:
+            return text
+    return text
 
 # --- SİSTEM BAŞLATICI FONKSİYONU ---
 start_lotus_system = None
@@ -68,6 +79,7 @@ class LauncherApp:
         self.root.title(f"{Config.PROJECT_NAME} v{Config.VERSION} - Launcher")
         self.ui_font_family = self._select_font_family()
         self._set_default_font(self.ui_font_family)
+        self.t = normalize_text
         
         # Temel Boyutlar (Ölçeklenmemiş)
         base_width = 500
@@ -122,10 +134,10 @@ class LauncherApp:
         # font puanlarını (size) orijinal tutuyoruz veya hafif revize ediyoruz.
         
         # Başlık ve Versiyon
-        tk.Label(self.root, text=Config.PROJECT_NAME.upper(), font=(self.ui_font_family, 36, "bold"), 
+        tk.Label(self.root, text=self.t(Config.PROJECT_NAME.upper()), font=(self.ui_font_family, 36, "bold"), 
                  bg="#1a1a2e", fg="#e94560").pack(pady=(int(30*self.SCALE_FACTOR/2), 0))
         
-        tk.Label(self.root, text=f"AI Operating System v{Config.VERSION}", 
+        tk.Label(self.root, text=self.t(f"AI Operating System v{Config.VERSION}"), 
                  font=(self.ui_font_family, 10), bg="#1a1a2e", fg="#95a5a6").pack(pady=(0, int(20*self.SCALE_FACTOR/2)))
 
         # Bilgi Paneli (Frame)
@@ -136,27 +148,27 @@ class LauncherApp:
         gpu_status = "AKTİF" if Config.USE_GPU else "PASİF"
         gpu_color = "#27ae60" if Config.USE_GPU else "#f39c12"
         
-        tk.Label(info_frame, text=f"Donanım Hızlandırma: {gpu_status}", font=(self.ui_font_family, 9), 
+        tk.Label(info_frame, text=self.t(f"Donanım Hızlandırma: {gpu_status}"), font=(self.ui_font_family, 9), 
                  bg="#16213e", fg=gpu_color).pack(pady=5)
         
         if Config.USE_GPU:
-            tk.Label(info_frame, text=f"GPU: {Config.GPU_INFO}", font=(self.ui_font_family, 8, "italic"), 
+            tk.Label(info_frame, text=self.t(f"GPU: {Config.GPU_INFO}"), font=(self.ui_font_family, 8, "italic"), 
                      bg="#16213e", fg="#bdc3c7").pack(pady=(0, 5))
 
         # Mod Seçimi Alanı
-        tk.Label(self.root, text="Çalışma Modunu Seçiniz", font=(self.ui_font_family, 11, "bold"), 
+        tk.Label(self.root, text=self.t("Çalışma Modunu Seçiniz"), font=(self.ui_font_family, 11, "bold"), 
                  bg="#1a1a2e", fg="#ffffff").pack(pady=(int(20*self.SCALE_FACTOR/2), int(10*self.SCALE_FACTOR/2)))
 
         # Butonlar
-        self.btn_online = self.create_styled_button("🌐 ONLINE (Gemini Pro)", "#0f3460", "online")
+        self.btn_online = self.create_styled_button(self.t("🌐 ONLINE (Gemini Pro)"), "#0f3460", "online")
         # Buton arası boşlukları ayarla
         self.btn_online.pack(pady=int(10*self.SCALE_FACTOR/3))
 
-        self.btn_local = self.create_styled_button("💻 LOCAL (Ollama/Llama 3.1)", "#16213e", "local")
+        self.btn_local = self.create_styled_button(self.t("💻 LOCAL (Ollama/Llama 3.1)"), "#16213e", "local")
         self.btn_local.pack(pady=int(10*self.SCALE_FACTOR/3))
 
         # Durum Göstergesi
-        self.status_var = tk.StringVar(value="Sistem Başlatılmaya Hazır")
+        self.status_var = tk.StringVar(value=self.t("Sistem Başlatılmaya Hazır"))
         self.status_label = tk.Label(self.root, textvariable=self.status_var, font=(self.ui_font_family, 9), 
                                      bg="#0f3460", fg="#bdc3c7", height=2)
         self.status_label.pack(side="bottom", fill="x")
