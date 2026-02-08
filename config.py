@@ -1,10 +1,17 @@
 import os
 import sys
 import logging
+import warnings
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
 from dotenv import load_dotenv
 from typing import Dict, Any, Optional, List
+
+# --- UYARI FİLTRELEME ---
+warnings.filterwarnings("ignore", category=UserWarning, message=".*pkg_resources is deprecated.*")
+warnings.filterwarnings("ignore", category=UserWarning, module="pygame")
+# Pynvml ve Torch uyarılarını bastırmak için filtreleme
+warnings.filterwarnings("ignore", category=FutureWarning, module="torch")
 
 # --- LOGLAMA YAPILANDIRMASI ---
 BASE_DIR = Path(__file__).resolve().parent
@@ -47,16 +54,18 @@ def get_int_env(key: str, default: int = 0) -> int:
     except (ValueError, TypeError):
         return default
 
-# --- DONANIM HIZLANDIRMA (GPU) KONTROLÜ ---
+# --- DONANIM HIZLANDIRMA (GPU) MERKEZİ KONTROLÜ ---
 def check_hardware():
     """Donanım yeteneklerini kontrol eder ve detaylı bilgi döner."""
     has_cuda = False
     gpu_name = "N/A"
+    
+    # Kullanıcı .env üzerinden GPU'yu zorla kapattıysa hiç kontrol etme
+    if not get_bool_env("USE_GPU", True):
+        logger.info("ℹ️ GPU kullanımı .env ayarları ile devre dışı bırakıldı.")
+        return False, "Disabled by User"
+
     try:
-        # Pynvml uyarısını bastırmak için filtreleme
-        import warnings
-        warnings.filterwarnings("ignore", category=FutureWarning, module="torch")
-        
         import torch
         if torch.cuda.is_available():
             has_cuda = True
@@ -68,18 +77,20 @@ def check_hardware():
     except Exception as e:
         logger.warning(f"⚠️ PyTorch/CUDA hatası: {e}. Sistem CPU modunda devam edecek.")
         has_cuda = False
+    
     return has_cuda, gpu_name
 
+# Bu değişkenler global olarak bir kez hesaplanır ve diğer modüllerce kullanılır
 HAS_CUDA, GPU_NAME = check_hardware()
 
 class Config:
     """
     LotusAI Merkezi Yapılandırma Sınıfı.
-    Sürüm 2.5.1 - Akıllı Anahtar Yönetimi
+    Sürüm 2.5.2 - Ajan Odaklı Anahtar Yönetimi
     """
     # --- GENEL SİSTEM BİLGİLERİ ---
     PROJECT_NAME = "LotusAI"
-    VERSION = "2.5.1"
+    VERSION = "2.5.2"
     DEBUG_MODE = get_bool_env("DEBUG_MODE", True)
     WORK_DIR = Path(os.getenv("WORK_DIR", BASE_DIR))
 
@@ -110,7 +121,9 @@ class Config:
 
     # --- AI SAĞLAYICI AYARLARI ---
     AI_PROVIDER = os.getenv("AI_PROVIDER", "gemini").lower()
-    USE_GPU = get_bool_env("USE_GPU", True) and HAS_CUDA
+    
+    # Global değişkeni kullan, tekrar kontrol etme
+    USE_GPU = HAS_CUDA 
     GPU_INFO = GPU_NAME
 
     # --- GEMINI (GOOGLE) AYARLARI ---
@@ -120,20 +133,24 @@ class Config:
     # --- AKILLI ANAHTAR YÖNETİMİ ---
     # 1. Önce doğrudan ana key'i kontrol et
     _MAIN_KEY = os.getenv("GEMINI_API_KEY")
+    _USING_FALLBACK_KEY = False
 
     # 2. Eğer ana key yoksa, ajan keylerinden birini (Atlas) ana key yap
     if not _MAIN_KEY:
         _MAIN_KEY = os.getenv("GEMINI_API_KEY_ATLAS")
         if _MAIN_KEY:
-            logger.info("⚠️ Ana GEMINI_API_KEY eksik. ATLAS anahtarı varsayılan olarak atandı.")
+            _USING_FALLBACK_KEY = True
+            logger.info("ℹ️ Çoklu Ajan Modu: Genel işlemler için ATLAS anahtarı kullanılacak.")
     
     # 3. Hala yoksa diğerlerini dene
     if not _MAIN_KEY:
         _MAIN_KEY = os.getenv("GEMINI_API_KEY_SIDAR") or \
                     os.getenv("GEMINI_API_KEY_KURT") or \
                     os.getenv("GEMINI_API_KEY_KERBEROS")
+        if _MAIN_KEY:
+             _USING_FALLBACK_KEY = True
 
-    HARDCODED_KEY = "" # Acil durumlar için buraya yazılabilir
+    HARDCODED_KEY = "" 
     if not _MAIN_KEY and HARDCODED_KEY:
         _MAIN_KEY = HARDCODED_KEY
 
@@ -171,7 +188,6 @@ class Config:
         name_upper = agent_name.upper()
         if name_upper in cls.AGENT_CONFIGS:
             config = cls.AGENT_CONFIGS[name_upper].copy()
-            # Eğer ajanın kendi key'i yoksa ve main key varsa, main key ata
             if not config.get("key") and cls._MAIN_KEY:
                 config["key"] = cls._MAIN_KEY
             return config
@@ -191,11 +207,9 @@ class Config:
         """Hayati ayarların ve sistem bütünlüğünün kontrolü."""
         cls.initialize_directories()
         
-        # API Anahtarı Kontrolü
         if cls.AI_PROVIDER == "gemini" and not cls._MAIN_KEY:
             logger.error("❌ KRİTİK HATA: Hiçbir GEMINI API Key bulunamadı!")
-            logger.error("👉 .env dosyasını kontrol edin.")
-            return False # Gemini modunda key yoksa başlatma
+            return False 
             
         return True
 
@@ -205,7 +219,6 @@ if not Config.validate_critical_settings():
         logger.critical("🚨 Kritik API anahtarları eksik! Sistem çalışmayabilir.")
 else:
     logger.info(f"✅ {Config.PROJECT_NAME} v{Config.VERSION} yapılandırması başarıyla tamamlandı.")
-
 
 # import os
 # import sys

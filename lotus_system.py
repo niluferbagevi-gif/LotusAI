@@ -13,14 +13,12 @@ import webbrowser
 import cv2
 import numpy as np
 import logging
-import torch  # GPU kontrolü için eklendi
+import torch 
 from flask import Flask, request, jsonify, render_template
 from werkzeug.utils import secure_filename
 from concurrent.futures import ThreadPoolExecutor
 
 # --- KRİTİK HATA DÜZELTMESİ (Monkey Patch) ---
-# "cannot import name 'isin_mps_friendly' from 'transformers.pytorch_utils'" hatasını giderir.
-# TTS kütüphanesi yüklenmeden önce bu yamanın yapılması gerekmektedir.
 try:
     import transformers.pytorch_utils
     if not hasattr(transformers.pytorch_utils, "isin_mps_friendly"):
@@ -31,21 +29,26 @@ except ImportError:
     pass
 # ---------------------------------------------
 
-# --- YAPILANDIRMA VE MODÜLLER ---
+# --- CONFIG YÜKLEME ---
+# Loglama ve GPU kontrolü Config içinde yapıldığı için buradan tekrar yapmıyoruz.
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger("LotusSystem")
 
-# GPU Cihaz Seçimi
-device = "cuda" if torch.cuda.is_available() else "cpu"
-if device == "cuda":
-    # GPU bellek yönetimini optimize et
-    torch.cuda.empty_cache()
-    logger.info(f"🚀 GPU Algılandı: {torch.cuda.get_device_name(0)}")
-else:
-    logger.warning("⚠️ GPU bulunamadı, sistem CPU üzerinden devam edecek.")
-
 try:
     from config import Config
+    # GPU Durumunu Config'den alıyoruz (TEK KAYNAK)
+    device = "cuda" if Config.USE_GPU else "cpu"
+    
+    if Config.USE_GPU:
+        # GPU bellek yönetimini optimize et (Sadece Config onay verdiyse)
+        try:
+            torch.cuda.empty_cache()
+            # Buradaki log'u kaldırabiliriz çünkü Config zaten yazdı, 
+            # veya sadece debug seviyesinde tutabiliriz.
+            logger.debug(f"System Device: {device.upper()}") 
+        except Exception as e:
+            logger.warning(f"GPU Bellek temizleme hatası: {e}")
+
     from core.system_state import SystemState
     from core.memory import MemoryManager
     from core.security import SecurityManager
@@ -66,7 +69,7 @@ try:
     from agents.sidar import SidarAgent
 
 except ImportError as e:
-    logger.critical(f"KRİTİK HATA: Modüller yüklenirken sorun oluştu. Eksik dosya olabilir.\nHata: {e}")
+    logger.critical(f"KRİTİK HATA: Modüller yüklenirken sorun oluştu.\nHata: {e}")
     if "config" in str(e) or "core" in str(e):
         sys.exit(1)
 
@@ -266,13 +269,14 @@ tts_model = None
 if Config.USE_XTTS:
     try:
         from TTS.api import TTS
-        if device == "cuda":
+        # Config.USE_GPU kontrolü zaten yapılmıştı, burada tekrar kontrol etmeye gerek yok
+        # Ama model yüklerken device parametresi için kullanıyoruz.
+        if Config.USE_GPU:
             logger.info("🔊 XTTS (GPU) Modeli Yükleniyor...")
-            # Modeli doğrudan GPU cihazına yükle
             tts_model = TTS("tts_models/multilingual/multi-dataset/xtts_v2").to(device)
             logger.info("🔊 XTTS Kullanıma Hazır.")
         else:
-            logger.warning("⚠️ CUDA bulunamadı, XTTS CPU modunda çalışacak veya devre dışı kalabilir.")
+            logger.warning("⚠️ XTTS CPU modunda çalışacak (Yavaş olabilir) veya devre dışı.")
     except Exception as e:
         logger.error(f"XTTS Başlatılamadı: {e}")
 
@@ -353,7 +357,7 @@ def play_voice(text, agent_name, state_mgr):
     finally:
         state_mgr.set_state(SystemState.IDLE)
         # Belleği temizle (GPU için önemli)
-        if device == "cuda":
+        if Config.USE_GPU:
             torch.cuda.empty_cache()
 
 # --- ANA ASYNC MOTOR DÖNGÜSÜ ---
@@ -480,7 +484,7 @@ async def main_loop(mode):
             
             else:
                 if state_manager.get_state() not in [SystemState.THINKING, SystemState.SPEAKING]:
-                     state_manager.set_state(SystemState.IDLE)
+                      state_manager.set_state(SystemState.IDLE)
                 await asyncio.sleep(0.5)
 
             await asyncio.sleep(0.05)

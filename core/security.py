@@ -24,24 +24,27 @@ try:
     import face_recognition
     import dlib
     FACE_REC_AVAILABLE = True
-    # dlib'in CUDA ile derlenip derlenmediğini kontrol et
-    GPU_AVAILABLE = dlib.DLIB_USE_CUDA
-    if GPU_AVAILABLE:
-        logger.info("🚀 GPU Desteği (CUDA) tespit edildi. Yüz tanıma GPU üzerinden çalışacak.")
+    
+    # Burada Config.USE_GPU kontrolünü esas alıyoruz.
+    # Config GPU kullanma dediyse dlib ne derse desin kullanmayız.
+    if Config.USE_GPU:
+        if dlib.DLIB_USE_CUDA:
+            GPU_AVAILABLE = True
+            logger.info("🚀 Yüz Tanıma: GPU (CUDA) Modu Aktif.")
+        else:
+            logger.warning("⚠️ Config GPU açık dedi ancak Dlib CUDA'yı göremedi. CPU (HOG) kullanılacak.")
+            GPU_AVAILABLE = False
     else:
-        logger.warning("⚠️ CUDA tespit edilemedi. Yüz tanıma CPU (HOG) üzerinden devam edecek.")
+        GPU_AVAILABLE = False
+        # Log kirliliğini önlemek için sadece debug
+        logger.debug("ℹ️ Yüz Tanıma: Config ayarı gereği CPU modunda çalışıyor.")
+
 except ImportError:
     logger.warning("⚠️ 'face_recognition' veya 'dlib' kütüphanesi bulunamadı. Yüz tanıma devre dışı.")
 
 class SecurityManager:
     """
-    LotusAI Güvenlik ve Kimlik Doğrulama Yöneticisi (GPU Optimize Edilmiş).
-    
-    Yetenekler:
-    - Yüz Tanıma: GPU (CNN) veya CPU (HOG) tabanlı anlık doğrulama.
-    - Ses İmzası: Konuşmacı teşhisi altyapısı.
-    - Ziyaretçi Yönetimi: Biyometrik veri kaydı.
-    - Akıllı Durum Takibi: Stabilite kontrolü ve erişim yönetimi.
+    LotusAI Güvenlik ve Kimlik Doğrulama Yöneticisi (Config Entegreli).
     """
     
     def __init__(self, camera_manager, memory_manager=None):
@@ -69,16 +72,24 @@ class SecurityManager:
         self.voices_dir.mkdir(parents=True, exist_ok=True)
 
         # GPU ve Model Ayarları
-        # Eğer GPU varsa varsayılan 'cnn', yoksa 'hog'
-        default_model = 'cnn' if GPU_AVAILABLE else 'hog'
+        # Config.USE_GPU True ise ve Dlib de CUDA'yı görüyorsa 'cnn', yoksa 'hog'
+        actual_gpu_status = Config.USE_GPU and GPU_AVAILABLE
+        default_model = 'cnn' if actual_gpu_status else 'hog'
+        
+        # Config dosyasında FACE_REC_MODEL elle belirtildiyse onu kullan, yoksa otomatiği kullan
         self.model_type = getattr(Config, 'FACE_REC_MODEL', default_model)
         
-        # GPU (CNN) kullanılıyorsa analiz sıklığı artırılabilir, CPU ise tasarruf modunda kalır
+        # Eğer GPU yoksa zorla hog'a çevir (Config'de cnn yazsa bile çökmemesi için)
+        if not actual_gpu_status and self.model_type == 'cnn':
+            self.model_type = 'hog'
+
+        # GPU (CNN) kullanılıyorsa analiz sıklığı artırılabilir
         self.process_interval = 0.2 if self.model_type == 'cnn' else 0.4
         self.recognition_tolerance = getattr(Config, 'FACE_TOLERANCE', 0.45) 
         
         if FACE_REC_AVAILABLE:
-            logger.info(f"🛡️ Güvenlik Modeli: {self.model_type.upper()} aktif.")
+            # Model tipini sadece debug'da bas veya bir kere bas, sürekli tekrarlama
+            logger.info(f"🛡️ Güvenlik Modeli Hazır: {self.model_type.upper()}")
             self.reload_identities()
 
     def reload_identities(self):
@@ -88,7 +99,7 @@ class SecurityManager:
             self.known_face_names = []
             self.known_voice_profiles = {}
             
-            logger.info("👤 Kimlik Veritabanı Belleğe Yükleniyor...")
+            logger.info("👤 Kimlik Veritabanı Güncelleniyor...")
             
             for user_id, user_data in self.user_manager.users.items():
                 face_file = user_data.get("face_file")
@@ -98,8 +109,7 @@ class SecurityManager:
                         try:
                             # Görüntüyü yükle
                             image = face_recognition.load_image_file(str(img_path))
-                            # Encoding işlemi (Burası da GPU varsa hızlanır)
-                            # num_jitters=1: Daha hızlı, num_jitters=10: Daha doğru
+                            # Encoding işlemi
                             encodings = face_recognition.face_encodings(image, num_jitters=1)
                             if encodings:
                                 self.known_face_encodings.append(encodings[0])
@@ -111,10 +121,10 @@ class SecurityManager:
                 if voice_file:
                     self.known_voice_profiles[user_id] = voice_file
 
-            logger.info(f"✅ Kimlik Yükleme Tamamlandı: {len(self.known_face_names)} yüz profili aktif.")
+            logger.info(f"✅ Veritabanı: {len(self.known_face_names)} yüz profili aktif.")
 
     def register_new_visitor(self, name: str, audio_data=None) -> Tuple[bool, str]:
-        """Anlık kamera görüntüsüyle yeni kullanıcı kaydeder (GPU Destekli TESPİT)."""
+        """Anlık kamera görüntüsüyle yeni kullanıcı kaydeder."""
         if not FACE_REC_AVAILABLE:
             return False, "Hata: Yüz tanıma modülü sistemde yüklü değil."
 
@@ -127,7 +137,7 @@ class SecurityManager:
         if frame is None:
             return False, "Hata: Kamera görüntüsü alınamadı."
 
-        # Yüz Tespiti (GPU modunda cnn kullanılır)
+        # Yüz Tespiti
         rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         try:
             face_locations = face_recognition.face_locations(rgb_frame, model=self.model_type)
@@ -169,18 +179,16 @@ class SecurityManager:
         return False, "Kritik Hata: Kullanıcı veritabanına yazılamadı."
 
     def check_static_frame(self, frame) -> Optional[Dict]:
-        """Karede kayıtlı bir yüz olup olmadığını GPU/CPU üzerinden kontrol eder."""
+        """Karede kayıtlı bir yüz olup olmadığını kontrol eder."""
         if not FACE_REC_AVAILABLE or frame is None or not self.known_face_encodings:
             return None
 
         try:
-            # CNN (GPU) kullanılıyorsa görüntüyü çok fazla küçültmeye gerek yok, 
-            # çünkü GPU zaten büyük kareleri hızlı işler. HOG için küçültme şart.
+            # Model tipine göre ölçekleme
             scale = 0.5 if self.model_type == 'hog' else 0.8
             small_frame = cv2.resize(frame, (0, 0), fx=scale, fy=scale)
             rgb_small_frame = cv2.cvtColor(small_frame, cv2.COLOR_BGR2RGB)
 
-            # Model tipine göre (hog/cnn) konumları bul
             face_locations = face_recognition.face_locations(rgb_small_frame, model=self.model_type)
             face_encodings = face_recognition.face_encodings(rgb_small_frame, face_locations)
 
@@ -244,8 +252,6 @@ class SecurityManager:
 
         # 2. Yabancı Tespiti
         if frame is not None:
-            # Yabancı tespiti için hızlı olması adına HOG kullanılabilir veya 
-            # GPU varsa yine CNN ile devam edilir
             small = cv2.resize(frame, (0,0), fx=0.4, fy=0.4)
             rgb = cv2.cvtColor(small, cv2.COLOR_BGR2RGB)
             if face_recognition.face_locations(rgb, model=self.model_type):
