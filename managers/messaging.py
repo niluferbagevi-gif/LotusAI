@@ -9,18 +9,42 @@ import threading
 from datetime import datetime
 from typing import Optional, Dict, Any, Union, List
 
-# GPU Desteği için (Eğer sistemde yüklüyse)
+# --- YAPILANDIRMA VE FALLBACK ---
 try:
-    import torch
-    HAS_GPU = torch.cuda.is_available()
+    from config import Config
 except ImportError:
-    HAS_GPU = False
-
-# Proje içi modüller
-from config import Config
+    # Bağımsız çalışma durumu için Fallback
+    class Config:
+        META_ACCESS_TOKEN = ""
+        WHATSAPP_PHONE_ID = ""
+        INSTAGRAM_ACCOUNT_ID = ""
+        FACEBOOK_PAGE_ID = ""
+        META_APP_SECRET = ""
+        META_VERIFY_TOKEN = "lotus_verify_token"
+        USE_GPU = False
 
 # --- LOGLAMA YAPILANDIRMASI ---
 logger = logging.getLogger("LotusAI.Messaging")
+
+# --- GPU / TORCH ENTEGRASYONU (CONFIG KONTROLLÜ) ---
+HAS_GPU = False
+DEVICE = "cpu"
+USE_GPU_CONFIG = getattr(Config, "USE_GPU", False)
+
+if USE_GPU_CONFIG:
+    try:
+        import torch
+        if torch.cuda.is_available():
+            HAS_GPU = True
+            DEVICE = "cuda"
+            logger.info("🚀 MessagingManager GPU Aktif (CUDA)")
+        else:
+            logger.info("ℹ️ MessagingManager: Config GPU açık ancak donanım bulunamadı. CPU kullanılacak.")
+    except ImportError:
+        logger.info("ℹ️ PyTorch yüklü değil, mesaj işleme CPU modunda.")
+else:
+    logger.info("ℹ️ Mesaj işleme CPU modunda (Config ayarı).")
+
 
 class MessagingManager:
     """
@@ -28,7 +52,7 @@ class MessagingManager:
     
     Yetenekler:
     - Çoklu Kanal: WhatsApp, Instagram ve Facebook Messenger entegrasyonu.
-    - GPU Entegrasyonu: Gelen/Giden mesaj içeriklerini GPU tabanlı analiz için hazırlar.
+    - GPU Entegrasyonu: Gelen/Giden mesaj içeriklerini GPU tabanlı analiz için hazırlar (Config kontrollü).
     - Güvenli Webhook: HMAC imza doğrulama ve challenge yanıt sistemi.
     - Akıllı Kuyruk: Üstel geri çekilme (retry logic) ile garantili mesaj gönderimi.
     - Simülasyon: API anahtarı yoksa otomatik test moduna geçiş.
@@ -38,10 +62,8 @@ class MessagingManager:
         # Eşzamanlılık Kilidi
         self.lock = threading.RLock()
         
-        # GPU Durumu Kontrolü
-        self.device = "cuda" if HAS_GPU else "cpu"
-        if HAS_GPU:
-            logger.info(f"🚀 MessagingManager: GPU (CUDA) hızlandırma desteği algılandı.")
+        # Donanım Durumu
+        self.device = DEVICE
         
         # Ayarlar (Config üzerinden)
         self.access_token = getattr(Config, 'META_ACCESS_TOKEN', "")
@@ -74,18 +96,15 @@ class MessagingManager:
 
     def process_with_gpu(self, text_data: str) -> str:
         """
-        Mesaj içeriğini GPU üzerinde işlenmek üzere hazırlar.
-        Bu metod, LotusAI'nin diğer ajanları (Gaya, Atlas vb.) ile 
-        GPU üzerinden veri takası yaparken kullanılır.
+        Mesaj içeriğini GPU üzerinde işlenmek üzere hazırlar (Placeholder).
         """
         if not HAS_GPU:
             return text_data # GPU yoksa direkt döndür
             
         try:
-            # Örnek: Metni GPU belleğine taşıma simülasyonu veya model analizi
-            # Burada ileride bir NLP modeli (Transformers vb.) GPU üzerinden çalıştırılabilir.
-            logger.debug(f"🧠 Mesaj GPU ({self.device}) üzerinde analiz ediliyor...")
-            # Şimdilik passthrough, ancak GPU altyapısı hazır.
+            # Örnek: Metni GPU belleğine taşıma simülasyonu
+            # Gerçek senaryoda burada torch.tensor işlemleri olurdu.
+            # logger.debug(f"🧠 Mesaj GPU ({self.device}) üzerinde analiz ediliyor...")
             return text_data
         except Exception as e:
             logger.error(f"GPU İşleme Hatası: {e}")

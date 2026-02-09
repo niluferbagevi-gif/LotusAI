@@ -3,23 +3,43 @@ import re
 import logging
 import threading
 from typing import Dict, Any, List, Optional, Tuple
-from config import Config
 
-# GPU desteği için gerekli kütüphane
+# --- YAPILANDIRMA VE FALLBACK ---
 try:
-    import torch
+    from config import Config
 except ImportError:
-    torch = None
+    class Config:
+        PROJECT_NAME = "LotusAI"
+        USE_GPU = False
 
 # --- LOGLAMA ---
 logger = logging.getLogger("LotusAI.Gaya")
+
+# --- GPU KONTROLÜ (Config Entegreli) ---
+HAS_TORCH = False
+DEVICE = "cpu"
+USE_GPU_CONFIG = getattr(Config, "USE_GPU", False)
+
+if USE_GPU_CONFIG:
+    try:
+        import torch
+        HAS_TORCH = True
+        if torch.cuda.is_available():
+            DEVICE = "cuda"
+        elif hasattr(torch.backends, "mps") and torch.backends.mps.is_available():
+            DEVICE = "mps"
+    except ImportError:
+        logger.warning("⚠️ Gaya: Config GPU açık ancak torch bulunamadı.")
+else:
+    # Config kapalıysa torch olsa bile kullanma
+    torch = None 
 
 class GayaAgent:
     """
     Gaya (Operasyon, Finans ve İletişim Uzmanı) - LotusAI'ın Marka Yüzü.
     
     Yetenekler:
-    - GPU Hızlandırmalı NLP: Rezervasyon ve metin analizini donanım hızlandırma ile yapar.
+    - GPU Hızlandırmalı NLP: Rezervasyon ve metin analizini donanım hızlandırma ile yapar (Config kontrollü).
     - Fatura/Gider İşleme: Finansal verileri temizler ve muhasebe/stok sistemine aktarır.
     - Çok Kanallı İletişim: Sosyal medya ve mesajlaşma kanalları için bağlamsal yanıtlar üretir.
     - Donanım Farkındalığı: Sistemin GPU imkanlarını kullanarak ağır işlemleri optimize eder.
@@ -37,43 +57,38 @@ class GayaAgent:
         self.agent_name = "GAYA"
         self.lock = threading.RLock()
         
-        # GPU/Cihaz Tespiti
-        self.device = self._detect_device()
+        # Donanım Durumu
+        self.device = DEVICE
         
-        # Alt bileşenleri GPU'ya yönlendir (Eğer destekliyorlarsa)
+        # Alt bileşenleri GPU'ya yönlendir (Eğer destekliyorlarsa ve Config izin verdiyse)
         self._optimize_subsystems()
         
         logger.info(f"🌸 {self.agent_name} Operasyon modülü {self.device} üzerinde aktif.")
 
     def _detect_device(self) -> str:
         """
-        Sistemin kullanabileceği en iyi işlem birimini (GPU/CPU) tespit eder.
+        Sistemin kullanabileceği en iyi işlem birimini (GPU/CPU) döndürür.
         """
-        if torch is not None:
-            if torch.cuda.is_available():
-                return "cuda"
-            elif hasattr(torch.backends, "mps") and torch.backends.mps.is_available():
-                return "mps" # Apple Silicon desteği
-        return "cpu"
+        return self.device
 
     def _optimize_subsystems(self):
         """
         Bağlı olan NLP ve diğer araçları tespit edilen GPU cihazına taşımaya çalışır.
         """
         with self.lock:
-            if self.nlp and hasattr(self.nlp, 'to'):
-                try:
-                    self.nlp.to(self.device)
-                    logger.info(f"🚀 Gaya NLP Modeli {self.device} birimine taşındı.")
-                except Exception as e:
-                    logger.warning(f"⚠️ NLP modeli GPU'ya taşınamadı: {e}")
+            # Sadece GPU aktifse ve torch varsa
+            if self.device != "cpu" and HAS_TORCH and self.nlp:
+                # NLPManager init sırasında device alıyor, burada ekstra bir işlem 
+                # gerekip gerekmediğini kontrol edebiliriz.
+                pass
 
     def get_system_prompt(self) -> str:
         """
         Gaya'nın kişiliğini ve çalışma prensiplerini tanımlayan sistem talimatı.
         """
+        project_name = getattr(Config, "PROJECT_NAME", "LotusAI")
         return (
-            f"Sen {Config.PROJECT_NAME} sisteminin Operasyon ve İletişim Uzmanı GAYA'sın. "
+            f"Sen {project_name} sisteminin Operasyon ve İletişim Uzmanı GAYA'sın. "
             "Müşterilerle iletişim kurarken son derece nazik, yardımsever, kurumsal ve çözüm odaklısın. "
             "Görevin: Fatura işlemek, rezervasyonları yönetmek ve sosyal medya trafiğini marka kalitesine uygun yönetmektir. "
             "Karakterin: Pratik, güven verici, enerjik ve satış kabiliyeti yüksek bir profesyonel. "
@@ -140,7 +155,7 @@ class GayaAgent:
 
     def process_invoice_result(self, invoice_data: Dict[str, Any]) -> str:
         """
-        AI (Vision) tarafından analiz edilen verileri GPU farkındalığıyla işler.
+        AI (Vision) tarafından analiz edilen verileri işler.
         """
         if not invoice_data:
             return "⚠️ Fatura analizi için veri sağlanamadı."
@@ -192,7 +207,7 @@ class GayaAgent:
 
     def handle_reservation(self, user_text: str, user_name: str) -> Optional[str]:
         """
-        Rezervasyon talebini NLP (GPU Destekli) ile ayrıştırıp sisteme kaydeder.
+        Rezervasyon talebini NLP ile ayrıştırıp sisteme kaydeder.
         """
         if not self.nlp: return None
         

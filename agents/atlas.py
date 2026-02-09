@@ -3,17 +3,32 @@ import threading
 import datetime
 import os
 from typing import Dict, Any, List, Optional
-from config import Config
 
-# GPU Durumu kontrolü için torch kütüphanesini içe aktarıyoruz
+# --- YAPILANDIRMA VE FALLBACK ---
 try:
-    import torch
-    HAS_TORCH = True
+    from config import Config
 except ImportError:
-    HAS_TORCH = False
+    class Config:
+        PROJECT_NAME = "LotusAI"
+        VERSION = "2.6"
+        USE_GPU = False
 
 # --- LOGLAMA ---
 logger = logging.getLogger("LotusAI.Atlas")
+
+# --- GPU KONTROLÜ (Config Entegreli) ---
+HAS_TORCH = False
+DEVICE = "cpu"
+USE_GPU_CONFIG = getattr(Config, "USE_GPU", False)
+
+if USE_GPU_CONFIG:
+    try:
+        import torch
+        HAS_TORCH = True
+        if torch.cuda.is_available():
+            DEVICE = "cuda"
+    except ImportError:
+        logger.warning("⚠️ Atlas: Config GPU açık ancak torch bulunamadı.")
 
 class AtlasAgent:
     """
@@ -21,7 +36,7 @@ class AtlasAgent:
     
     Yetenekler:
     - Sistem Denetimi: Donanım (Sidar), Güvenlik (Kerberos) ve Operasyon (Gaya) verilerini toplar.
-    - Donanım Farkındalığı: GPU kaynaklarını izler ve raporlar.
+    - Donanım Farkındalığı: GPU kaynaklarını izler ve raporlar (Config kontrollü).
     - Stratejik Karar: LLM için kapsamlı sistem bağlamı (Context) üretir.
     - Görev Dağıtımı (Delegasyon): Gelen istekleri en uygun uzman ajana yönlendirir.
     - Ekip Hafızası: Takımın geçmiş faaliyetlerini analiz ederek tutarlılık sağlar.
@@ -39,14 +54,20 @@ class AtlasAgent:
         self.agent_name = "ATLAS"
         self.lock = threading.RLock()
         
+        # Donanım Durumu
+        self.device = DEVICE
+        self.has_gpu = (DEVICE == "cuda")
+        
         # GPU Durumunu Başlangıçta Kontrol Et
         self.gpu_info = self._check_gpu_status()
         
-        logger.info(f"👑 {self.agent_name} Liderlik Modülü (v{Config.VERSION}) aktif.")
+        version = getattr(Config, "VERSION", "2.6")
+        logger.info(f"👑 {self.agent_name} Liderlik Modülü (v{version}) aktif.")
+        
         if self.gpu_info['available']:
-            logger.info(f"🚀 Atlas Donanım Bilgisi: {self.gpu_info['device_name']} algılandı ve kullanıma hazır.")
+            logger.info(f"🚀 Atlas Donanım Bilgisi: {self.gpu_info['device_name']} algılandı.")
         else:
-            logger.warning("⚠️ Atlas: GPU hızlandırma donanımsal olarak aktif değil, CPU üzerinden devam ediliyor.")
+            logger.info("ℹ️ Atlas: CPU modunda çalışıyor.")
 
     def _check_gpu_status(self) -> Dict[str, Any]:
         """
@@ -60,17 +81,14 @@ class AtlasAgent:
             "count": 0
         }
 
-        if Config.USE_GPU and HAS_TORCH:
+        if self.has_gpu and HAS_TORCH:
             try:
-                if torch.cuda.is_available():
-                    status["available"] = True
-                    status["count"] = torch.cuda.device_count()
-                    status["device_name"] = torch.cuda.get_device_name(0)
-                    # VRAM Bilgileri (Bayt cinsinden alıp GB'a çeviriyoruz)
-                    t = torch.cuda.get_device_properties(0).total_memory
-                    status["vram_total"] = round(t / (1024**3), 2)
-                else:
-                    logger.debug("Torch yüklü ama CUDA erişilebilir değil.")
+                status["available"] = True
+                status["count"] = torch.cuda.device_count()
+                status["device_name"] = torch.cuda.get_device_name(0)
+                # VRAM Bilgileri (Bayt cinsinden alıp GB'a çeviriyoruz)
+                t = torch.cuda.get_device_properties(0).total_memory
+                status["vram_total"] = round(t / (1024**3), 2)
             except Exception as e:
                 logger.error(f"GPU Durum kontrolü hatası: {e}")
         
@@ -79,7 +97,6 @@ class AtlasAgent:
     def get_system_overview(self) -> str:
         """
         Tüm alt sistemlerden gelen verileri birleştirerek 'Yönetici Özeti' oluşturur.
-        Bu metod, güncel Manager dosyalarındaki fonksiyon isimleriyle tam uyumludur.
         """
         overview = []
         
@@ -140,8 +157,9 @@ class AtlasAgent:
         else:
             gpu_status_str += " (CPU Modu)"
 
+        project_name = getattr(Config, "PROJECT_NAME", "LotusAI")
         context_parts = [
-            f"### {Config.PROJECT_NAME} LİDER RAPORU ###",
+            f"### {project_name} LİDER RAPORU ###",
             f"📅 Tarih/Saat: {now}",
             f"⚡ Sistem Modu: {current_state_name}",
             f"{gpu_status_str}\n",
@@ -149,16 +167,6 @@ class AtlasAgent:
             self.get_system_overview()
         ]
         
-        # Ekip Geçmişi (Son 10 Faaliyet - core/memory.py)
-        if hasattr(self.memory, 'get_team_history'):
-            try:
-                history = self.memory.get_team_history(limit=10)
-                if history:
-                    context_parts.append("\n### SON EKİP FAALİYETLERİ ###")
-                    context_parts.append(history)
-            except Exception as e:
-                logger.error(f"Atlas: Hafıza okuma hatası: {e}")
-            
         return "\n".join(context_parts)
 
     def delegate_task(self, task_description: str) -> str:
@@ -196,8 +204,9 @@ class AtlasAgent:
         """
         Atlas'ın karakterini ve otoritesini tanımlayan ana sistem talimatı.
         """
+        project_name = getattr(Config, "PROJECT_NAME", "LotusAI")
         return (
-            f"Sen {Config.PROJECT_NAME} AI İşletim Sistemi'nin baş mimarı ve lideri ATLAS'sın. "
+            f"Sen {project_name} AI İşletim Sistemi'nin baş mimarı ve lideri ATLAS'sın. "
             "Sistemdeki tüm ajanlar ve araçlar senin denetimindedir. "
             "Karakterin: Ciddi, otoriter, çözüm odaklı, her zaman büyük resmi gören ve son derece güvenilir. "
             "Cevaplarında sistemin canlı verilerine (donanım yükü, GPU durumu, güvenlik durumu, bakiye vb.) dayanmalısın. "

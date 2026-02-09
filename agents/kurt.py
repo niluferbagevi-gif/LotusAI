@@ -1,13 +1,38 @@
 import re
 import logging
 import threading
-import torch  # GPU desteği için eklendi
 from datetime import datetime
 from typing import Dict, Any, List, Optional, Tuple
-from config import Config
+
+# --- YAPILANDIRMA VE FALLBACK ---
+try:
+    from config import Config
+except ImportError:
+    class Config:
+        PROJECT_NAME = "LotusAI"
+        MIN_LIQUIDITY_LIMIT = 5000.0
+        USE_GPU = False
 
 # --- LOGLAMA ---
 logger = logging.getLogger("LotusAI.Kurt")
+
+# --- GPU KONTROLÜ (Config Entegreli) ---
+HAS_TORCH = False
+DEVICE = "cpu"
+USE_GPU_CONFIG = getattr(Config, "USE_GPU", False)
+
+if USE_GPU_CONFIG:
+    try:
+        import torch
+        HAS_TORCH = True
+        if torch.cuda.is_available():
+            DEVICE = "cuda"
+        elif hasattr(torch.backends, "mps") and torch.backends.mps.is_available():
+            DEVICE = "mps"
+    except ImportError:
+        logger.warning("⚠️ Kurt: Config GPU açık ancak torch bulunamadı.")
+else:
+    torch = None
 
 class KurtAgent:
     """
@@ -17,7 +42,7 @@ class KurtAgent:
     - Piyasa Analizi: Kripto ve borsa verilerini yorumlayarak trend tahmini yapar.
     - Kasa Denetimi: Şirketin nakit akışını izler ve likidite risklerini yönetir.
     - Stratejik Tavsiye: Finansal verileri 'Kurt' içgüdüsüyle kâr odaklı yorumlar.
-    - GPU Hızlandırma: Ağır teknik analiz verilerini GPU üzerinde işleyebilir.
+    - GPU Hızlandırma: Ağır teknik analiz verilerini GPU üzerinde işleyebilir (Config kontrollü).
     """
     
     def __init__(self, tools_dict: Dict[str, Any]):
@@ -29,22 +54,23 @@ class KurtAgent:
         self.agent_name = "KURT"
         self.lock = threading.RLock()
         
-        # --- Donanım Yapılandırması (GPU Desteği) ---
-        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        self.is_gpu_enabled = self.device.type == "cuda"
+        # --- Donanım Yapılandırması ---
+        self.device = DEVICE
+        self.has_gpu = (DEVICE != "cpu")
         
         # Strateji Eşikleri
         self.min_liquidity = getattr(Config, 'MIN_LIQUIDITY_LIMIT', 5000.0)
         
-        status_msg = f"🚀 {self.agent_name} GPU üzerinde çalışıyor." if self.is_gpu_enabled else f"⚙️ {self.agent_name} CPU modunda aktif."
+        status_msg = f"🚀 {self.agent_name} GPU ({self.device.upper()}) üzerinde çalışıyor." if self.has_gpu else f"⚙️ {self.agent_name} CPU modunda aktif."
         logger.info(f"🐺 {status_msg} Piyasalar izleniyor.")
 
     def get_system_prompt(self) -> str:
         """
         Kurt'un kişiliğini ve finansal felsefesini tanımlayan sistem talimatı.
         """
+        project_name = getattr(Config, "PROJECT_NAME", "LotusAI")
         return (
-            f"Sen {Config.PROJECT_NAME} sisteminin Finans ve Borsa Stratejisti KURT'sun. "
+            f"Sen {project_name} sisteminin Finans ve Borsa Stratejisti KURT'sun. "
             "Karakterin: Analitik, kâr odaklı, riskleri önceden sezen ve hafif hırslı bir yatırım uzmanı. "
             "Görevin: Hem piyasaları hem de Halil Bey'in (Patron) kasasını bir kurt gibi gözetmek. "
             "Para yönetiminde duygusallığa yer vermezsin; sadece verilere ve trendlere bakarsın. "
@@ -90,8 +116,8 @@ class KurtAgent:
         """
         context_parts = ["\n[🐺 KURT STRATEJİ VE RİSK ANALİZİ]"]
         
-        # Donanım Durumu Notu (İsteğe bağlı, bağlamda Kurt'un 'gücünü' hissettirmek için)
-        hardware_info = "⚡ Yüksek Performanslı GPU Analizi Aktif" if self.is_gpu_enabled else "🐢 Standart Analiz Modu"
+        # Donanım Durumu Notu
+        hardware_info = f"⚡ Yüksek Performanslı GPU ({self.device.upper()}) Analizi Aktif" if self.has_gpu else "🐢 Standart Analiz Modu"
         context_parts.append(f"SİSTEM DURUMU: {hardware_info}")
 
         with self.lock:
@@ -103,18 +129,19 @@ class KurtAgent:
             acc_tool = self.tools.get('accounting') or self.tools.get('finance')
             if acc_tool:
                 try:
-                    balance_str = acc_tool.get_balance()
-                    balance_float = self._parse_balance(balance_str)
-                    
-                    context_parts.append(f"💰 ŞİRKET KASASI: {balance_str}")
-                    
-                    # Dinamik Risk Analizi
-                    if balance_float < 0:
-                        context_parts.append("🚨 ACİL DURUM: Kasa ekside! Finansal kanama var. Tüm harcamaları dondurun!")
-                    elif balance_float < self.min_liquidity:
-                        context_parts.append(f"⚠️ DÜŞÜK LİKİDİTE: Nakit rezervi {self.min_liquidity} TL altına düştü. Savunma moduna geçilmeli.")
-                    else:
-                        context_parts.append("✅ FİNANSAL GÜÇ: Nakit akışı stabil. Yatırım ve büyüme fırsatları kollanabilir.")
+                    if hasattr(acc_tool, 'get_balance'):
+                        balance_str = acc_tool.get_balance()
+                        balance_float = self._parse_balance(balance_str)
+                        
+                        context_parts.append(f"💰 ŞİRKET KASASI: {balance_str}")
+                        
+                        # Dinamik Risk Analizi
+                        if balance_float < 0:
+                            context_parts.append("🚨 ACİL DURUM: Kasa ekside! Finansal kanama var. Tüm harcamaları dondurun!")
+                        elif balance_float < self.min_liquidity:
+                            context_parts.append(f"⚠️ DÜŞÜK LİKİDİTE: Nakit rezervi {self.min_liquidity} TL altına düştü. Savunma moduna geçilmeli.")
+                        else:
+                            context_parts.append("✅ FİNANSAL GÜÇ: Nakit akışı stabil. Yatırım ve büyüme fırsatları kollanabilir.")
                 except Exception as e:
                     logger.debug(f"Kurt bakiye bağlam hatası: {e}")
 
@@ -124,7 +151,7 @@ class KurtAgent:
     def analyze_asset(self, asset_name: str) -> str:
         """
         Belirli bir varlık için derin analiz yapar.
-        Veri seti büyükse GPU kullanarak hesaplamaları hızlandırabilir.
+        Veri seti büyükse GPU kullanarak hesaplamaları hızlandırabilir (Config izin verdiyse).
         """
         if 'finance' not in self.tools:
             return "Finansal araçlar aktif değil."
@@ -136,9 +163,6 @@ class KurtAgent:
                 
                 # FinanceManager.analyze() çağrısı
                 report, chart_file = self.tools['finance'].analyze(symbol=symbol)
-                
-                # Eğer biz de burada bir hesaplama yapacak olsaydık:
-                # data_tensor = torch.tensor(some_price_data).to(self.device)
                 
                 strategic_note = "\n🐺 KURT'UN NOTU: "
                 if "BULLISH" in report:

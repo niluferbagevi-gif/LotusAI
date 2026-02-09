@@ -117,3 +117,46 @@
 2026-02-09 02:57:54,956 - [INFO] - TTS.utils.manage - (manage.py:418) - tts_models/multilingual/multi-dataset/xtts_v2 is already downloaded.
 2026-02-09 02:57:55,868 - [INFO] - TTS.tts.models - (__init__.py:9) - Using model: xtts
 2026-02-09 02:58:05,421 - [INFO] - LotusSystem - (lotus_system.py:277) - 🔊 XTTS Kullanıma Hazır.
+2026-02-09 03:28:46,828 - [INFO] - LotusAI.Config - (config.py:74) - 🚀 Donanım Hızlandırma Aktif: NVIDIA GeForce RTX 3070 Ti Laptop GPU (1 GPU tespit edildi)
+2026-02-09 03:28:46,828 - [INFO] - LotusAI.Config - (config.py:143) - ℹ️ Çoklu Ajan Modu: Genel işlemler için ATLAS anahtarı kullanılacak.
+2026-02-09 03:28:46,828 - [INFO] - LotusAI.Config - (config.py:221) - ✅ LotusAI v2.5.2 yapılandırması başarıyla tamamlandı.
+2026-02-09 03:28:50,549 - [INFO] - LotusAI.Security - (security.py:33) - 🚀 Yüz Tanıma: GPU (CUDA) Modu Aktif.
+2026-02-09 03:28:51,738 - [INFO] - LotusAI.Finance - (finance.py:54) - 🚀 Finans Modülü GPU Aktif: NVIDIA GeForce RTX 3070 Ti Laptop GPU
+2026-02-09 03:28:51,741 - [INFO] - LotusAI.Operations - (operations.py:35) - 🚀 OperationsManager GPU Aktif: NVIDIA GeForce RTX 3070 Ti Laptop GPU
+2026-02-09 03:28:53,491 - [INFO] - LotusAI.Accounting - (accounting.py:30) - 🚀 AccountingManager: GPU (cuDF) hızlandırma aktif.
+2026-02-09 03:28:53,493 - [INFO] - LotusAI.Messaging - (messaging.py:40) - 🚀 MessagingManager GPU Aktif (CUDA)
+2026-02-09 03:28:55,513 - [INFO] - LotusAI.NLP - (nlp.py:41) - 🚀 NLP Modülü GPU Aktif: NVIDIA GeForce RTX 3070 Ti Laptop GPU
+2026-02-09 03:28:56,060 - [INFO] - LotusAI.Engine - (engine.py:50) - 🚀 Engine GPU Aktif: NVIDIA GeForce RTX 3070 Ti Laptop GPU
+2026-02-09 03:28:56,389 - [INFO] - LotusAI.Media - (media.py:83) - 🚀 MediaManager GPU Aktif: NVIDIA GeForce RTX 3070 Ti Laptop GPU
+2026-02-09 03:28:56,390 - [WARNING] - LotusAI.Messaging - (messaging.py:86) - ⚠️ MessagingManager: SİMÜLASYON MODU AKTİF (Kimlik bilgileri eksik).
+2026-02-09 03:29:00,219 - [INFO] - LotusSystem - (lotus_system.py:275) - 🔊 XTTS (GPU) Modeli Yükleniyor...
+2026-02-09 03:29:00,225 - [INFO] - TTS.utils.manage - (manage.py:418) - tts_models/multilingual/multi-dataset/xtts_v2 is already downloaded.
+2026-02-09 03:29:01,150 - [INFO] - TTS.tts.models - (__init__.py:9) - Using model: xtts
+2026-02-09 03:29:10,410 - [INFO] - LotusSystem - (lotus_system.py:277) - 🔊 XTTS Kullanıma Hazır.
+2026-02-09 03:29:14,162 - [ERROR] - LotusAI.Config - (config.py:203) - ❌ Geçersiz sağlayıcı modu: local
+2026-02-09 03:31:48,774 - [INFO] - LotusAI.Config - (main.py:74) - 🚀 Donanım Hızlandırma Aktif: NVIDIA GeForce RTX 3070 Ti Laptop GPU (1 GPU tespit edildi)
+2026-02-09 03:31:48,774 - [INFO] - LotusAI.Config - (main.py:143) - ℹ️ Çoklu Ajan Modu: Genel işlemler için ATLAS anahtarı kullanılacak.
+2026-02-09 03:31:48,775 - [INFO] - LotusAI.Config - (main.py:233) - ✅ LotusAI v2.5.3 yapılandırması başarıyla tamamlandı.
+2026-02-09 03:32:05,383 - [INFO] - LotusAI.Config - (main.py:74) - 🚀 Donanım Hızlandırma Aktif: NVIDIA GeForce RTX 3070 Ti Laptop GPU (1 GPU tespit edildi)
+2026-02-09 03:32:05,383 - [INFO] - LotusAI.Config - (main.py:143) - ℹ️ Çoklu Ajan Modu: Genel işlemler için ATLAS anahtarı kullanılacak.
+2026-02-09 03:32:05,383 - [INFO] - LotusAI.Config - (main.py:233) - ✅ LotusAI v2.5.3 yapılandırması başarıyla tamamlandı.
+2026-02-09 03:34:17,341 - [INFO] - LotusAI.Config - (main.py:74) - 🚀 Donanım Hızlandırma Aktif: NVIDIA GeForce RTX 3070 Ti Laptop GPU (1 GPU tespit edildi)
+2026-02-09 03:34:17,342 - [INFO] - LotusAI.Config - (main.py:143) - ℹ️ Çoklu Ajan Modu: Genel işlemler için ATLAS anahtarı kullanılacak.
+2026-02-09 03:34:17,342 - [INFO] - LotusAI.Config - (main.py:233) - ✅ LotusAI v2.5.3 yapılandırması başarıyla tamamlandı.
+2026-02-09 03:36:48,896 - [INFO] - LotusAI.Config - (config.py:74) - 🚀 Donanım Hızlandırma Aktif: NVIDIA GeForce RTX 3070 Ti Laptop GPU (1 GPU tespit edildi)
+2026-02-09 03:36:48,896 - [INFO] - LotusAI.Config - (config.py:143) - ℹ️ Çoklu Ajan Modu: Genel işlemler için ATLAS anahtarı kullanılacak.
+2026-02-09 03:36:48,896 - [INFO] - LotusAI.Config - (config.py:233) - ✅ LotusAI v2.5.3 yapılandırması başarıyla tamamlandı.
+2026-02-09 03:36:52,047 - [INFO] - LotusAI.Security - (security.py:33) - 🚀 Yüz Tanıma: GPU (CUDA) Modu Aktif.
+2026-02-09 03:36:53,286 - [INFO] - LotusAI.Finance - (finance.py:54) - 🚀 Finans Modülü GPU Aktif: NVIDIA GeForce RTX 3070 Ti Laptop GPU
+2026-02-09 03:36:53,287 - [INFO] - LotusAI.Operations - (operations.py:35) - 🚀 OperationsManager GPU Aktif: NVIDIA GeForce RTX 3070 Ti Laptop GPU
+2026-02-09 03:36:55,074 - [INFO] - LotusAI.Accounting - (accounting.py:30) - 🚀 AccountingManager: GPU (cuDF) hızlandırma aktif.
+2026-02-09 03:36:55,075 - [INFO] - LotusAI.Messaging - (messaging.py:40) - 🚀 MessagingManager GPU Aktif (CUDA)
+2026-02-09 03:36:57,200 - [INFO] - LotusAI.NLP - (nlp.py:41) - 🚀 NLP Modülü GPU Aktif: NVIDIA GeForce RTX 3070 Ti Laptop GPU
+2026-02-09 03:36:57,747 - [INFO] - LotusAI.Engine - (engine.py:50) - 🚀 Engine GPU Aktif: NVIDIA GeForce RTX 3070 Ti Laptop GPU
+2026-02-09 03:36:58,074 - [INFO] - LotusAI.Media - (media.py:83) - 🚀 MediaManager GPU Aktif: NVIDIA GeForce RTX 3070 Ti Laptop GPU
+2026-02-09 03:36:58,074 - [WARNING] - LotusAI.Messaging - (messaging.py:86) - ⚠️ MessagingManager: SİMÜLASYON MODU AKTİF (Kimlik bilgileri eksik).
+2026-02-09 03:37:01,625 - [INFO] - LotusSystem - (lotus_system.py:275) - 🔊 XTTS (GPU) Modeli Yükleniyor...
+2026-02-09 03:37:01,629 - [INFO] - TTS.utils.manage - (manage.py:418) - tts_models/multilingual/multi-dataset/xtts_v2 is already downloaded.
+2026-02-09 03:37:02,492 - [INFO] - TTS.tts.models - (__init__.py:9) - Using model: xtts
+2026-02-09 03:37:11,964 - [INFO] - LotusSystem - (lotus_system.py:277) - 🔊 XTTS Kullanıma Hazır.
+2026-02-09 03:37:14,377 - [INFO] - LotusAI.Config - (config.py:213) - ✅ AI Sağlayıcı Modu Ayarlandı: OLLAMA

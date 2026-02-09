@@ -10,17 +10,19 @@ from typing import Tuple, List, Optional, Dict, Any
 # Gereksiz uyarıları gizle
 warnings.filterwarnings("ignore")
 
-# --- LOGGING ---
-logger = logging.getLogger("LotusAI.Finance")
-
-# Config dosyasını içe aktar
+# --- YAPILANDIRMA VE FALLBACK ---
 try:
     from config import Config
 except ImportError:
     # Bağımsız çalışma durumu için sahte config
     class Config:
+        WORK_DIR = os.getcwd()
         STATIC_DIR = Path("static")
         DEBUG_MODE = True
+        USE_GPU = False
+
+# --- LOGGING ---
+logger = logging.getLogger("LotusAI.Finance")
 
 # --- KRİTİK KÜTÜPHANELER ---
 try:
@@ -35,28 +37,31 @@ except ImportError as e:
     FINANCE_LIBS = False
     logger.warning(f"⚠️ Finans kütüphaneleri eksik: {e}. (pip install ccxt pandas ta mplfinance numpy)")
 
-# GPU Desteği için PyTorch Kontrolü
+# GPU Desteği için PyTorch ve Config Kontrolü
 HAS_GPU = False
 DEVICE = "cpu"
-try:
-    import torch
-    # CUDA kontrolünü güvenli blok içine alıyoruz, sürücü hatası tüm sistemi çökertmesin.
-    if torch.cuda.is_available():
-        HAS_GPU = True
-        DEVICE = "cuda"
-        try:
-            gpu_name = torch.cuda.get_device_name(0)
-            logger.info(f"🚀 GPU Desteği Aktif: {gpu_name}")
-        except:
-            logger.info(f"🚀 GPU Desteği Aktif (Model adı alınamadı)")
-    else:
-        logger.info("ℹ️ GPU bulunamadı, analizler CPU üzerinden devam edecek.")
-except ImportError:
-    HAS_GPU = False
-    logger.info("ℹ️ PyTorch yüklü değil, GPU hızlandırma devre dışı.")
-except Exception as e:
-    HAS_GPU = False
-    logger.warning(f"⚠️ GPU başlatma hatası (Sürücü problemi olabilir): {e}. CPU kullanılıyor.")
+USE_GPU_CONFIG = getattr(Config, "USE_GPU", False)
+
+if USE_GPU_CONFIG:
+    try:
+        import torch
+        # CUDA kontrolünü güvenli blok içine alıyoruz
+        if torch.cuda.is_available():
+            HAS_GPU = True
+            DEVICE = "cuda"
+            try:
+                gpu_name = torch.cuda.get_device_name(0)
+                logger.info(f"🚀 Finans Modülü GPU Aktif: {gpu_name}")
+            except:
+                logger.info(f"🚀 Finans Modülü GPU Aktif (Model adı alınamadı)")
+        else:
+            logger.info("ℹ️ Config GPU açık dedi ancak Torch CUDA bulamadı. CPU kullanılacak.")
+    except ImportError:
+        logger.info("ℹ️ PyTorch yüklü değil, GPU hızlandırma devre dışı.")
+    except Exception as e:
+        logger.warning(f"⚠️ GPU başlatma hatası: {e}. CPU kullanılıyor.")
+else:
+    logger.info("ℹ️ Finans analizleri CPU modunda (Config ayarı).")
 
 class FinanceManager:
     """
@@ -141,7 +146,7 @@ class FinanceManager:
 
     def _apply_gpu_calculations(self, df: pd.DataFrame) -> pd.DataFrame:
         """
-        Kritik indikatörleri GPU (torch) kullanarak hesaplar.
+        Kritik indikatörleri GPU (torch) veya CPU kullanarak hesaplar.
         """
         if not HAS_GPU:
             # GPU yoksa direkt indikatörleri hesapla (CPU kütüphanesi ile)
@@ -156,11 +161,9 @@ class FinanceManager:
         try:
             # GPU varsa veriyi taşı
             # Not: ta kütüphanesi Pandas Series bekler, Tensor değil.
-            # Bu yüzden burada Torch'u sadece ağır matematiksel işlemler için kullanmalıyız.
-            # Şimdilik hibrit yapıda, veri bütünlüğü için standart kütüphaneyi kullanıyoruz.
-            # İleride özel kernel yazılabilir.
+            # Şimdilik hibrit yapıda, veri transferi testi yapıyoruz.
             
-            # Burada sembolik bir GPU işlemi yapalım (veri transferi testi)
+            # Sembolik GPU işlemi (Veri yolu testi)
             prices = torch.tensor(df['close'].values, dtype=torch.float32).to(DEVICE)
             
             # Gerçek hesaplama (ta library CPU kullanır, ama güvenilirdir)

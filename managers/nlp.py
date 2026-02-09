@@ -1,20 +1,61 @@
 import re
 import logging
 import threading
-import torch
 from collections import Counter
 from typing import Dict, List, Any, Optional
-from transformers import pipeline, AutoModelForSequenceClassification, AutoTokenizer
+
+# --- YAPILANDIRMA VE FALLBACK ---
+try:
+    from config import Config
+except ImportError:
+    class Config:
+        USE_GPU = False
 
 # --- LOGLAMA ---
 logger = logging.getLogger("LotusAI.NLP")
+
+# --- KÜTÜPHANE VE GPU KONTROLÜ ---
+NLP_AVAILABLE = False
+HAS_GPU = False
+DEVICE_ID = -1  # -1: CPU, 0: GPU (CUDA)
+DEVICE_NAME = "CPU"
+
+try:
+    import torch
+    from transformers import pipeline, AutoModelForSequenceClassification, AutoTokenizer
+    NLP_AVAILABLE = True
+except ImportError as e:
+    logger.warning(f"⚠️ NLP kütüphaneleri eksik: {e}. (pip install torch transformers)")
+
+# Config üzerinden GPU kontrolü
+USE_GPU_CONFIG = getattr(Config, "USE_GPU", False)
+
+if NLP_AVAILABLE and USE_GPU_CONFIG:
+    try:
+        if torch.cuda.is_available():
+            HAS_GPU = True
+            DEVICE_ID = 0
+            DEVICE_NAME = "GPU (CUDA)"
+            try:
+                gpu_name = torch.cuda.get_device_name(0)
+                logger.info(f"🚀 NLP Modülü GPU Aktif: {gpu_name}")
+            except:
+                logger.info("🚀 NLP Modülü GPU Aktif")
+        else:
+            logger.info("ℹ️ NLP: Config GPU açık ancak donanım bulunamadı. CPU kullanılacak.")
+    except Exception as e:
+        logger.warning(f"⚠️ NLP GPU kontrol hatası: {e}")
+else:
+    if NLP_AVAILABLE:
+        logger.info("ℹ️ NLP işlemleri CPU modunda (Config ayarı).")
+
 
 class NLPManager:
     """
     LotusAI Doğal Dil İşleme (NLP) ve Duygu Analizi Yöneticisi.
     
     Yetenekler:
-    - GPU Hızlandırma: Transformer modelleri CUDA üzerinden çalıştırılır.
+    - GPU Hızlandırma: Transformer modelleri CUDA üzerinden çalıştırılır (Config kontrollü).
     - Derin Öğrenme Tabanlı Duygu Analizi: Türkçe BERT modeli ile yüksek doğruluk.
     - Akıllı Temizleme: Metni gürültüden ve dolgu kelimelerinden arındırır.
     - Veri Ayıklama: Rezervasyon ve iletişim bilgilerini Regex ile çeker.
@@ -24,24 +65,23 @@ class NLPManager:
         # Çoklu thread erişimi için kilit
         self.lock = threading.RLock()
         
-        # Donanım Kontrolü (GPU varsa CUDA, yoksa CPU)
-        self.device = 0 if torch.cuda.is_available() else -1
-        self.device_name = "GPU (CUDA)" if self.device == 0 else "CPU"
+        self.sentiment_pipeline = None
         
-        # Model ve Tokenizer Yükleme (Türkçe Duygu Analizi için BERT tabanlı model)
-        # Bu model manuel listeden çok daha isabetli sonuçlar verir.
-        try:
-            model_name = "savasy/bert-base-turkish-sentiment-cased"
-            self.sentiment_pipeline = pipeline(
-                "sentiment-analysis", 
-                model=model_name, 
-                tokenizer=model_name, 
-                device=self.device
-            )
-            logger.info(f"✅ NLP Modeli {self.device_name} üzerinde yüklendi.")
-        except Exception as e:
-            logger.error(f"❌ Model yükleme hatası: {e}")
-            self.sentiment_pipeline = None
+        if NLP_AVAILABLE:
+            # Model ve Tokenizer Yükleme (Türkçe Duygu Analizi için BERT tabanlı model)
+            try:
+                model_name = "savasy/bert-base-turkish-sentiment-cased"
+                self.sentiment_pipeline = pipeline(
+                    "sentiment-analysis", 
+                    model=model_name, 
+                    tokenizer=model_name, 
+                    device=DEVICE_ID
+                )
+                logger.info(f"✅ NLP Modeli {DEVICE_NAME} üzerinde yüklendi.")
+            except Exception as e:
+                logger.error(f"❌ Model yükleme hatası: {e}")
+        else:
+            logger.warning("⚠️ NLP modülleri eksik olduğu için duygu analizi pasif.")
 
         # Stop Words (Analiz dışı bırakılacak etkisiz kelimeler)
         self.stop_words = {
@@ -146,7 +186,7 @@ class NLPManager:
                 
                 return {
                     "total_count": total,
-                    "device_used": self.device_name,
+                    "device_used": DEVICE_NAME,
                     "sentiment_distribution": {
                         "positive": results["positive"],
                         "negative": results["negative"],
@@ -177,7 +217,7 @@ class NLPManager:
         return "[DAVRANIŞ: Net, kısa ve ciddi bir profesyonellikle yanıt ver.]"
 
     def extract_reservation_details(self, text: str) -> Dict[str, Any]:
-        """Metinden rezervasyon verilerini (Kişi, Saat, Telefon) ayıklar (CPU-based Regex)."""
+        """Metinden rezervasyon verilerini (Kişi, Saat, Telefon) ayıklar (Regex)."""
         text = self.turkish_lower(text)
         
         with self.lock:

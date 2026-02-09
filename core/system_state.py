@@ -5,6 +5,15 @@ import os
 from datetime import datetime
 from typing import List, Dict, Any, Optional, Callable
 
+# --- YAPILANDIRMA VE FALLBACK ---
+try:
+    from config import Config
+except ImportError:
+    # Bağımsız çalışma durumu için Fallback
+    class Config:
+        WORK_DIR = os.getcwd()
+        USE_GPU = False
+
 # --- LOGLAMA ---
 logger = logging.getLogger("LotusAI.SystemState")
 
@@ -14,7 +23,7 @@ class SystemState:
     
     Bu sınıf şunları yönetir:
     1. Sistemin Anlık Modu ve Mod Geçişleri.
-    2. Donanım (GPU/CPU) Durum Takibi ve Kaynak Paylaşımı.
+    2. Donanım (GPU/CPU) Durum Takibi ve Kaynak Paylaşımı (Config tabanlı).
     3. Global Sistem Değişkenleri (Aktif Ajan, Aktif Kullanıcı).
     4. Kaynak Kullanım Takibi (Resource Locking) - GPU Çakışma Önleyici.
     5. Thread-Safe veri erişimi ve Durum Değişikliği Bildirimleri.
@@ -61,7 +70,8 @@ class SystemState:
         self._active_user = {"name": "Bilinmiyor", "level": 0}
         
         # --- GPU ve Donanım Bilgileri ---
-        self._gpu_available = self._check_gpu_support()
+        # Doğrudan Config'den gelen kararı kullanıyoruz (Tek Gerçek Kaynak Prensibi)
+        self._gpu_available = getattr(Config, "USE_GPU", False)
         self._gpu_load = 0.0  # % cinsinden tahmini yük
         self._vram_usage = 0.0 # MB cinsinden tahmini kullanım
         
@@ -79,13 +89,11 @@ class SystemState:
         logger.info(f"✅ Sistem Durum Yöneticisi Başlatıldı. GPU Desteği: {'AKTİF' if self._gpu_available else 'PASİF'}")
 
     def _check_gpu_support(self) -> bool:
-        """Sistemde CUDA destekli bir GPU olup olmadığını kontrol eder."""
-        try:
-            import torch
-            return torch.cuda.is_available()
-        except ImportError:
-            # Torch yüklü değilse çevre değişkenlerine veya donanım komutlarına bakabiliriz
-            return False
+        """
+        Sistemde CUDA destekli bir GPU olup olmadığını kontrol eder.
+        Artık doğrudan Config'e bakıyor, tekrar torch import edip sorgulama yapmıyor.
+        """
+        return self._gpu_available
 
     # --- DURUM YÖNETİMİ ---
 
@@ -143,14 +151,16 @@ class SystemState:
                 "active_resources": list(self._resource_locks.keys()),
                 "is_heavy_load": self._current_state in [self.THINKING, self.PROCESSING]
             }
-            # Eğer torch varsa detaylı veri alalım
+            # Eğer GPU aktifse (Config onaylı), anlık VRAM bilgisini çekmeyi dene
             if self._gpu_available:
                 try:
                     import torch
-                    status["gpu_name"] = torch.cuda.get_device_name(0)
-                    status["vram_allocated"] = f"{torch.cuda.memory_allocated(0) / 1024**2:.2f} MB"
-                except:
-                    pass
+                    if torch.cuda.is_available():
+                        status["gpu_name"] = torch.cuda.get_device_name(0)
+                        status["vram_allocated"] = f"{torch.cuda.memory_allocated(0) / 1024**2:.2f} MB"
+                except Exception:
+                    # Torch hatası olursa sessizce geç, sistemi bozma
+                    status["gpu_error"] = "Veri alınamadı"
             return status
 
     def lock_resource(self, resource_name: str, agent_name: str) -> bool:

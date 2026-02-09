@@ -12,20 +12,24 @@ from pathlib import Path
 from datetime import datetime
 from typing import Optional, Dict, Any, List
 
-# Donanım hızlandırma için torch entegrasyonu
+# --- YAPILANDIRMA VE FALLBACK ---
 try:
-    import torch
-    HAS_TORCH = True
+    from config import Config
 except ImportError:
-    HAS_TORCH = False
-
-# Proje içi modüller
-from config import Config
+    class Config:
+        WORK_DIR = os.getcwd()
+        STATIC_DIR = Path("static")
+        USE_GPU = False
+        INSTAGRAM_ACCOUNT_ID = "lotusbagevi"
+        FACEBOOK_PAGE_ID = "niluferbagevi"
+        COMPETITORS = []
+        GEMINI_MODEL = "gemini-1.5-flash"
+        _MAIN_KEY = ""
 
 # --- LOGGING SETUP ---
 logger = logging.getLogger("LotusAI.Media")
 
-# --- KÜTÜPHANE YÜKLEMELERİ (Detaylı Hata Gösterimi ile) ---
+# --- KÜTÜPHANE YÜKLEMELERİ ---
 
 # 1. Google Search
 try:
@@ -43,20 +47,19 @@ except ImportError as e:
     INSTAGRAM_AVAILABLE = False
     logger.warning(f"⚠️ MediaManager: 'instaloader' yüklenemedi. Detay: {e}")
 
-# 3. Facebook Scraper (Sorunlu olan kısım)
+# 3. Facebook Scraper
 try:
     from facebook_scraper import get_posts
     FACEBOOK_AVAILABLE = True
-except Exception as e: 
+except Exception as e:
     FACEBOOK_AVAILABLE = False
-    # Hata mesajını analiz edip kullanıcıya net çözüm önerelim
     error_msg = str(e)
     if "lxml.html.clean" in error_msg:
-        logger.warning("⚠️ MediaManager: 'lxml_html_clean' eksik. Çözüm için terminalde: 'pip install lxml_html_clean' çalıştırın.")
+        logger.warning("⚠️ MediaManager: 'lxml_html_clean' eksik. (pip install lxml_html_clean)")
     else:
         logger.warning(f"⚠️ MediaManager: 'facebook-scraper' yüklenemedi. Detay: {e}")
 
-# 4. Google Trends (Pytrends)
+# 4. Google Trends
 try:
     from pytrends.request import TrendReq
     TRENDS_AVAILABLE = True
@@ -64,11 +67,37 @@ except ImportError as e:
     TRENDS_AVAILABLE = False
     logger.warning(f"⚠️ MediaManager: 'pytrends' yüklenemedi. Detay: {e}")
 
+# --- GPU / TORCH ENTEGRASYONU (CONFIG KONTROLLÜ) ---
+HAS_TORCH = False
+DEVICE = "cpu"
+USE_GPU_CONFIG = getattr(Config, "USE_GPU", False)
+
+if USE_GPU_CONFIG:
+    try:
+        import torch
+        HAS_TORCH = True
+        if torch.cuda.is_available():
+            DEVICE = "cuda"
+            try:
+                gpu_name = torch.cuda.get_device_name(0)
+                logger.info(f"🚀 MediaManager GPU Aktif: {gpu_name}")
+            except:
+                logger.info("🚀 MediaManager GPU Aktif")
+        elif hasattr(torch.backends, "mps") and torch.backends.mps.is_available():
+            DEVICE = "mps"
+            logger.info("🚀 MediaManager Apple Silicon GPU (MPS) Aktif")
+        else:
+            logger.info("ℹ️ Config GPU açık ancak uygun donanım bulunamadı. CPU kullanılacak.")
+    except ImportError:
+        logger.info("ℹ️ PyTorch yüklü değil, GPU hızlandırma devre dışı.")
+else:
+    logger.info("ℹ️ Medya işlemleri CPU modunda (Config ayarı).")
+
 
 class MediaManager:
     """
     LotusAI Medya, İçerik ve Sosyal Medya Yöneticisi.
-    v2.5 - Gelişmiş Hata Ayıklama ve GPU Desteği
+    v2.6 - Config Entegreli GPU ve Hata Yönetimi
     """
     
     def __init__(self):
@@ -78,21 +107,24 @@ class MediaManager:
         self.is_fb_active = FACEBOOK_AVAILABLE
         self.is_trends_active = TRENDS_AVAILABLE
         
-        # Donanım Yapılandırması (GPU/CPU)
-        self.device = self._detect_hardware()
+        # Donanım Yapılandırması (Global değişkenden)
+        self.device = DEVICE
         
-        # Yapılandırma verileri (Config üzerinden)
+        # Yapılandırma verileri
         self.target_insta = getattr(Config, 'INSTAGRAM_ACCOUNT_ID', "lotusbagevi")
         self.target_fb = getattr(Config, 'FACEBOOK_PAGE_ID', "niluferbagevi")
         self.competitors = getattr(Config, 'COMPETITORS', [])
         
-        # API Key Yönetimi (Config'deki düzeltmeyi kullanır)
+        # API Key Yönetimi
         self.api_key = getattr(Config, '_MAIN_KEY', "")
         
         # Dizinler
         self.static_dir = Path(getattr(Config, 'STATIC_DIR', './static'))
         self.ai_images_dir = self.static_dir / "ai_images"
-        self.ai_images_dir.mkdir(parents=True, exist_ok=True)
+        try:
+            self.ai_images_dir.mkdir(parents=True, exist_ok=True)
+        except Exception as e:
+            logger.error(f"Dizin oluşturma hatası: {e}")
 
         # Pazarlama Takvimi (Türkiye odaklı)
         self.marketing_calendar = {
@@ -115,26 +147,6 @@ class MediaManager:
         if self.is_insta_active:
             self._init_instagram()
 
-    def _detect_hardware(self) -> str:
-        """Sistemdeki GPU varlığını algılar ve en uygun cihazı seçer."""
-        if not HAS_TORCH:
-            logger.info("MediaManager: Torch bulunamadı, CPU modunda çalışıyor.")
-            return "cpu"
-        
-        try:
-            if torch.cuda.is_available():
-                gpu_name = torch.cuda.get_device_name(0)
-                logger.info(f"🚀 MediaManager: GPU Algılandı ({gpu_name}). Hızlandırma aktif.")
-                return "cuda"
-            elif hasattr(torch.backends, "mps") and torch.backends.mps.is_available():
-                logger.info("🚀 MediaManager: Apple Silicon GPU (MPS) Algılandı.")
-                return "mps"
-        except Exception as e:
-            logger.warning(f"Donanım tarama hatası: {e}")
-        
-        logger.info("MediaManager: GPU bulunamadı, standart CPU modunda.")
-        return "cpu"
-
     def _setup_environment(self):
         """Dil ve yerel ayarları yapılandırır."""
         try:
@@ -146,7 +158,7 @@ class MediaManager:
         try:
             wikipedia.set_lang("tr")
         except:
-            logger.warning("MediaManager: Wikipedia dili ayarlanamadı.")
+            pass
 
     def _init_instagram(self):
         """Instagram istemcisini başlatır."""
@@ -176,7 +188,6 @@ class MediaManager:
                 "systemInstruction": {"parts": [{"text": system_prompt}]}
             }
             
-            # API URL'sini dinamik tutuyoruz, Config'den model bilgisi çekilebilir
             model = getattr(Config, 'GEMINI_MODEL', 'gemini-1.5-flash')
             url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={self.api_key}"
             
@@ -260,7 +271,6 @@ class MediaManager:
             top_5 = trending.head(5)[0].tolist()
             return "🔥 " + ", ".join(top_5)
         except Exception as e:
-            logger.debug(f"Trends hatası: {e}")
             return "Gündem verilerine şu an erişilemiyor."
 
     def generate_concept_image(self, prompt: str) -> str:
@@ -289,7 +299,6 @@ class MediaManager:
             profile = instaloader.Profile.from_username(self.L.context, self.target_insta)
             return f"📸 @{profile.username} | 👥 Takipçi: {profile.followers:,} | 📝 Gönderi: {profile.mediacount}"
         except Exception as e:
-            logger.warning(f"Instagram veri hatası: {e}")
             return "Instagram verileri alınamadı (Gizlilik veya Limit)."
 
     def get_facebook_stats(self) -> str:
@@ -302,7 +311,6 @@ class MediaManager:
                 return f"📝 En Son: {text}..."
             return "Paylaşım bulunamadı."
         except Exception as e:
-            logger.warning(f"Facebook veri hatası: {e}")
             return f"Facebook verilerine ulaşılamadı. ({str(e)[:50]}...)"
 
     def check_competitors(self) -> str:
@@ -355,6 +363,8 @@ class MediaManager:
         """Sistem donanım bilgilerini raporlar."""
         info = {"device": self.device}
         if HAS_TORCH and torch.cuda.is_available():
-            info["gpu_name"] = torch.cuda.get_device_name(0)
-            info["memory_allocated"] = f"{torch.cuda.memory_allocated(0) / 1024**2:.2f} MB"
+            try:
+                info["gpu_name"] = torch.cuda.get_device_name(0)
+                info["memory_allocated"] = f"{torch.cuda.memory_allocated(0) / 1024**2:.2f} MB"
+            except: pass
         return info

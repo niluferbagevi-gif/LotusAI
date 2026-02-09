@@ -1,11 +1,35 @@
 import logging
 import threading
 from typing import Dict, Any, Optional
-import torch  # GPU işlemleri için gerekli
-from config import Config
+
+# --- YAPILANDIRMA VE FALLBACK ---
+try:
+    from config import Config
+except ImportError:
+    class Config:
+        PROJECT_NAME = "LotusAI"
+        USE_GPU = False
 
 # --- LOGLAMA ---
 logger = logging.getLogger("LotusAI.Poyraz")
+
+# --- GPU KONTROLÜ (Config Entegreli) ---
+HAS_TORCH = False
+DEVICE_TYPE = "cpu"
+USE_GPU_CONFIG = getattr(Config, "USE_GPU", False)
+
+if USE_GPU_CONFIG:
+    try:
+        import torch
+        HAS_TORCH = True
+        if torch.cuda.is_available():
+            DEVICE_TYPE = "cuda"
+        elif hasattr(torch.backends, "mps") and torch.backends.mps.is_available():
+            DEVICE_TYPE = "mps"
+    except ImportError:
+        logger.warning("⚠️ Poyraz: Config GPU açık ancak torch bulunamadı.")
+else:
+    torch = None
 
 class PoyrazAgent:
     """
@@ -16,27 +40,35 @@ class PoyrazAgent:
     - Medya Analizi: Sosyal medya trendlerini ve rakip hareketlerini izler.
     - Araştırmacı Gazetecilik: 'Universal Search' ile derinlemesine bilgi toplar.
     - İçerik Stratejisti: Güncel olaylardan marka için içerik fikirleri üretir.
-    - GPU Analizi: Toplanan verileri GPU üzerinde duygu ve trend skorlamasına tabi tutar.
+    - GPU Analizi: Toplanan verileri GPU üzerinde duygu ve trend skorlamasına tabi tutar (Config kontrollü).
     - Karakter: Enerjik, hızlı, meraklı ve her zaman güncel.
     """
     
-    def __init__(self, tools_dict: Dict[str, Any]):
+    def __init__(self, nlp_manager: Any, tools_dict: Dict[str, Any]):
         """
         Poyraz ajanını başlatır ve donanım hızlandırmayı yapılandırır.
+        :param nlp_manager: NLP yöneticisi (engine.py ile uyumluluk için ilk sırada).
         :param tools_dict: Engine tarafından sağlanan araç havuzu (media, messaging vb.).
         """
+        self.nlp = nlp_manager
         self.tools = tools_dict
         self.agent_name = "POYRAZ"
         self.lock = threading.RLock()
         
         # --- GPU YAPILANDIRMASI ---
-        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        self.gpu_active = torch.cuda.is_available()
+        self.device_type = DEVICE_TYPE
+        self.gpu_active = (DEVICE_TYPE != "cpu")
         
-        if self.gpu_active:
-            logger.info(f"🌬️ {self.agent_name}: GPU (CUDA) hızlandırma aktif. Cihaz: {torch.cuda.get_device_name(0)}")
+        if self.gpu_active and HAS_TORCH and DEVICE_TYPE == "cuda":
+            try:
+                gpu_name = torch.cuda.get_device_name(0)
+                logger.info(f"🌬️ {self.agent_name}: GPU (CUDA) hızlandırma aktif. Cihaz: {gpu_name}")
+            except:
+                logger.info(f"🌬️ {self.agent_name}: GPU hızlandırma aktif.")
+        elif self.gpu_active:
+             logger.info(f"🌬️ {self.agent_name}: GPU ({DEVICE_TYPE}) hızlandırma aktif.")
         else:
-            logger.warning(f"🌬️ {self.agent_name}: GPU bulunamadı, CPU üzerinden çalışmaya devam ediyor.")
+            logger.info(f"🌬️ {self.agent_name}: CPU üzerinden çalışıyor.")
 
         logger.info(f"🌬️ {self.agent_name} Gündem ve Medya Takip modülü aktif.")
 
@@ -44,8 +76,9 @@ class PoyrazAgent:
         """
         Poyraz'ın kişiliğini ve çalışma tarzını tanımlayan sistem talimatı.
         """
+        project_name = getattr(Config, "PROJECT_NAME", "LotusAI")
         return (
-            f"Sen {Config.PROJECT_NAME} sisteminin enerjik, meraklı ve her şeyden haberdar olan Medya Uzmanı POYRAZ'sın. "
+            f"Sen {project_name} sisteminin enerjik, meraklı ve her şeyden haberdar olan Medya Uzmanı POYRAZ'sın. "
             "Karakterin: Bir rüzgar gibi hızlı, bilgiyi anında yakalayan, sosyal medya diline hakim ve araştırmacı. "
             "Görevin: Türkiye ve Bursa gündemini, sosyal medya trendlerini ve önemli haberleri takip ederek Halil Bey'i (Patron) bilgilendirmek. "
             "Sadece bilgi verme; bu bilgilerin marka (Lotus Bağevi) için nasıl bir fırsata dönüşebileceğini de söyle. "
@@ -92,18 +125,19 @@ class PoyrazAgent:
         Metin içeriğini GPU kullanarak analiz eder (Duygu analizi vb.).
         Bu özellik yerel bir model yüklendiğinde tam performansla çalışır.
         """
-        if not self.gpu_active:
+        if not self.gpu_active or not HAS_TORCH:
             return "GPU bulunmadığı için standart analiz yapıldı: Nötr."
 
         try:
             # Burada normalde transformers kütüphanesi ile GPU'ya tensor gönderilir.
             # Simülasyon olarak veriyi GPU memory'e taşıyıp işlem yapıyoruz:
-            dummy_tensor = torch.tensor([ord(c) for c in text[:100]], dtype=torch.float32).to(self.device)
+            dummy_data = [ord(c) for c in text[:100]] if text else [0]
+            dummy_tensor = torch.tensor(dummy_data, dtype=torch.float32).to(DEVICE_TYPE)
+            
             # GPU üzerinde işlem yapıldığını doğrula
             processing_unit = "CUDA Core" if dummy_tensor.is_cuda else "CPU"
+            if DEVICE_TYPE == "mps": processing_unit = "MPS Core"
             
-            logger.debug(f"Poyraz metni {processing_unit} üzerinde analiz etti.")
-            # Gelecekte buraya model.predict(text) eklenecek.
             return f"Analiz Tamamlandı ({processing_unit}): Veri akışı pozitif ve marka için uygun."
         except Exception as e:
             logger.error(f"GPU Analiz hatası: {e}")
@@ -123,7 +157,7 @@ class PoyrazAgent:
                     logger.info(f"Poyraz araştırıyor: {query}")
                     result = media_tool.universal_search(query)
                     
-                    # Arama sonucunu GPU ile süzgeçten geçir (Örn: Önem derecesi)
+                    # Arama sonucunu GPU ile süzgeçten geçir
                     sentiment = self.analyze_sentiment_gpu(result)
                     return f"{result}\n\n[POYRAZ'IN GPU ANALİZİ]: {sentiment}"
                 
@@ -159,7 +193,13 @@ class PoyrazAgent:
     def get_status(self) -> str:
         """Poyraz'ın mevcut sağlık, donanım ve bağlantı durumunu döner."""
         has_media = 'media' in self.tools
-        gpu_status = f"✅ GPU Hızlandırma ({torch.cuda.get_device_name(0)})" if self.gpu_active else "⚠️ CPU Modu"
+        
+        gpu_name = "Bilinmiyor"
+        if self.gpu_active and HAS_TORCH and DEVICE_TYPE == "cuda":
+            try: gpu_name = torch.cuda.get_device_name(0)
+            except: pass
+        
+        gpu_status = f"✅ GPU Hızlandırma ({gpu_name})" if self.gpu_active else "⚠️ CPU Modu"
         
         status = "🟢 Aktif ve Gündemi İzliyor" if has_media else "🔴 Kısıtlı (Medya Modülü Yok)"
         return f"Poyraz Durumu: {status} | Donanım: {gpu_status}"

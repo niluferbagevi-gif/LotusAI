@@ -3,11 +3,25 @@ import shutil
 import threading
 import logging
 import re
-import torch # GPU kontrolü ve tensör işlemleri için eklendi
+import os
 from pathlib import Path
 from datetime import datetime
 from typing import Dict, Any, Optional, List
-from config import Config
+
+# --- YAPILANDIRMA VE FALLBACK ---
+try:
+    from config import Config
+except ImportError:
+    class Config:
+        WORK_DIR = os.getcwd()
+        USE_GPU = False
+
+# Torch Kontrolü
+try:
+    import torch
+    TORCH_AVAILABLE = True
+except ImportError:
+    TORCH_AVAILABLE = False
 
 # --- LOGGING ---
 logger = logging.getLogger("LotusAI.UserManager")
@@ -18,7 +32,7 @@ class UserManager:
     
     Features:
     - RBAC (Role-Based Access Control): 6-level authorization.
-    - GPU Awareness: Detects and prepares for GPU-accelerated identity tasks.
+    - GPU Awareness: Detects and prepares for GPU-accelerated identity tasks (Config based).
     - JSON DB: Persistent storage with automated backup.
     - Thread-Safe: Multi-agent compatible locking mechanism (RLock).
     - Auto-Migration: Automatically updates user data structures.
@@ -44,7 +58,7 @@ class UserManager:
         # Ensure work directory exists
         self.work_dir.mkdir(parents=True, exist_ok=True)
         
-        # GPU Check
+        # GPU Check (Config Controlled)
         self.device = self._detect_hardware()
         
         # Load database
@@ -52,8 +66,10 @@ class UserManager:
         logger.info(f"🚀 UserManager initialized on {self.device.upper()}.")
 
     def _detect_hardware(self) -> str:
-        """Detects if a GPU is available for future AI/Identity tasks."""
-        if torch.cuda.is_available():
+        """Detects if a GPU is available for future AI/Identity tasks based on Config."""
+        use_gpu = getattr(Config, "USE_GPU", False)
+        
+        if use_gpu and TORCH_AVAILABLE and torch.cuda.is_available():
             try:
                 # Get GPU name for logging
                 gpu_name = torch.cuda.get_device_name(0)
@@ -61,6 +77,7 @@ class UserManager:
                 return "cuda"
             except Exception:
                 return "cuda"
+        
         return "cpu"
 
     def _load_db(self) -> Dict[str, Any]:
@@ -286,10 +303,14 @@ class UserManager:
                 
     def get_hardware_status(self) -> Dict[str, Any]:
         """Returns the current hardware environment of the UserManager."""
+        gpu_count = 0
+        if TORCH_AVAILABLE and torch.cuda.is_available():
+            gpu_count = torch.cuda.device_count()
+            
         return {
             "device": self.device,
-            "cuda_available": torch.cuda.is_available(),
-            "gpu_count": torch.cuda.device_count() if torch.cuda.is_available() else 0
+            "cuda_available": (self.device == "cuda"),
+            "gpu_count": gpu_count
         }
 
 

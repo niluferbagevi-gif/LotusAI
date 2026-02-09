@@ -6,7 +6,17 @@ import re
 from pathlib import Path
 from datetime import datetime
 from typing import List, Dict, Optional, Any
-from config import Config
+
+# --- YAPILANDIRMA VE FALLBACK ---
+try:
+    from config import Config
+except ImportError:
+    class Config:
+        WORK_DIR = os.getcwd()
+        USE_GPU = False
+        YEMEKSEPETI_URL = "https://partner.yemeksepeti.com"
+        GETIR_URL = "https://restoran.getir.com"
+        TRENDYOL_URL = "https://partner.trendyol.com"
 
 # --- LOGLAMA ---
 logger = logging.getLogger("LotusAI.Delivery")
@@ -27,26 +37,30 @@ except ImportError:
 class DeliveryManager:
     """
     LotusAI Paket Servis Entegrasyon Yöneticisi (GPU Hızlandırmalı Versiyon).
-    
+     
     Yetenekler:
-    - GPU Hızlandırma: Tarayıcı render işlemlerini GPU'ya aktararak CPU tasarrufu sağlar.
+    - GPU Hızlandırma: Tarayıcı render işlemlerini GPU'ya aktararak CPU tasarrufu sağlar (Config Kontrollü).
     - Çoklu Panel Yönetimi: Yemeksepeti, Getir, Trendyol takibi.
     - Akıllı Filtreleme: Yanlış alarmları eleyen gelişmiş kontrol mekanizması.
     - Otomatik Onarım: Çöken sekmeleri veya tarayıcıyı tespit edip yeniden başlatır.
     """
-    
+     
     def __init__(self):
         self.driver = None 
         self.is_selenium_active = False
         self.lock = threading.RLock()
         
         # Dizin Yapılandırması
-        self.work_dir = Path(getattr(Config, 'WORK_DIR', Path.cwd()))
+        default_work_dir = getattr(Config, "WORK_DIR", os.getcwd())
+        self.work_dir = Path(default_work_dir)
         self.user_data_dir = self.work_dir / "chrome_user_data"
         self.screenshots_dir = self.work_dir / "static" / "delivery_previews"
         
-        self.user_data_dir.mkdir(parents=True, exist_ok=True)
-        self.screenshots_dir.mkdir(parents=True, exist_ok=True)
+        try:
+            self.user_data_dir.mkdir(parents=True, exist_ok=True)
+            self.screenshots_dir.mkdir(parents=True, exist_ok=True)
+        except Exception as e:
+            logger.error(f"Dizin oluşturma hatası: {e}")
         
         self.last_alerts = {} 
         
@@ -75,7 +89,7 @@ class DeliveryManager:
         ]
 
     def start_service(self, headless: bool = False) -> bool:
-        """Selenium tarayıcısını GPU donanım hızlandırma ve anti-bot ayarlarıyla başlatır."""
+        """Selenium tarayıcısını donanım hızlandırma ve anti-bot ayarlarıyla başlatır."""
         if not SELENIUM_AVAILABLE:
             return False
 
@@ -83,23 +97,30 @@ class DeliveryManager:
             if self.is_selenium_active and self.driver:
                 return True
 
-            logger.info("🛵 Paket Servis Tarayıcısı (GPU Hızlandırmalı) başlatılıyor...")
+            use_gpu = getattr(Config, "USE_GPU", False)
+            mode_msg = "GPU Hızlandırmalı" if use_gpu else "CPU Modunda"
+            logger.info(f"🛵 Paket Servis Tarayıcısı ({mode_msg}) başlatılıyor...")
             
             try:
                 chrome_options = Options()
                 chrome_options.add_argument(f"--user-data-dir={self.user_data_dir}")
                 chrome_options.add_argument("--start-maximized")
                 
-                # --- GPU VE DONANIM HIZLANDIRMA AYARLARI ---
-                chrome_options.add_argument("--enable-gpu") # GPU kullanımını zorla
-                chrome_options.add_argument("--enable-software-rasterizer")
-                chrome_options.add_argument("--ignore-gpu-blocklist") # Desteklenmeyen GPU'larda bile dene
-                chrome_options.add_argument("--num-raster-threads=4") # Render işlemini hızlandır
+                # --- GPU VE DONANIM HIZLANDIRMA AYARLARI (Config Kontrollü) ---
+                if use_gpu:
+                    chrome_options.add_argument("--enable-gpu") # GPU kullanımını zorla
+                    chrome_options.add_argument("--enable-software-rasterizer")
+                    chrome_options.add_argument("--ignore-gpu-blocklist") # Desteklenmeyen GPU'larda bile dene
+                    chrome_options.add_argument("--num-raster-threads=4") # Render işlemini hızlandır
+                else:
+                    chrome_options.add_argument("--disable-gpu") # CPU modu için GPU'yu kapat
+                    chrome_options.add_argument("--disable-software-rasterizer")
                 
                 if headless:
                     # Yeni headless modu GPU desteğini daha iyi yönetir
                     chrome_options.add_argument("--headless=new") 
-                    chrome_options.add_argument("--disable-gpu") # Eski headless modda bazen gerekir ama 'new' ile kullanılmaz
+                    if not use_gpu:
+                        chrome_options.add_argument("--disable-gpu")
                 
                 # --- ANTİ-BOT VE PERFORMANS AYARLARI ---
                 chrome_options.add_argument("--disable-blink-features=AutomationControlled")
@@ -120,7 +141,7 @@ class DeliveryManager:
                 self.is_selenium_active = True
                 self._load_initial_panels()
                 
-                logger.info("✅ Paket Servis servisi GPU desteğiyle aktif edildi.")
+                logger.info(f"✅ Paket Servis servisi aktif edildi ({mode_msg}).")
                 return True
                 
             except Exception as e:
@@ -146,12 +167,12 @@ class DeliveryManager:
                 self.driver.execute_script(f"window.open('{data['url']}', '_blank');")
                 time.sleep(1) # Sekmeler arası yük dengelemesi
             
-            logger.info(f"🌐 {len(self.platforms)} panel sekmesi GPU üzerinde hazırlandı.")
+            logger.info(f"🌐 {len(self.platforms)} panel sekmesi hazırlandı.")
         except Exception as e:
             logger.error(f"❌ Panel yükleme hatası: {e}")
 
     def check_new_orders(self) -> List[str]:
-        """GPU üzerinden render edilen sekmeleri tarayarak sipariş kontrolü yapar."""
+        """Tarayıcı sekmelerini tarayarak sipariş kontrolü yapar."""
         alerts = []
         if not self.is_selenium_active or not self.driver: 
             return alerts
@@ -169,7 +190,7 @@ class DeliveryManager:
                 for handle in handles:
                     try:
                         self.driver.switch_to.window(handle)
-                        # GPU render'ın tamamlanması için çok kısa bir es
+                        # Render'ın tamamlanması için çok kısa bir es
                         time.sleep(0.3) 
                         
                         current_url = self.driver.current_url.lower()
@@ -184,7 +205,7 @@ class DeliveryManager:
                             
                             # Akıllı Kelime Eşleştirme
                             found_trigger = any(kw in body_text for kw in active_platform['keywords']) or \
-                                           any(kw in page_title for kw in active_platform['keywords'])
+                                            any(kw in page_title for kw in active_platform['keywords'])
                             
                             if found_trigger:
                                 # Negatif Filtreleme (Sipariş yok mesajlarını ele)
@@ -223,7 +244,7 @@ class DeliveryManager:
         return None
 
     def _recover_missing_tabs(self):
-        """Kapanan sekmeleri tespit eder ve GPU desteğiyle yeniden açar."""
+        """Kapanan sekmeleri tespit eder ve yeniden açar."""
         with self.lock:
             try:
                 handles = self.driver.window_handles
@@ -243,7 +264,7 @@ class DeliveryManager:
                 logger.error(f"Tab kurtarma sırasında hata: {e}")
 
     def take_panel_screenshot(self, platform_name: str) -> Optional[str]:
-        """GPU tarafından render edilen güncel görüntüyü diske kaydeder."""
+        """Tarayıcıdan güncel görüntüyü diske kaydeder."""
         if not self.driver: return None
         try:
             timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
@@ -256,7 +277,7 @@ class DeliveryManager:
             return None
 
     def stop_service(self):
-        """Tarayıcıyı ve tüm GPU kaynaklarını güvenli bir şekilde serbest bırakır."""
+        """Tarayıcıyı ve tüm kaynaklarını güvenli bir şekilde serbest bırakır."""
         with self.lock:
             if self.driver:
                 try:
@@ -273,7 +294,8 @@ class DeliveryManager:
             return "Paket Servis Takibi: 🔴 DEVRE DIŞI"
         try:
             tab_count = len(self.driver.window_handles)
-            gpu_status = "GPU Aktif" if self.is_selenium_active else "CPU Modu"
+            use_gpu = getattr(Config, "USE_GPU", False)
+            gpu_status = "GPU Aktif" if use_gpu else "CPU Modu"
             return f"Paket Servis Takibi: 🟢 AKTİF ({tab_count} Panel - {gpu_status})"
         except:
             return "Paket Servis Takibi: ⚠️ BAĞLANTI SORUNU"

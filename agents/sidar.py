@@ -7,16 +7,36 @@ import threading
 import sys
 from pathlib import Path
 from typing import Dict, Any, List, Optional, Tuple
-from config import Config
 
-# GPU Takibi için opsiyonel kütüphane kontrolü
+# --- YAPILANDIRMA VE FALLBACK ---
 try:
-    import torch
+    from config import Config
 except ImportError:
-    torch = None
+    class Config:
+        PROJECT_NAME = "LotusAI"
+        WORK_DIR = os.getcwd()
+        USE_GPU = False
 
 # --- LOGLAMA ---
 logger = logging.getLogger("LotusAI.Sidar")
+
+# --- GPU KONTROLÜ (Config Entegreli) ---
+HAS_TORCH = False
+DEVICE_TYPE = "cpu"
+USE_GPU_CONFIG = getattr(Config, "USE_GPU", False)
+
+if USE_GPU_CONFIG:
+    try:
+        import torch
+        HAS_TORCH = True
+        if torch.cuda.is_available():
+            DEVICE_TYPE = "cuda"
+        elif hasattr(torch.backends, "mps") and torch.backends.mps.is_available():
+            DEVICE_TYPE = "mps"
+    except ImportError:
+        logger.warning("⚠️ Sidar: Config GPU açık ancak torch bulunamadı.")
+else:
+    torch = None
 
 class SidarAgent:
     """
@@ -28,7 +48,7 @@ class SidarAgent:
     - Hata Analizi: Traceback verilerini analiz ederek kök neden tespiti yapar.
     - Güvenli Geliştirme: Kaydetmeden önce Python ve JSON sözdizimi kontrolü yapar.
     - Mimari Öngörü: Projenin büyüme hızına göre yapısal iyileştirme tavsiyeleri sunar.
-    - GPU Optimizasyonu: VRAM yönetimi ve donanım hızlandırma denetimi yapar.
+    - GPU Optimizasyonu: VRAM yönetimi ve donanım hızlandırma denetimi yapar (Config kontrollü).
     """
     
     def __init__(self, tools_dict: Dict[str, Any]):
@@ -42,8 +62,13 @@ class SidarAgent:
         self.last_technical_audit = None
         
         # GPU Durumunu Başlangıçta Tespit Et
-        self.gpu_available = torch.cuda.is_available() if torch else False
-        self.gpu_count = torch.cuda.device_count() if self.gpu_available else 0
+        self.gpu_available = (DEVICE_TYPE != "cpu")
+        self.gpu_count = 0
+        
+        if self.gpu_available and HAS_TORCH and DEVICE_TYPE == "cuda":
+            try:
+                self.gpu_count = torch.cuda.device_count()
+            except: pass
         
         logger.info(f"👨‍💻 {self.agent_name} Teknik Liderlik modülü aktif. Donanım hızlandırma: {'AKTİF' if self.gpu_available else 'DEVRE DIŞI'}")
 
@@ -52,9 +77,10 @@ class SidarAgent:
         Sidar'ın teknik otoritesini ve karakterini tanımlayan sistem talimatı.
         """
         gpu_info = f"Sistemde {self.gpu_count} GPU birimi tespit edildi." if self.gpu_available else "GPU bulunamadı, CPU üzerinden işlem yapılıyor."
+        project_name = getattr(Config, "PROJECT_NAME", "LotusAI")
         
         return (
-            f"Sen {Config.PROJECT_NAME} sisteminin Baş Mühendisi ve Yazılım Mimarı SİDAR'sın. "
+            f"Sen {project_name} sisteminin Baş Mühendisi ve Yazılım Mimarı SİDAR'sın. "
             "Karakterin: Son derece disiplinli, teknik detaylara aşırı hakim, titiz ve çözüm odaklı. "
             f"Görevin: Sistemin kod yapısını korumak, hataları ayıklamak ve donanımı ({gpu_info}) en verimli şekilde kullanmaktır. "
             "Halil Bey'e (Patron) rapor sunarken net, profesyonel ve proaktif ol. "
@@ -67,23 +93,31 @@ class SidarAgent:
         Mevcut GPU donanımının detaylı verilerini toplar.
         """
         details = {"available": False, "devices": []}
-        if not self.gpu_available:
+        if not self.gpu_available or not HAS_TORCH:
             return details
 
         try:
             details["available"] = True
-            for i in range(self.gpu_count):
-                props = torch.cuda.get_device_properties(i)
-                mem_alloc = torch.cuda.memory_allocated(i) / (1024**2)  # MB
-                mem_reserved = torch.cuda.memory_reserved(i) / (1024**2) # MB
-                
-                details["devices"].append({
-                    "id": i,
-                    "name": props.name,
-                    "total_memory_mb": props.total_memory / (1024**2),
-                    "allocated_mb": round(mem_alloc, 2),
-                    "reserved_mb": round(mem_reserved, 2),
-                    "capability": props.major + props.minor / 10
+            if DEVICE_TYPE == "cuda":
+                for i in range(self.gpu_count):
+                    props = torch.cuda.get_device_properties(i)
+                    mem_alloc = torch.cuda.memory_allocated(i) / (1024**2)  # MB
+                    mem_reserved = torch.cuda.memory_reserved(i) / (1024**2) # MB
+                    
+                    details["devices"].append({
+                        "id": i,
+                        "name": props.name,
+                        "total_memory_mb": props.total_memory / (1024**2),
+                        "allocated_mb": round(mem_alloc, 2),
+                        "reserved_mb": round(mem_reserved, 2),
+                        "capability": props.major + props.minor / 10
+                    })
+            elif DEVICE_TYPE == "mps":
+                 details["devices"].append({
+                    "id": 0,
+                    "name": "Apple Silicon (MPS)",
+                    "allocated_mb": "N/A", # MPS currently doesn't support detailed memory tracking easily
+                    "total_memory_mb": "Unified"
                 })
         except Exception as e:
             logger.error(f"GPU detayları alınırken hata: {e}")
@@ -94,19 +128,26 @@ class SidarAgent:
         """
         Gereksiz GPU belleğini temizler ve sistemi rahatlatır.
         """
-        if not self.gpu_available:
+        if not self.gpu_available or not HAS_TORCH:
             return "⚠️ Optimizasyon atlandı: GPU aktif değil."
         
         with self.lock:
             try:
-                initial_mem = torch.cuda.memory_allocated() / (1024**2)
-                torch.cuda.empty_cache()
-                # Python çöp toplayıcısını da tetikleyelim
-                import gc
-                gc.collect()
-                final_mem = torch.cuda.memory_allocated() / (1024**2)
+                savings = 0
+                if DEVICE_TYPE == "cuda":
+                    initial_mem = torch.cuda.memory_allocated() / (1024**2)
+                    torch.cuda.empty_cache()
+                    # Python çöp toplayıcısını da tetikleyelim
+                    import gc
+                    gc.collect()
+                    final_mem = torch.cuda.memory_allocated() / (1024**2)
+                    savings = round(initial_mem - final_mem, 2)
+                elif DEVICE_TYPE == "mps":
+                    import gc
+                    gc.collect()
+                    try: torch.mps.empty_cache()
+                    except: pass
                 
-                savings = round(initial_mem - final_mem, 2)
                 return f"✅ GPU Optimizasyonu Tamamlandı. Serbest bırakılan VRAM: {savings} MB"
             except Exception as e:
                 return f"❌ Optimizasyon hatası: {str(e)}"
@@ -122,8 +163,10 @@ class SidarAgent:
             sys_info = f"OS: {platform.system()} {platform.release()} | Python: {platform.python_version()}"
             
             gpu_data = self.get_gpu_details()
-            if gpu_data["available"]:
-                gpu_status = f"GPU: AKTİF | Birim: {gpu_data['devices'][0]['name']} | Kullanım: {gpu_data['devices'][0]['allocated_mb']}MB"
+            if gpu_data["available"] and gpu_data["devices"]:
+                dev = gpu_data['devices'][0]
+                alloc = dev.get('allocated_mb', 'N/A')
+                gpu_status = f"GPU: AKTİF | Birim: {dev['name']} | Kullanım: {alloc}MB"
             else:
                 gpu_status = "GPU: Devre Dışı / Bulunamadı"
             
@@ -153,13 +196,15 @@ class SidarAgent:
         """
         Tüm sistemi teknik bir denetime tabi tutar ve kritik bir rapor döner.
         """
-        audit_report = [f"🛠️ {Config.PROJECT_NAME} TEKNİK DENETİM RAPORU"]
+        project_name = getattr(Config, "PROJECT_NAME", "LotusAI")
+        audit_report = [f"🛠️ {project_name} TEKNİK DENETİM RAPORU"]
         audit_report.append(f"Zaman: {os.popen('date /t' if os.name == 'nt' else 'date').read().strip()}")
         
         with self.lock:
             # Dizin Yapısı Kontrolü
+            work_dir = getattr(Config, "WORK_DIR", ".")
             critical_dirs = ["agents", "core", "managers", "static", "templates"]
-            missing = [d for d in critical_dirs if not (Path(Config.WORK_DIR) / d).exists()]
+            missing = [d for d in critical_dirs if not (Path(work_dir) / d).exists()]
             
             if missing:
                 audit_report.append(f"❌ HATA: Kritik dizinler eksik: {', '.join(missing)}")
@@ -169,8 +214,9 @@ class SidarAgent:
             # GPU Denetimi
             if self.gpu_available:
                 gpu_info = self.get_gpu_details()
-                dev = gpu_info['devices'][0]
-                audit_report.append(f"\n--- GPU ANALİZİ ---\nBirim: {dev['name']}\nVRAM: {dev['allocated_mb']}/{dev['total_memory_mb']} MB\nDurum: Sağlıklı")
+                if gpu_info['devices']:
+                    dev = gpu_info['devices'][0]
+                    audit_report.append(f"\n--- GPU ANALİZİ ---\nBirim: {dev['name']}\nVRAM: {dev.get('allocated_mb', 'N/A')}/{dev.get('total_memory_mb', 'N/A')} MB\nDurum: Sağlıklı")
             else:
                 audit_report.append("\n⚠️ GPU ANALİZİ: Donanım hızlandırma bulunamadı, sistem CPU yükü artabilir.")
 

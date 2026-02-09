@@ -7,12 +7,21 @@ import os
 from pathlib import Path
 from datetime import datetime
 from typing import List, Dict, Tuple, Any, Optional
-from config import Config
+
+# --- YAPILANDIRMA VE FALLBACK ---
+try:
+    from config import Config
+except ImportError:
+    # Bağımsız çalışma durumu için Fallback
+    class Config:
+        WORK_DIR = Path.cwd()
+        USE_GPU = False
 
 # --- LOGLAMA ---
 logger = logging.getLogger("LotusAI.Memory")
 
 # --- KÜTÜPHANE KONTROLLERİ ---
+
 # PDF İşleme
 try:
     import PyPDF2
@@ -47,7 +56,7 @@ class MemoryManager:
     Yetenekler:
     - Kısa Süreli Hafıza: SQLite (Hızlı erişim, sıralı sohbet akışı).
     - Uzun Süreli Hafıza: ChromaDB (Anlamsal arama, geçmiş hatırlatma).
-    - GPU Hızlandırma: Embedding işlemleri için CUDA desteği.
+    - GPU Hızlandırma: Config ve Donanım uyumlu embedding işlemleri.
     - Bilgi Bankası (RAG): PDF, DOCX, TXT, MD belgelerinin vektörel indekslenmesi.
     """
     
@@ -71,16 +80,24 @@ class MemoryManager:
         self.docs_collection = None
         self.embedding_fn = None
         
+        # Donanım Durumu (Merkezi Config + Kütüphane Kontrolü)
+        config_gpu = getattr(Config, "USE_GPU", False)
+        
         if CHROMA_AVAILABLE:
             try:
                 # 1. GPU/CPU Kontrolü ve Cihaz Seçimi
-                device = "cuda" if torch.cuda.is_available() else "cpu"
-                if device == "cuda":
+                # Config GPU'ya izin veriyorsa VE Torch CUDA görüyorsa
+                if config_gpu and torch.cuda.is_available():
+                    device = "cuda"
                     logger.info(f"🚀 GPU Algılandı: {torch.cuda.get_device_name(0)}. Hafıza işlemleri GPU üzerinde çalışacak.")
                 else:
-                    logger.info("ℹ️ GPU bulunamadı, hafıza işlemleri CPU üzerinden devam edecek.")
+                    device = "cpu"
+                    if config_gpu:
+                        logger.warning("⚠️ Config GPU açık dedi ancak Torch/CUDA bulunamadı. CPU'ya geçiliyor.")
+                    else:
+                        logger.info("ℹ️ Hafıza işlemleri CPU modunda (Config veya donanım kısıtlaması).")
 
-                # 2. Embedding Fonksiyonunu Hazırla (GPU Desteği ile)
+                # 2. Embedding Fonksiyonunu Hazırla
                 # 'all-MiniLM-L6-v2' hızlıdır, daha kaliteli sonuçlar için 'paraphrase-multilingual-MiniLM-L12-v2' tercih edilebilir.
                 self.embedding_fn = embedding_functions.SentenceTransformerEmbeddingFunction(
                     model_name="all-MiniLM-L6-v2",
@@ -90,7 +107,7 @@ class MemoryManager:
                 # 3. Kalıcı ChromaDB istemcisi
                 self.chroma_client = chromadb.PersistentClient(path=str(self.vector_db_path))
                 
-                # 4. Koleksiyonları oluştur veya mevcut olanları yükle (Embedding fonksiyonunu buraya ekledik)
+                # 4. Koleksiyonları oluştur veya mevcut olanları yükle
                 self.history_collection = self.chroma_client.get_or_create_collection(
                     name="chat_history", 
                     metadata={"hnsw:space": "cosine"},
@@ -102,9 +119,12 @@ class MemoryManager:
                     embedding_function=self.embedding_fn
                 )
                 
-                logger.info(f"✅ Hafıza Sistemi Aktif (GPU:{device == 'cuda'}): {self.docs_collection.count()} belge parçası yüklü.")
+                doc_count = self.docs_collection.count()
+                logger.info(f"✅ Hafıza Sistemi Aktif: {doc_count} belge parçası yüklü.")
+                
             except Exception as e:
                 logger.error(f"❌ ChromaDB Başlatma Hatası: {e}")
+                self.chroma_client = None
 
     def _init_sqlite(self):
         """SQLite veritabanı şemasını hazırlar ve tabloları oluşturur."""
@@ -112,6 +132,7 @@ class MemoryManager:
             try:
                 conn = sqlite3.connect(str(self.db_path), timeout=10)
                 c = conn.cursor()
+                # Sohbet Geçmişi Tablosu
                 c.execute('''CREATE TABLE IF NOT EXISTS chat_history 
                              (id INTEGER PRIMARY KEY AUTOINCREMENT, 
                               agent TEXT, 
@@ -119,6 +140,7 @@ class MemoryManager:
                               message TEXT, 
                               timestamp DATETIME DEFAULT CURRENT_TIMESTAMP)''')
                 
+                # İşlenen Dosyalar Tablosu (Tekrar işlemeyi önlemek için)
                 c.execute('''CREATE TABLE IF NOT EXISTS processed_files 
                              (filename TEXT PRIMARY KEY, 
                               processed_date DATETIME, 
@@ -132,7 +154,7 @@ class MemoryManager:
     # --- 1. BELGE İŞLEME (RAG INGESTION) ---
 
     def ingest_documents(self) -> str:
-        """Belgeleri tarar ve vektör veritabanına GPU destekli indeksler."""
+        """Belgeleri tarar ve vektör veritabanına indeksler."""
         if not CHROMA_AVAILABLE or not self.docs_collection:
             return "Vektör veritabanı (ChromaDB) yüklü veya aktif değil."
 
@@ -182,7 +204,7 @@ class MemoryManager:
                             for i in range(len(chunks))
                         ]
                         
-                        # Vektör veritabanına toplu ekleme (İşlem embedding_fn sayesinde GPU'da yapılır)
+                        # Vektör veritabanına toplu ekleme
                         self.docs_collection.add(
                             documents=chunks, 
                             metadatas=metadatas, 
@@ -211,6 +233,7 @@ class MemoryManager:
         while start < text_len:
             end = start + chunk_size
             if end < text_len:
+                # Cümle sonunu bulmaya çalış (.!?)
                 last_punctuation = -1
                 for punct in ".!?":
                     pos = text.rfind(punct, start + (chunk_size // 2), end)
@@ -223,6 +246,7 @@ class MemoryManager:
             if len(chunk) > 10:
                 chunks.append(chunk)
             
+            # Bir sonraki parça için başlangıç noktasını ayarla (overlap kadar geri git)
             start = end - overlap
             if start < 0: start = 0
             if end >= text_len: break
@@ -230,6 +254,7 @@ class MemoryManager:
         return chunks
 
     def _is_file_processed(self, filename: str, file_hash: str) -> bool:
+        """Dosyanın daha önce işlenip işlenmediğini kontrol eder."""
         with self.lock:
             try:
                 conn = sqlite3.connect(str(self.db_path))
@@ -241,6 +266,7 @@ class MemoryManager:
             except: return False
 
     def _mark_file_as_processed(self, filename: str, file_hash: str, file_size: int):
+        """Dosyayı işlenmiş olarak işaretler."""
         with self.lock:
             try:
                 conn = sqlite3.connect(str(self.db_path))
@@ -257,7 +283,7 @@ class MemoryManager:
     # --- 2. SOHBET KAYIT VE ERİŞİM ---
 
     def save(self, agent: str, role: str, message: str):
-        """Mesajı kaydeder. ChromaDB kısmı GPU ile vektörlenir."""
+        """Mesajı kaydeder. ChromaDB kısmı GPU ile vektörlenir (Varsa)."""
         if not message or not message.strip(): return
         timestamp = datetime.now()
         
@@ -277,6 +303,7 @@ class MemoryManager:
         if CHROMA_AVAILABLE and self.history_collection and len(message) > 15:
             try:
                 meta = {"agent": str(agent), "role": str(role), "time": str(timestamp.isoformat())}
+                # Benzersiz ID oluştur
                 unique_id = f"{agent}_{timestamp.timestamp()}_{hashlib.md5(message.encode()).hexdigest()[:6]}"
                 
                 self.history_collection.add(
@@ -307,7 +334,7 @@ class MemoryManager:
         relevant_docs = ""
         
         if CHROMA_AVAILABLE:
-            # 1. Benzer eski konuşmalar (Sorgu embedding'i GPU'da oluşturulur)
+            # 1. Benzer eski konuşmalar
             if self.history_collection:
                 try:
                     res = self.history_collection.query(
@@ -335,6 +362,7 @@ class MemoryManager:
         return recent, long_term_history, relevant_docs
 
     def get_agent_history_for_web(self, agent_name: str, limit: int = 40) -> List[Dict]:
+        """Web arayüzü için sohbet geçmişini formatlar."""
         target_agent = "ATLAS" if agent_name == "GENEL" else agent_name
         rows = []
         with self.lock:
@@ -357,6 +385,7 @@ class MemoryManager:
         } for r in reversed(rows)]
 
     def clear_history(self, only_chat: bool = True) -> bool:
+        """Hafızayı temizler. only_chat=False ise bilgi bankası da silinir."""
         with self.lock:
             try:
                 conn = sqlite3.connect(str(self.db_path))
@@ -367,19 +396,22 @@ class MemoryManager:
                 conn.commit()
                 conn.close()
                 
-                if CHROMA_AVAILABLE:
-                    self.chroma_client.delete_collection("chat_history")
-                    self.history_collection = self.chroma_client.get_or_create_collection(
-                        name="chat_history", 
-                        embedding_function=self.embedding_fn
-                    )
-                    
-                    if not only_chat:
-                        self.chroma_client.delete_collection("documents")
-                        self.docs_collection = self.chroma_client.get_or_create_collection(
-                            name="documents", 
+                if CHROMA_AVAILABLE and self.chroma_client:
+                    try:
+                        self.chroma_client.delete_collection("chat_history")
+                        self.history_collection = self.chroma_client.get_or_create_collection(
+                            name="chat_history", 
                             embedding_function=self.embedding_fn
                         )
+                        
+                        if not only_chat:
+                            self.chroma_client.delete_collection("documents")
+                            self.docs_collection = self.chroma_client.get_or_create_collection(
+                                name="documents", 
+                                embedding_function=self.embedding_fn
+                            )
+                    except Exception as ve:
+                        logger.warning(f"⚠️ Vektör temizleme uyarısı: {ve}")
                 
                 logger.info(f"🧹 Hafıza temizlendi (Mod: {'Sohbet' if only_chat else 'Tam'})")
                 return True

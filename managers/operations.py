@@ -7,35 +7,52 @@ from pathlib import Path
 from datetime import datetime
 from typing import Dict, List, Any, Optional, Union
 
-# GPU Desteği için PyTorch entegrasyonu
-try:
-    import torch
-    HAS_GPU = torch.cuda.is_available()
-    DEVICE = "cuda" if HAS_GPU else "cpu"
-except ImportError:
-    HAS_GPU = False
-    DEVICE = "cpu"
-
-# LotusAI merkezi yapılandırmasını içe aktar
+# --- YAPILANDIRMA VE FALLBACK ---
 try:
     from config import Config
 except ImportError:
     class Config:
-        WORK_DIR = Path(".")
+        WORK_DIR = os.getcwd()
         STATIC_DIR = Path("static")
+        USE_GPU = False
+
+# --- LOGLAMA ---
+logger = logging.getLogger("LotusAI.Operations")
+
+# --- GPU KONTROLÜ (Config Entegreli) ---
+HAS_GPU = False
+DEVICE = "cpu"
+USE_GPU_CONFIG = getattr(Config, "USE_GPU", False)
+
+if USE_GPU_CONFIG:
+    try:
+        import torch
+        if torch.cuda.is_available():
+            HAS_GPU = True
+            DEVICE = "cuda"
+            try:
+                gpu_name = torch.cuda.get_device_name(0)
+                logger.info(f"🚀 OperationsManager GPU Aktif: {gpu_name}")
+            except:
+                logger.info("🚀 OperationsManager GPU Aktif")
+        else:
+            logger.info("ℹ️ Operations: Config GPU açık ancak donanım bulunamadı. CPU kullanılacak.")
+    except ImportError:
+        logger.info("ℹ️ PyTorch yüklü değil, işlemler CPU modunda.")
+else:
+    logger.info("ℹ️ Operasyon işlemleri CPU modunda (Config ayarı).")
 
 # Paket servis modülünü güvenli şekilde içe aktar
 try:
     from managers.delivery import DeliveryManager
 except ImportError:
     DeliveryManager = None
+    logger.warning("⚠️ DeliveryManager modülü bulunamadı. Paket servis botu devre dışı.")
 
-# --- LOGLAMA ---
-logger = logging.getLogger("LotusAI.Operations")
 
 class OperationsManager:
     """
-    LotusAI Saha ve Operasyon Yöneticisi (GPU Destekli).
+    LotusAI Saha ve Operasyon Yöneticisi.
     
     Yetenekler:
     - Stok Yönetimi: Ürün girişi, çıkışı ve kritik seviye takibi.
@@ -47,12 +64,16 @@ class OperationsManager:
     
     def __init__(self):
         # Yollar
-        self.work_dir = Path(getattr(Config, "WORK_DIR", "."))
+        default_work_dir = getattr(Config, "WORK_DIR", os.getcwd())
+        self.work_dir = Path(default_work_dir)
         self.db_file = self.work_dir / "lotus_operasyon.json"
         self.menu_file = self.work_dir / "lotus_menu.json"
         self.backup_dir = self.work_dir / "backups" / "operations"
         
-        self.backup_dir.mkdir(parents=True, exist_ok=True)
+        try:
+            self.backup_dir.mkdir(parents=True, exist_ok=True)
+        except Exception as e:
+            logger.error(f"Dizin oluşturma hatası: {e}")
         
         # Çoklu ajan erişimi için Reentrant Lock
         self.lock = threading.RLock()
@@ -69,7 +90,7 @@ class OperationsManager:
         self._init_databases()
         self.menu_data = self._load_menu()
         
-        gpu_status = f"GPU Aktif ({torch.cuda.get_device_name(0)})" if self.has_gpu else "CPU Modunda"
+        gpu_status = f"GPU Aktif ({self.device})" if self.has_gpu else "CPU Modu"
         logger.info(f"✅ Operasyon Yöneticisi aktif. Donanım: {gpu_status}")
 
     def _init_delivery(self):
@@ -185,9 +206,6 @@ class OperationsManager:
         """Hava durumu ve saate göre GPU/AI destekli akıllı öneri sunar."""
         hour = datetime.now().hour
         weather = weather_context.lower()
-        
-        # Gelecekte buraya torch tabanlı bir 'Sentiment Analysis' veya 'Recommender Model' eklenebilir.
-        # Şu an altyapı cihaz (device) bazlı çalışmaya hazırdır.
         
         prefix = "🤖 [AI Önerisi]: " if self.has_gpu else ""
         
@@ -327,7 +345,6 @@ class OperationsManager:
         db = self._load_db()
         hw = "GPU" if self.has_gpu else "CPU"
         return f"Ops ({hw}): {len(db.get('rezervasyonlar', []))} Kayıt | Bot: {'Açık' if self.is_selenium_active else 'Kapalı'}"
-
 
 # import json
 # import logging

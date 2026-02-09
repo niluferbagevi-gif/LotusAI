@@ -12,17 +12,52 @@ from typing import Optional, Dict, List, Any, Union
 from PIL import Image
 import google.generativeai as genai
 
-# GPU Desteği için PyTorch Kontrolü
+# --- YAPILANDIRMA VE FALLBACK ---
 try:
-    import torch
-    HAS_TORCH = True
+    from config import Config
 except ImportError:
-    HAS_TORCH = False
+    class Config:
+        APP_ID = "lotus-ai-core"
+        WORK_DIR = os.getcwd()
+        USE_GPU = False
+        AI_PROVIDER = "gemini"
+        GEMINI_API_KEY = ""
+        OLLAMA_URL = "http://localhost:11434/api/generate"
+        TEXT_MODEL = "llama3"
+        @staticmethod
+        def get_agent_settings(agent): return {"key": "", "model": "gemini-1.5-flash"}
 
 # --- LOGLAMA YAPILANDIRMASI ---
 logger = logging.getLogger("LotusAI.Engine")
 
-# OpenCV Kontrolü (Görsel işlemler ve kamera için)
+# --- KÜTÜPHANE KONTROLLERİ ---
+
+# GPU / PyTorch (Config Kontrollü)
+HAS_TORCH = False
+DEVICE = "cpu"
+USE_GPU_CONFIG = getattr(Config, "USE_GPU", False)
+
+if USE_GPU_CONFIG:
+    try:
+        import torch
+        HAS_TORCH = True
+        if torch.cuda.is_available():
+            DEVICE = "cuda"
+            try:
+                # GPU Önbelleğini temizle
+                torch.cuda.empty_cache()
+                gpu_name = torch.cuda.get_device_name(0)
+                logger.info(f"🚀 Engine GPU Aktif: {gpu_name}")
+            except:
+                logger.info("🚀 Engine GPU Aktif")
+        else:
+            logger.info("ℹ️ Engine: Config GPU açık ancak donanım bulunamadı. CPU kullanılacak.")
+    except ImportError:
+        logger.info("ℹ️ PyTorch yüklü değil, Engine CPU modunda.")
+else:
+    logger.info("ℹ️ Engine işlemleri CPU modunda (Config ayarı).")
+
+# OpenCV
 try:
     import cv2
     CV2_AVAILABLE = True
@@ -30,10 +65,18 @@ except ImportError:
     CV2_AVAILABLE = False
     logger.warning("⚠️ 'opencv-python' yüklü değil, kamera fonksiyonları kısıtlı çalışacaktır.")
 
-# --- KONFİGÜRASYON VE MODÜLLER ---
-from agents.definitions import AGENTS_CONFIG
-from config import Config
-from managers.nlp import NLPManager 
+# --- MODÜLLER ---
+try:
+    from agents.definitions import AGENTS_CONFIG
+except ImportError:
+    AGENTS_CONFIG = {}
+    logger.warning("⚠️ Ajan tanımları (agents.definitions) bulunamadı.")
+
+try:
+    from managers.nlp import NLPManager
+except ImportError:
+    NLPManager = None
+    logger.warning("⚠️ NLPManager bulunamadı.")
 
 # --- AJANLARIN DİNAMİK VE GÜVENLİ YÜKLENMESİ ---
 AGENTS_LOADED = {
@@ -49,7 +92,7 @@ def _import_agent(name: str, class_name: str):
         AGENTS_LOADED[name] = True
         return agent_class
     except (ImportError, AttributeError) as e:
-        logger.error(f"❌ {name} Ajanı yüklenemedi: {e}")
+        logger.debug(f"ℹ️ {name} Ajanı yüklenemedi: {e}")
         return None
 
 # Ajan sınıflarını yükle
@@ -71,22 +114,16 @@ class AgentEngine:
         self.tools = tools_dict
         self.app_id = getattr(Config, "APP_ID", "lotus-ai-core")
         
-        # --- DONANIM (GPU) TESPİTİ ---
-        self.device = "cpu"
-        if HAS_TORCH:
-            if torch.cuda.is_available():
-                self.device = "cuda"
-                # GPU Önbelleğini temizle
-                torch.cuda.empty_cache()
-                gpu_name = torch.cuda.get_device_name(0)
-                logger.info(f"🚀 GPU Algılandı: {gpu_name}. LotusAI Engine GPU üzerinde hızlandırılıyor.")
-            else:
-                logger.info("ℹ️ GPU bulunamadı, işlemler CPU üzerinde yürütülecek.")
+        # Donanım bilgisi global değişkenden
+        self.device = DEVICE
         
-        # NLP Yöneticisi (GPU cihaz bilgisi ile başlatılıyor)
-        self.nlp = tools_dict.get('nlp') or NLPManager(device=self.device)
+        # NLP Yöneticisi
+        if NLPManager:
+            self.nlp = tools_dict.get('nlp') or NLPManager()
+        else:
+            self.nlp = None
         
-        # --- AJANLARI BAŞLAT (Cihaz bilgisi aktarılıyor) ---
+        # --- AJANLARI BAŞLAT ---
         self.atlas = AtlasAgent(memory_manager, tools_dict) if AGENTS_LOADED["ATLAS"] else None
         self.gaya = GayaAgent(tools_dict, self.nlp) if AGENTS_LOADED["GAYA"] else None
         
@@ -110,7 +147,11 @@ class AgentEngine:
     def determine_agent(self, text: str) -> Optional[str]:
         """Kullanıcı girdisindeki anahtar kelimelere göre en uygun ajanı seçer."""
         if not text: return "ATLAS"
-        clean_text = self.nlp.clean_text(text.lower())
+        clean_text = ""
+        if self.nlp:
+            clean_text = self.nlp.clean_text(text.lower())
+        else:
+            clean_text = text.lower()
         
         # Öncelikli kontrol: Güvenlik ve Sistem
         if any(k in clean_text for k in ["sistem", "kod", "hata", "terminal"]):
@@ -235,14 +276,16 @@ class AgentEngine:
         fatura_triggers = ["fatura", "fiş", "dekont", "hesap", "oku", "işle", "ne yazıyor", "analiz et"]
         is_visual_request = any(t in clean_input for t in fatura_triggers) or file_path is not None
         
-        if is_visual_request and Config.AI_PROVIDER == "gemini":
+        # Config.AI_PROVIDER kontrolü
+        ai_provider = getattr(Config, "AI_PROVIDER", "gemini")
+        
+        if is_visual_request and ai_provider == "gemini":
             target_agent = "KERBEROS" if agent_name in ["KERBEROS", "ATLAS"] else "GAYA"
             
             # Eğer dosya yoksa ama kamera varsa anlık görüntü al
             if not gemini_file_part and 'camera' in self.tools and CV2_AVAILABLE:
                 frame = self.tools['camera'].get_frame()
                 if frame is not None:
-                    # Görüntü işleme sırasında GPU hızlandırması potansiyeli (Gelecek planı için)
                     _, buffer = cv2.imencode('.jpg', frame)
                     gemini_file_part = {"mime_type": "image/jpeg", "data": buffer.tobytes()}
             
@@ -265,7 +308,12 @@ class AgentEngine:
 
     async def get_response(self, agent_name: str, user_text: str, sec_result, file_path: str = None):
         """Kullanıcı mesajına göre en uygun cevabı üretir (Ana Giriş Noktası)."""
-        clean_input = self.nlp.clean_text(user_text)
+        clean_input = ""
+        if self.nlp:
+            clean_input = self.nlp.clean_text(user_text)
+        else:
+            clean_input = user_text.lower()
+            
         status, user_obj, sub_status = sec_result
         
         # 1. GÜVENLİK KONTROLÜ
@@ -297,11 +345,12 @@ class AgentEngine:
         sys_prompt = self._build_core_prompt(agent_name, clean_input, sec_result, op_result)
         
         try:
-            recent, _ = self.memory.load_context(agent_name, clean_input)
+            recent, _, _ = self.memory.load_context(agent_name, clean_input)
         except:
             recent = []
 
-        if Config.AI_PROVIDER == "gemini":
+        ai_provider = getattr(Config, "AI_PROVIDER", "gemini")
+        if ai_provider == "gemini":
             return await self._query_gemini(agent_name, sys_prompt, recent, user_text, gemini_file_part)
         else:
             return await self._query_ollama(agent_name, sys_prompt, recent, user_text)
@@ -313,10 +362,11 @@ class AgentEngine:
 
         active_agents = [n for n, loaded in AGENTS_LOADED.items() if loaded]
         tasks = []
+        ai_provider = getattr(Config, "AI_PROVIDER", "gemini")
         
         for agent in active_agents:
             sys_prompt = self._build_core_prompt(agent, user_text, sec_result) + "\n\n[GÖREV]: Konu hakkında kendi uzmanlık alanından tek cümlelik, çok kısa bir brifing ver."
-            if Config.AI_PROVIDER == "gemini":
+            if ai_provider == "gemini":
                 tasks.append(self._query_gemini(agent, sys_prompt, [], user_text))
             else:
                 tasks.append(self._query_ollama(agent, sys_prompt, [], user_text))
@@ -326,8 +376,20 @@ class AgentEngine:
 
     async def _query_gemini(self, agent, sys_prompt, history, user_text, image_data=None):
         """Exponential Backoff ile Gemini API çağrısı."""
-        api_key = Config.GEMINI_KEYS.get(agent) or Config.GEMINI_KEYS.get("ATLAS", "")
-        if not api_key: return {"agent": agent, "content": "⚠️ Sistem hatası: API Anahtarı yapılandırılmamış."}
+        
+        # Config'den ajan ayarlarını al
+        api_key = ""
+        model_name = getattr(Config, "GEMINI_MODEL", "gemini-1.5-flash")
+        
+        if hasattr(Config, 'get_agent_settings'):
+            settings = Config.get_agent_settings(agent)
+            api_key = settings.get("key")
+            model_name = settings.get("model", model_name)
+        else:
+            api_key = getattr(Config, "GEMINI_API_KEY", "")
+
+        if not api_key: 
+            return {"agent": agent, "content": "⚠️ Sistem hatası: API Anahtarı yapılandırılmamış."}
         
         genai.configure(api_key=api_key)
         
@@ -339,7 +401,7 @@ class AgentEngine:
         for i in range(5): # 5 deneme
             try:
                 model = genai.GenerativeModel(
-                    model_name=Config.GEMINI_MODEL, 
+                    model_name=model_name, 
                     system_instruction=sys_prompt
                 )
                 
@@ -351,8 +413,9 @@ class AgentEngine:
                 resp = await asyncio.to_thread(chat.send_message, contents)
                 
                 reply = resp.text.strip()
-                self.memory.save(agent, "user", user_text)
-                self.memory.save(agent, "model", reply)
+                if self.memory:
+                    self.memory.save(agent, "user", user_text)
+                    self.memory.save(agent, "model", reply)
                 
                 return {"agent": agent, "content": reply}
                 
@@ -368,19 +431,23 @@ class AgentEngine:
         """Yerel Ollama sunucusuna istek gönderir (Ollama GPU kullanımını kendi yönetir)."""
         msgs = [{"role": "system", "content": sys_prompt}] + history + [{"role": "user", "content": user_text}]
         
+        ollama_url = getattr(Config, "OLLAMA_URL", "http://localhost:11434/api/generate")
+        text_model = getattr(Config, "TEXT_MODEL", "llama3")
+        
         for i in range(2):
             try:
                 async with aiohttp.ClientSession() as session:
                     async with session.post(
-                        Config.OLLAMA_URL, 
-                        json={"model": Config.TEXT_MODEL, "messages": msgs, "stream": False}, 
+                        ollama_url, 
+                        json={"model": text_model, "messages": msgs, "stream": False}, 
                         timeout=120
                     ) as resp:
                         if resp.status == 200:
                             res = await resp.json()
                             reply = res.get("message", {}).get("content", "").strip()
-                            self.memory.save(agent, "user", user_text)
-                            self.memory.save(agent, "assistant", reply)
+                            if self.memory:
+                                self.memory.save(agent, "user", user_text)
+                                self.memory.save(agent, "assistant", reply)
                             return {"agent": agent, "content": reply}
                         else:
                             logger.error(f"Ollama HTTP hatası: {resp.status}")

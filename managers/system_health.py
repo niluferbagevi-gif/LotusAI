@@ -6,11 +6,18 @@ import threading
 from datetime import datetime, timedelta
 from typing import Dict, List, Any, Optional, Tuple
 
-# Proje içi modüller
-from config import Config
+# --- YAPILANDIRMA VE FALLBACK ---
+try:
+    from config import Config
+except ImportError:
+    class Config:
+        WORK_DIR = os.getcwd()
+        USE_GPU = False
 
 # --- LOGLAMA ---
 logger = logging.getLogger("LotusAI.SystemHealth")
+
+# --- KÜTÜPHANE KONTROLLERİ ---
 
 # psutil: CPU, RAM ve Disk takibi için
 try:
@@ -26,14 +33,16 @@ try:
     NVML_AVAILABLE = True
 except ImportError:
     NVML_AVAILABLE = False
-    logger.debug("pynvml modülü bulunamadı. GPU izleme devre dışı.")
 
-# torch: AI modellerinin GPU erişimini kontrol etmek için (Opsiyonel)
+# torch: AI modellerinin GPU erişimini kontrol etmek için
 try:
     import torch
     TORCH_AVAILABLE = True
 except ImportError:
     TORCH_AVAILABLE = False
+
+# Config üzerinden GPU kontrolü
+USE_GPU_CONFIG = getattr(Config, "USE_GPU", False)
 
 class SystemHealthManager:
     """
@@ -52,28 +61,39 @@ class SystemHealthManager:
         # GPU Modülü Başlatma
         self.gpu_active = False
         self.gpu_count = 0
-        self.cuda_info = "Tespit Edilemedi"
+        self.cuda_info = "Pasif / CPU Modu"
         
-        if NVML_AVAILABLE:
-            try:
-                pynvml.nvmlInit()
-                self.gpu_count = pynvml.nvmlDeviceGetCount()
-                self.gpu_active = True
-                logger.info(f"🚀 GPU Takip Servisi Aktif: {self.gpu_count} cihaz tespit edildi.")
-            except Exception as e:
-                self.gpu_active = False
-                logger.error(f"❌ NVML Başlatılamadı: {e}")
-
-        # PyTorch/CUDA Yazılım Kontrolü
-        if TORCH_AVAILABLE:
-            if torch.cuda.is_available():
-                self.cuda_info = f"Aktif (v{torch.version.cuda})"
+        # GPU takibi sadece Config izin verirse ve kütüphane varsa başlar
+        if USE_GPU_CONFIG:
+            if NVML_AVAILABLE:
+                try:
+                    pynvml.nvmlInit()
+                    self.gpu_count = pynvml.nvmlDeviceGetCount()
+                    self.gpu_active = True
+                    logger.info(f"🚀 GPU Takip Servisi Aktif: {self.gpu_count} cihaz tespit edildi.")
+                except Exception as e:
+                    self.gpu_active = False
+                    logger.error(f"❌ NVML Başlatılamadı: {e}")
             else:
-                self.cuda_info = "Pasif (Yazılım desteği yok)"
+                logger.info("ℹ️ SystemHealth: GPU izleme için 'pynvml' eksik.")
+
+            # PyTorch/CUDA Yazılım Kontrolü
+            if TORCH_AVAILABLE:
+                if torch.cuda.is_available():
+                    self.cuda_info = f"Aktif (v{torch.version.cuda})"
+                else:
+                    self.cuda_info = "Pasif (Donanım Yok)"
+            else:
+                self.cuda_info = "Pasif (Torch Yok)"
+        else:
+            logger.info("ℹ️ Sistem sağlık izleme CPU modunda (Config ayarı).")
 
         if PSUTIL_AVAILABLE:
-            self.last_net_io = psutil.net_io_counters()
-            logger.info("✅ Sistem sağlık takip servisi hazır.")
+            try:
+                self.last_net_io = psutil.net_io_counters()
+                logger.info("✅ Sistem sağlık takip servisi hazır.")
+            except Exception:
+                pass
 
     # --- DURUM ÖZETLERİ ---
 
@@ -114,7 +134,15 @@ class SystemHealthManager:
                 # 1. Temel Kaynaklar
                 cpu = psutil.cpu_percent(interval=0.1)
                 mem = psutil.virtual_memory()
-                disk = psutil.disk_usage(str(Config.WORK_DIR.anchor)).percent
+                
+                # Disk kullanımı (Varsayılan olarak çalışma dizininin olduğu disk)
+                work_dir = getattr(Config, "WORK_DIR", ".")
+                # Eğer WORK_DIR bir Path objesi ise .anchor veya str çevrimi gerekebilir
+                # En güvenli yol: mutlak yolu alıp stringe çevirmek
+                drive_path = os.path.splitdrive(os.path.abspath(str(work_dir)))[0]
+                if not drive_path: drive_path = "/" # Linux/Unix için kök dizin
+                
+                disk = psutil.disk_usage(drive_path).percent
                 
                 # 2. Ağ ve Uptime
                 net_report = self._get_network_speed()
@@ -167,6 +195,7 @@ class SystemHealthManager:
 
     def _get_gpu_load(self) -> int:
         """Birinci GPU'nun yük yüzdesini döner."""
+        if not self.gpu_active: return 0
         try:
             handle = pynvml.nvmlDeviceGetHandleByIndex(0)
             util = pynvml.nvmlDeviceGetUtilizationRates(handle)
@@ -175,11 +204,17 @@ class SystemHealthManager:
 
     def _get_detailed_gpu_info(self) -> str:
         """Tüm GPU'ların sıcaklık, yük, VRAM ve süreç bilgilerini döner."""
+        if not self.gpu_active: return "GPU İzleme Pasif"
+        
         lines = []
         try:
             for i in range(self.gpu_count):
                 handle = pynvml.nvmlDeviceGetHandleByIndex(i)
                 name = pynvml.nvmlDeviceGetName(handle)
+                # pynvml bazen bytes dönebilir, stringe çevirmek gerekebilir
+                if isinstance(name, bytes):
+                    name = name.decode('utf-8')
+                    
                 temp = pynvml.nvmlDeviceGetTemperature(handle, pynvml.NVML_TEMPERATURE_GPU)
                 util = pynvml.nvmlDeviceGetUtilizationRates(handle)
                 mem = pynvml.nvmlDeviceGetMemoryInfo(handle)
@@ -227,18 +262,22 @@ class SystemHealthManager:
         """Sistemi en çok yoran işlemi ismen bulur."""
         try:
             procs = []
-            for proc in psutil.process_iter(['name', 'cpu_percent', 'memory_percent']):
+            # 'memory_percent' bazen hata verebilir, dikkatli kullanılmalı
+            attrs = ['name', 'cpu_percent', 'memory_percent']
+            for proc in psutil.process_iter(attrs):
                 try:
                     procs.append(proc.info)
                 except (psutil.NoSuchProcess, psutil.AccessDenied):
                     continue
             
             key = 'cpu_percent' if r_type == "cpu" else 'memory_percent'
-            procs.sort(key=lambda x: x[key] if x[key] is not None else 0, reverse=True)
+            # None değerlerini 0 kabul ederek sırala
+            procs.sort(key=lambda x: x.get(key) or 0, reverse=True)
             
             if procs:
                 top = procs[0]
-                return f"{top['name']} (%{round(top[key], 1)})"
+                val = top.get(key) or 0
+                return f"{top['name']} (%{round(val, 1)})"
         except: pass
         return None
 

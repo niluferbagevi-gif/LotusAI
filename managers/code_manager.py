@@ -11,7 +11,14 @@ import fnmatch
 from pathlib import Path
 from datetime import datetime
 from typing import List, Optional, Union, Dict
-from config import Config
+
+# --- YAPILANDIRMA VE FALLBACK ---
+try:
+    from config import Config
+except ImportError:
+    class Config:
+        WORK_DIR = os.getcwd()
+        USE_GPU = False
 
 # --- LOGLAMA ---
 logger = logging.getLogger("LotusAI.CodeManager")
@@ -19,12 +26,14 @@ logger = logging.getLogger("LotusAI.CodeManager")
 class CodeManager:
     """
     LotusAI Dosya, Terminal ve Geliştirme Yöneticisi.
-    Sürüm 2.6 - GPU İzleme ve Gelişmiş Sistem Raporlama Destekli
+    Sürüm 2.6 - GPU İzleme ve Gelişmiş Sistem Raporlama Destekli (Config Entegreli)
     """
     
     def __init__(self, work_dir: Optional[Union[str, Path]] = None):
         # Sandbox (Güvenli Alan) sınırlarını belirle
-        self.root_dir = Path(work_dir).resolve() if work_dir else Path(Config.WORK_DIR).resolve()
+        # Config.WORK_DIR kullan, yoksa mevcut dizini al
+        default_work_dir = getattr(Config, "WORK_DIR", os.getcwd())
+        self.root_dir = Path(work_dir).resolve() if work_dir else Path(default_work_dir).resolve()
         self.backup_dir = self.root_dir / "backups" / "code"
         
         # Çoklu ajan erişimi için Reentrant Lock (Yarış durumlarını önler)
@@ -245,21 +254,37 @@ class CodeManager:
                 return f"❌ Sistem hatası: {str(e)}"
 
     def get_gpu_info(self) -> str:
-        """Sistemdeki NVIDIA GPU durumunu sorgular."""
+        """Sistemdeki NVIDIA GPU durumunu sorgular (Config kontrollü)."""
+        # Config üzerinden GPU kullanımı kapalıysa sorgulama yapma
+        if not getattr(Config, "USE_GPU", False):
+            return "ℹ️ GPU: Config ayarı ile devre dışı bırakıldı (CPU Modu)."
+
         try:
             # nvidia-smi komutunu dene
             result = subprocess.run(
-                ["nvidia-smi", "--query-gpu=gpu_name,memory.total,memory.free,utilization.gpu", "--format=csv,noheader,nounits"],
+                ["nvidia-smi", "--query-gpu=name,memory.total,memory.free,utilization.gpu", "--format=csv,noheader,nounits"],
                 capture_output=True, text=True, timeout=5
             )
+            
             if result.returncode == 0:
-                data = result.stdout.strip().split(", ")
-                return (f"🚀 GPU: {data[0]}\n"
-                        f"📊 Bellek: {data[2]}MB / {data[1]}MB Boş\n"
-                        f"🔥 Yük: %{data[3]}")
-            return "ℹ️ GPU: NVIDIA sürücüsü bulunamadı veya GPU yok."
-        except:
-            return "ℹ️ GPU: Sistemde aktif GPU tespit edilemedi."
+                # Çıktı: NVIDIA GeForce RTX 3070 Ti Laptop GPU, 8192, 7000, 5
+                # Birden fazla GPU varsa ilkini veya tümünü listeleyebiliriz
+                lines = result.stdout.strip().split('\n')
+                report = []
+                for i, line in enumerate(lines):
+                    data = [x.strip() for x in line.split(',')]
+                    if len(data) >= 4:
+                        report.append(f"🚀 GPU {i}: {data[0]}\n"
+                                      f"📊 Bellek: {data[2]}MB / {data[1]}MB Boş\n"
+                                      f"🔥 Yük: %{data[3]}")
+                
+                return "\n".join(report) if report else "ℹ️ GPU verisi okunamadı."
+            
+            return "ℹ️ GPU: NVIDIA sürücüsü yanıt vermedi veya bulunamadı."
+        except FileNotFoundError:
+             return "ℹ️ GPU: 'nvidia-smi' komutu sistemde yüklü değil."
+        except Exception as e:
+            return f"ℹ️ GPU Hatası: {str(e)}"
 
     def get_file_info(self, filename: str) -> str:
         """Dosya hakkında detaylı bilgi döner."""
