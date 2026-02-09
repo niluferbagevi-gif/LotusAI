@@ -391,7 +391,11 @@ async def main_loop(mode):
     
     # NLP yöneticisini cihaz bilgisi ile başlat
     nlp_manager = NLPManager()
-    poyraz_agent = PoyrazAgent(nlp_manager)
+    media_manager = MediaManager() if MEDIA_AVAILABLE else None
+    poyraz_tools = {"messaging": RuntimeContext.messaging_manager}
+    if media_manager:
+        poyraz_tools["media"] = media_manager
+    poyraz_agent = PoyrazAgent(nlp_manager, poyraz_tools)
     
     sidar_tools = {
         'code': code_manager, 
@@ -416,8 +420,8 @@ async def main_loop(mode):
         "state": state_manager
     }
     
-    if MEDIA_AVAILABLE:
-        tools['media'] = MediaManager()
+    if media_manager:
+        tools['media'] = media_manager
 
     RuntimeContext.engine = AgentEngine(memory_manager, tools)
 
