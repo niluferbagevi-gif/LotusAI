@@ -1,0 +1,200 @@
+MIT License
+
+Copyright (c) 2026 Halil Sevim - LotusAI Project
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+================================================================================
+ADDITIONAL TERMS FOR LOTUSAI
+================================================================================
+
+1. ATTRIBUTION REQUIREMENTS
+   - You must give appropriate credit to the original author (Halil Sevim)
+   - Provide a link to the original repository
+   - Indicate if changes were made to the original code
+   - You may do so in any reasonable manner, but not in any way that suggests
+     the licensor endorses you or your use
+
+2. COMMERCIAL USE
+   - Commercial use is permitted without additional fees
+   - Attribution must be maintained in commercial products
+   - You may sell products built with this software
+   - No royalties or revenue sharing required
+
+3. MODIFICATION AND DISTRIBUTION
+   - You may modify and distribute modified versions
+   - Modified versions must be clearly marked as such
+   - Modified versions must be released under the same MIT License
+   - You must document significant changes made
+
+4. THIRD-PARTY COMPONENTS
+   This software incorporates the following third-party libraries:
+   
+   - PyTorch (BSD License)
+   - OpenCV (Apache 2.0 License)
+   - Flask (BSD License)
+   - Google Generative AI (Google Terms of Service)
+   - Meta APIs (Meta Platform Terms)
+   - Transformers (Apache 2.0 License)
+   - ChromaDB (Apache 2.0 License)
+   - LangChain (MIT License)
+   - And others listed in requirements.txt
+   
+   Each component maintains its own license terms.
+   Users must comply with all applicable third-party licenses.
+
+5. AI MODEL USAGE RESTRICTIONS
+   
+   Google Gemini API:
+   - Subject to Google's Generative AI Terms of Service
+   - API key required (obtain from Google AI Studio)
+   - Rate limits and quotas apply
+   - Commercial use permitted per Google's terms
+   
+   Meta Platform APIs (WhatsApp/Instagram/Facebook):
+   - Subject to Meta Platform Terms and Policies
+   - Business verification may be required
+   - API access requires Meta App approval
+   - Privacy policy compliance mandatory
+   
+   Local AI Models (Ollama/GGUF):
+   - Subject to individual model licenses
+   - Some models restrict commercial use
+   - Check model card before deployment
+
+6. DATA PRIVACY AND SECURITY
+   
+   GDPR/KVKK Compliance:
+   - User consent required for data processing
+   - Right to access, modify, and delete data
+   - Data retention policies must be implemented
+   - Cross-border data transfer restrictions apply
+   
+   Face Recognition Data:
+   - Biometric data must be encrypted at rest
+   - Secure storage and transmission required
+   - User consent mandatory before capture
+   - Data deletion upon request
+   
+   Conversation Logs:
+   - End-to-end encryption recommended
+   - Secure storage implementation required
+   - Retention period must be defined
+   - Access controls must be enforced
+
+7. SECURITY REQUIREMENTS
+   
+   Production Deployment:
+   - Security audit recommended before deployment
+   - HTTPS/TLS encryption mandatory
+   - Regular security updates required
+   - Vulnerability disclosure policy recommended
+   
+   API Keys and Secrets:
+   - Never commit API keys to version control
+   - Use environment variables for secrets
+   - Rotate keys regularly
+   - Implement key management system
+
+8. PROHIBITED USES
+   
+   You may NOT use this software for:
+   - Illegal activities or purposes
+   - Violating privacy rights
+   - Harassment or discrimination
+   - Creating deepfakes without consent
+   - Unauthorized surveillance
+   - Military or weapons applications (without explicit permission)
+   - Medical diagnosis (without proper certification)
+
+9. WARRANTY DISCLAIMER
+   
+   - This software is provided for EDUCATIONAL and RESEARCH purposes
+   - Production use requires proper testing and security hardening
+   - No warranty for fitness for particular purpose
+   - Author assumes no liability for damages or misuse
+   - Use in critical systems at your own risk
+
+10. SUPPORT AND MAINTENANCE
+    
+    - No guaranteed support or maintenance
+    - Community support available via GitHub Issues
+    - Commercial support may be available upon request
+    - Security patches provided on best-effort basis
+
+11. TRADEMARK
+    
+    - "LotusAI" and the Lotus logo are trademarks
+    - You may not use trademarks without permission
+    - You may reference the project name for attribution
+    - Modified versions should use different branding
+
+12. TERMINATION
+    
+    License terminates automatically if you:
+    - Violate any license terms
+    - Engage in prohibited uses
+    - Fail to provide required attribution
+    - Misrepresent the software or its origin
+
+13. JURISDICTION AND DISPUTES
+    
+    - This license is governed by Turkish law
+    - Disputes shall be resolved in Turkish courts
+    - Arbitration may be pursued before litigation
+    - English version prevails in case of translation conflicts
+
+14. UPDATES TO LICENSE
+    
+    - License terms may be updated for new versions
+    - Existing versions retain original license
+    - Major changes will be announced
+    - Check repository for latest terms
+
+================================================================================
+CONTACT INFORMATION
+================================================================================
+
+For licensing questions, commercial inquiries, or permission requests:
+
+Email: license@lotusai.com
+GitHub: https://github.com/yourusername/LotusAI
+Website: https://lotusai.com
+
+For security vulnerabilities:
+Email: security@lotusai.com
+
+================================================================================
+ACKNOWLEDGMENTS
+================================================================================
+
+This project is built upon the work of many open-source contributors.
+Special thanks to:
+
+- Google AI Team (Gemini API)
+- Meta Platform Team (WhatsApp/Instagram APIs)
+- PyTorch Contributors
+- OpenCV Community
+- HuggingFace Team
+- And all open-source library maintainers
+
+================================================================================
+
+Last Updated: February 10, 2026
+Version: 2.5.3

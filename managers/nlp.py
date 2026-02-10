@@ -1,274 +1,640 @@
+"""
+LotusAI NLP Manager
+Sürüm: 2.5.3
+Açıklama: NLP ve duygu analizi yönetimi
+
+Özellikler:
+- Transformers/BERT entegrasyonu
+- GPU hızlandırmalı duygu analizi
+- Batch processing
+- Keyword extraction
+- Rezervasyon ayıklama
+- Türkçe stop words
+- Intent detection
+"""
+
 import re
 import logging
 import threading
 from collections import Counter
-from typing import Dict, List, Any, Optional
+from typing import Dict, List, Any, Optional, Tuple
+from dataclasses import dataclass
+from enum import Enum
 
-# --- YAPILANDIRMA VE FALLBACK ---
-try:
-    from config import Config
-except ImportError:
-    class Config:
-        USE_GPU = False
+# ═══════════════════════════════════════════════════════════════
+# CONFIG
+# ═══════════════════════════════════════════════════════════════
+from config import Config
 
-# --- LOGLAMA ---
 logger = logging.getLogger("LotusAI.NLP")
 
-# --- KÜTÜPHANE VE GPU KONTROLÜ ---
+
+# ═══════════════════════════════════════════════════════════════
+# TRANSFORMERS & GPU
+# ═══════════════════════════════════════════════════════════════
 NLP_AVAILABLE = False
 HAS_GPU = False
-DEVICE_ID = -1  # -1: CPU, 0: GPU (CUDA)
-DEVICE_NAME = "CPU"
+DEVICE_ID = -1  # -1: CPU, 0: GPU
 
 try:
     import torch
-    from transformers import pipeline, AutoModelForSequenceClassification, AutoTokenizer
+    from transformers import pipeline
     NLP_AVAILABLE = True
-except ImportError as e:
-    logger.warning(f"⚠️ NLP kütüphaneleri eksik: {e}. (pip install torch transformers)")
+except ImportError:
+    logger.warning(
+        "⚠️ NLP kütüphaneleri eksik\n"
+        "pip install torch transformers"
+    )
 
-# Config üzerinden GPU kontrolü
-USE_GPU_CONFIG = getattr(Config, "USE_GPU", False)
-
-if NLP_AVAILABLE and USE_GPU_CONFIG:
+# GPU detection
+if NLP_AVAILABLE and Config.USE_GPU:
     try:
         if torch.cuda.is_available():
             HAS_GPU = True
             DEVICE_ID = 0
-            DEVICE_NAME = "GPU (CUDA)"
             try:
                 gpu_name = torch.cuda.get_device_name(0)
-                logger.info(f"🚀 NLP Modülü GPU Aktif: {gpu_name}")
-            except:
-                logger.info("🚀 NLP Modülü GPU Aktif")
-        else:
-            logger.info("ℹ️ NLP: Config GPU açık ancak donanım bulunamadı. CPU kullanılacak.")
+                logger.info(f"🚀 NLP GPU aktif: {gpu_name}")
+            except Exception:
+                logger.info("🚀 NLP GPU aktif")
     except Exception as e:
-        logger.warning(f"⚠️ NLP GPU kontrol hatası: {e}")
-else:
-    if NLP_AVAILABLE:
-        logger.info("ℹ️ NLP işlemleri CPU modunda (Config ayarı).")
+        logger.warning(f"⚠️ GPU kontrol hatası: {e}")
 
 
+# ═══════════════════════════════════════════════════════════════
+# ENUMS
+# ═══════════════════════════════════════════════════════════════
+class Sentiment(Enum):
+    """Duygu tipleri"""
+    POSITIVE = "POZITIF"
+    NEGATIVE = "NEGATIF"
+    NEUTRAL = "NOTR"
+
+
+class Intent(Enum):
+    """Niyet tipleri"""
+    RESERVATION = "rezervasyon"
+    COMPLAINT = "şikayet"
+    QUESTION = "soru"
+    PRAISE = "övgü"
+    ORDER = "sipariş"
+    CANCEL = "iptal"
+    UNKNOWN = "bilinmiyor"
+
+
+# ═══════════════════════════════════════════════════════════════
+# DATA STRUCTURES
+# ═══════════════════════════════════════════════════════════════
+@dataclass
+class SentimentResult:
+    """Duygu analizi sonucu"""
+    sentiment: Sentiment
+    confidence: float
+    text: str
+
+
+@dataclass
+class ReservationData:
+    """Rezervasyon verisi"""
+    person_count: str
+    time: str
+    phone: Optional[str]
+    summary: str
+
+
+@dataclass
+class BatchAnalysis:
+    """Toplu analiz sonucu"""
+    total_count: int
+    positive: int
+    negative: int
+    neutral: int
+    satisfaction_rate: float
+    top_complaints: List[str]
+    popular_topics: List[str]
+    device_used: str
+
+
+@dataclass
+class NLPMetrics:
+    """NLP metrikleri"""
+    sentiment_analyses: int = 0
+    batch_analyses: int = 0
+    reservations_extracted: int = 0
+    keywords_extracted: int = 0
+    errors_encountered: int = 0
+
+
+# ═══════════════════════════════════════════════════════════════
+# NLP MANAGER
+# ═══════════════════════════════════════════════════════════════
 class NLPManager:
     """
-    LotusAI Doğal Dil İşleme (NLP) ve Duygu Analizi Yöneticisi.
+    LotusAI Doğal Dil İşleme ve Duygu Analizi Yöneticisi
     
     Yetenekler:
-    - GPU Hızlandırma: Transformer modelleri CUDA üzerinden çalıştırılır (Config kontrollü).
-    - Derin Öğrenme Tabanlı Duygu Analizi: Türkçe BERT modeli ile yüksek doğruluk.
-    - Akıllı Temizleme: Metni gürültüden ve dolgu kelimelerinden arındırır.
-    - Veri Ayıklama: Rezervasyon ve iletişim bilgilerini Regex ile çeker.
+    - BERT: Türkçe duygu analizi (GPU hızlandırmalı)
+    - Batch processing: Toplu metin işleme
+    - Keyword extraction: Anahtar kelime çıkarma
+    - Reservation parsing: Rezervasyon bilgisi ayıklama
+    - Intent detection: Niyet tespiti
+    - Stop words: Türkçe dolgu kelime filtreleme
+    
+    Transformers kütüphanesi ile Türkçe BERT modelini kullanarak
+    yüksek doğrulukta duygu analizi yapar.
     """
     
+    # Turkish stop words
+    STOP_WORDS = {
+        "ve", "ile", "ama", "fakat", "lakin", "ancak", "de", "da",
+        "ki", "bu", "şu", "o", "bir", "daha", "en", "çok",
+        "mi", "mı", "mu", "mü", "ben", "sen", "biz", "siz",
+        "için", "gibi", "kadar", "diye", "yok", "var",
+        "ne", "neden", "nasıl", "mıdır"
+    }
+    
+    # Number words
+    WORD_TO_NUM = {
+        "bir": 1, "iki": 2, "üç": 3, "dört": 4, "beş": 5,
+        "altı": 6, "yedi": 7, "sekiz": 8, "dokuz": 9, "on": 10
+    }
+    
+    # Intent keywords
+    INTENT_KEYWORDS = {
+        Intent.RESERVATION: ["rezervasyon", "masa", "ayır", "yerim", "kişi"],
+        Intent.COMPLAINT: ["şikayet", "kötü", "berbat", "memnun değil", "soğuk"],
+        Intent.QUESTION: ["ne zaman", "nasıl", "nerede", "kaça", "var mı"],
+        Intent.PRAISE: ["harika", "mükemmel", "çok güzel", "teşekkür", "muhteşem"],
+        Intent.ORDER: ["sipariş", "istiyorum", "getir", "yemek"],
+        Intent.CANCEL: ["iptal", "vazgeç", "istemiyorum"]
+    }
+    
+    # Model settings
+    MODEL_NAME = "savasy/bert-base-turkish-sentiment-cased"
+    MAX_LENGTH = 512
+    CONFIDENCE_THRESHOLD = 0.6
+    
     def __init__(self):
-        # Çoklu thread erişimi için kilit
+        """NLP manager başlatıcı"""
+        # Thread safety
         self.lock = threading.RLock()
         
+        # Model
         self.sentiment_pipeline = None
         
-        if NLP_AVAILABLE:
-            # Model ve Tokenizer Yükleme (Türkçe Duygu Analizi için BERT tabanlı model)
-            try:
-                model_name = "savasy/bert-base-turkish-sentiment-cased"
-                self.sentiment_pipeline = pipeline(
-                    "sentiment-analysis", 
-                    model=model_name, 
-                    tokenizer=model_name, 
-                    device=DEVICE_ID
-                )
-                logger.info(f"✅ NLP Modeli {DEVICE_NAME} üzerinde yüklendi.")
-            except Exception as e:
-                logger.error(f"❌ Model yükleme hatası: {e}")
-        else:
-            logger.warning("⚠️ NLP modülleri eksik olduğu için duygu analizi pasif.")
-
-        # Stop Words (Analiz dışı bırakılacak etkisiz kelimeler)
-        self.stop_words = {
-            "ve", "ile", "ama", "fakat", "lakin", "ancak", "de", "da", "ki", "bu", "şu", "o",
-            "bir", "daha", "en", "çok", "mi", "mı", "mu", "mü", "ben", "sen", "biz", "siz",
-            "için", "gibi", "kadar", "diye", "yok", "var", "ne", "neden", "nasıl", "mıdır"
-        }
+        # Metrics
+        self.metrics = NLPMetrics()
         
-        # Sayısal karşılıklar (Rezervasyon ayıklama için)
-        self.word_to_num = {
-            "bir": 1, "iki": 2, "üç": 3, "dört": 4, "beş": 5, 
-            "altı": 6, "yedi": 7, "sekiz": 8, "dokuz": 9, "on": 10
-        }
-
+        # Initialize model
+        if NLP_AVAILABLE:
+            self._init_model()
+        else:
+            logger.warning("⚠️ NLP modülleri eksik, duygu analizi pasif")
+    
+    def _init_model(self) -> None:
+        """BERT modelini yükle"""
+        try:
+            self.sentiment_pipeline = pipeline(
+                "sentiment-analysis",
+                model=self.MODEL_NAME,
+                tokenizer=self.MODEL_NAME,
+                device=DEVICE_ID
+            )
+            
+            device_name = "GPU (CUDA)" if HAS_GPU else "CPU"
+            logger.info(f"✅ NLP modeli {device_name} üzerinde yüklendi")
+        
+        except Exception as e:
+            logger.error(f"Model yükleme hatası: {e}")
+            self.metrics.errors_encountered += 1
+    
+    # ───────────────────────────────────────────────────────────
+    # TEXT PROCESSING
+    # ───────────────────────────────────────────────────────────
+    
     def turkish_lower(self, text: str) -> str:
-        """Türkçe karakterlere duyarlı küçük harfe çevirme."""
-        if not text: return ""
+        """
+        Türkçe karaktere duyarlı lowercase
+        
+        Args:
+            text: Ham metin
+        
+        Returns:
+            Küçük harfli metin
+        """
+        if not text:
+            return ""
+        
+        # Turkish character mapping
         map_chars = str.maketrans("IİĞÜŞÖÇ", "ıiğüşöç")
         return text.translate(map_chars).lower()
-
-    def clean_text(self, text: str, for_analysis: bool = False) -> str:
-        """Metni gereksiz boşluklardan ve dolgu kelimelerinden temizler."""
-        if not text: return ""
+    
+    def clean_text(
+        self,
+        text: str,
+        for_analysis: bool = False
+    ) -> str:
+        """
+        Metni temizle
+        
+        Args:
+            text: Ham metin
+            for_analysis: Analiz için daha agresif temizleme
+        
+        Returns:
+            Temiz metin
+        """
+        if not text:
+            return ""
         
         with self.lock:
+            # Lowercase
             clean = self.turkish_lower(text)
-            # Dolgu seslerini temizle
-            clean = re.sub(r'\b(eee|mmm|hmm|şey|yani|ııı|aa|ee|bi)\b', '', clean)
             
+            # Remove filler sounds
+            clean = re.sub(
+                r'\b(eee|mmm|hmm|şey|yani|ııı|aa|ee|bi)\b',
+                '',
+                clean
+            )
+            
+            # For analysis: keep only alphanumeric
             if for_analysis:
-                # Sadece harf ve rakamları bırak
                 clean = re.sub(r'[^\w\s]', '', clean)
-                
+            
+            # Normalize whitespace
             return " ".join(clean.split())
-
-    def detect_emotion(self, text: str) -> str:
+    
+    # ───────────────────────────────────────────────────────────
+    # SENTIMENT ANALYSIS
+    # ───────────────────────────────────────────────────────────
+    
+    def detect_emotion(self, text: str) -> SentimentResult:
         """
-        Derin öğrenme modeli kullanarak duygu analizi yapar.
-        GPU desteği sayesinde model tahminleri çok hızlı gerçekleşir.
+        Duygu analizi
+        
+        Args:
+            text: Analiz edilecek metin
+        
+        Returns:
+            SentimentResult objesi
         """
         if not self.sentiment_pipeline or not text:
-            return "NOTR"
-
+            return SentimentResult(
+                sentiment=Sentiment.NEUTRAL,
+                confidence=0.0,
+                text=text
+            )
+        
         with self.lock:
             try:
-                # Modeli çalıştır
-                result = self.sentiment_pipeline(text[:512])[0] # BERT 512 token sınırı
-                label = result['label'].upper() # 'POSITIVE' veya 'NEGATIVE'
+                # Truncate to max length
+                truncated = text[:self.MAX_LENGTH]
+                
+                # Run model
+                result = self.sentiment_pipeline(truncated)[0]
+                label = result['label'].upper()
                 score = result['score']
                 
-                # Skor eşiği kontrolü (Düşük güvenilirlikte nötr kabul et)
-                if score < 0.6:
-                    return "NOTR"
+                # Low confidence -> neutral
+                if score < self.CONFIDENCE_THRESHOLD:
+                    sentiment = Sentiment.NEUTRAL
+                elif "POSITIVE" in label:
+                    sentiment = Sentiment.POSITIVE
+                elif "NEGATIVE" in label:
+                    sentiment = Sentiment.NEGATIVE
+                else:
+                    sentiment = Sentiment.NEUTRAL
                 
-                # Model etiketlerini LotusAI formatına çevir
-                if "POSITIVE" in label: return "POZITIF"
-                if "NEGATIVE" in label: return "NEGATIF"
-                return "NOTR"
+                self.metrics.sentiment_analyses += 1
+                
+                return SentimentResult(
+                    sentiment=sentiment,
+                    confidence=score,
+                    text=text
+                )
+            
             except Exception as e:
                 logger.error(f"Duygu analizi hatası: {e}")
-                return "NOTR"
-
-    def analyze_batch(self, text_list: List[str]) -> Dict[str, Any]:
+                self.metrics.errors_encountered += 1
+                
+                return SentimentResult(
+                    sentiment=Sentiment.NEUTRAL,
+                    confidence=0.0,
+                    text=text
+                )
+    
+    def analyze_batch(self, text_list: List[str]) -> BatchAnalysis:
         """
-        Yorum listesi üzerinde TOPLU (Batch) analiz yapar.
-        GPU üzerinde toplu işleme performansı maksimize eder.
+        Toplu duygu analizi
+        
+        Args:
+            text_list: Metin listesi
+        
+        Returns:
+            BatchAnalysis objesi
         """
         if not text_list or not self.sentiment_pipeline:
-            return {"status": "Veri Yok"}
-
+            return BatchAnalysis(
+                total_count=0,
+                positive=0,
+                negative=0,
+                neutral=0,
+                satisfaction_rate=0.0,
+                top_complaints=[],
+                popular_topics=[],
+                device_used="N/A"
+            )
+        
         with self.lock:
-            results = {
-                "positive": 0, "negative": 0, "neutral": 0,
-                "all_text": "", "neg_text": ""
-            }
-
-            # GPU avantajını kullanmak için listeyi toplu olarak modele gönderiyoruz
+            positive_count = 0
+            negative_count = 0
+            neutral_count = 0
+            
+            all_text = ""
+            negative_text = ""
+            
             try:
-                # Boş metinleri filtrele
+                # Filter empty texts
                 valid_texts = [t for t in text_list if t.strip()]
-                model_results = self.sentiment_pipeline(valid_texts, truncation=True)
                 
+                # Batch inference
+                model_results = self.sentiment_pipeline(
+                    valid_texts,
+                    truncation=True
+                )
+                
+                # Process results
                 for i, res in enumerate(model_results):
                     label = res['label'].upper()
                     score = res['score']
                     text = valid_texts[i]
-                    cleaned = self.clean_text(text, for_analysis=True)
-                    results["all_text"] += cleaned + " "
                     
-                    if score < 0.6:
-                        results["neutral"] += 1
+                    cleaned = self.clean_text(text, for_analysis=True)
+                    all_text += cleaned + " "
+                    
+                    # Categorize
+                    if score < self.CONFIDENCE_THRESHOLD:
+                        neutral_count += 1
                     elif "POSITIVE" in label:
-                        results["positive"] += 1
+                        positive_count += 1
                     elif "NEGATIVE" in label:
-                        results["negative"] += 1
-                        results["neg_text"] += cleaned + " "
+                        negative_count += 1
+                        negative_text += cleaned + " "
                     else:
-                        results["neutral"] += 1
-
-                total = len(valid_texts)
-                sentiment_score = int((results["positive"] / total) * 100) if total > 0 else 0
+                        neutral_count += 1
                 
-                return {
-                    "total_count": total,
-                    "device_used": DEVICE_NAME,
-                    "sentiment_distribution": {
-                        "positive": results["positive"],
-                        "negative": results["negative"],
-                        "neutral": results["neutral"]
-                    },
-                    "satisfaction_rate": f"%{sentiment_score}",
-                    "top_complaints": self.extract_keywords(results["neg_text"], 3),
-                    "popular_topics": self.extract_keywords(results["all_text"], 5)
-                }
+                total = len(valid_texts)
+                satisfaction_rate = (
+                    (positive_count / total * 100)
+                    if total > 0 else 0.0
+                )
+                
+                # Extract keywords
+                top_complaints = self.extract_keywords(negative_text, 3)
+                popular_topics = self.extract_keywords(all_text, 5)
+                
+                device_used = "GPU (CUDA)" if HAS_GPU else "CPU"
+                
+                self.metrics.batch_analyses += 1
+                
+                return BatchAnalysis(
+                    total_count=total,
+                    positive=positive_count,
+                    negative=negative_count,
+                    neutral=neutral_count,
+                    satisfaction_rate=satisfaction_rate,
+                    top_complaints=top_complaints,
+                    popular_topics=popular_topics,
+                    device_used=device_used
+                )
+            
             except Exception as e:
                 logger.error(f"Batch analiz hatası: {e}")
-                return {"status": "Hata", "error": str(e)}
-
+                self.metrics.errors_encountered += 1
+                
+                return BatchAnalysis(
+                    total_count=0,
+                    positive=0,
+                    negative=0,
+                    neutral=0,
+                    satisfaction_rate=0.0,
+                    top_complaints=[],
+                    popular_topics=[],
+                    device_used="Error"
+                )
+    
+    # ───────────────────────────────────────────────────────────
+    # KEYWORD EXTRACTION
+    # ───────────────────────────────────────────────────────────
+    
     def extract_keywords(self, text: str, top_n: int = 5) -> List[str]:
-        """En sık geçen ve anlam taşıyan anahtar kelimeleri bulur."""
-        if not text: return []
+        """
+        Anahtar kelime çıkarma
+        
+        Args:
+            text: Metin
+            top_n: Maksimum kelime sayısı
+        
+        Returns:
+            Kelime listesi
+        """
+        if not text:
+            return []
+        
+        # Split and filter
         words = text.split()
-        filtered = [w for w in words if w not in self.stop_words and len(w) > 2]
-        return [item[0] for item in Counter(filtered).most_common(top_n)]
-
+        filtered = [
+            w for w in words
+            if w not in self.STOP_WORDS and len(w) > 2
+        ]
+        
+        # Count and return top N
+        keywords = [
+            item[0]
+            for item in Counter(filtered).most_common(top_n)
+        ]
+        
+        self.metrics.keywords_extracted += len(keywords)
+        
+        return keywords
+    
+    # ───────────────────────────────────────────────────────────
+    # INTENT DETECTION
+    # ───────────────────────────────────────────────────────────
+    
+    def detect_intent(self, text: str) -> Intent:
+        """
+        Niyet tespiti
+        
+        Args:
+            text: Kullanıcı metni
+        
+        Returns:
+            Intent enum
+        """
+        text_lower = self.turkish_lower(text)
+        
+        # Check each intent's keywords
+        for intent, keywords in self.INTENT_KEYWORDS.items():
+            if any(kw in text_lower for kw in keywords):
+                return intent
+        
+        return Intent.UNKNOWN
+    
+    # ───────────────────────────────────────────────────────────
+    # BEHAVIOR PROMPT
+    # ───────────────────────────────────────────────────────────
+    
     def get_behavior_prompt(self, text: str) -> str:
-        """Kullanıcının moduna göre Gemini/LLM için davranış talimatı üretir."""
-        emotion = self.detect_emotion(text)
-        if emotion == "POZITIF": 
-            return "[DAVRANIŞ: Enerjik, minnettar ve samimi ol. Gülümseyen bir ton kullan.]"
-        elif emotion == "NEGATIF": 
-            return "[DAVRANIŞ: Alttan al, son derece nazik ve profesyonel ol. Çözüm odaklı ve özür dileyen bir ton kullan.]"
-        return "[DAVRANIŞ: Net, kısa ve ciddi bir profesyonellikle yanıt ver.]"
-
-    def extract_reservation_details(self, text: str) -> Dict[str, Any]:
-        """Metinden rezervasyon verilerini (Kişi, Saat, Telefon) ayıklar (Regex)."""
-        text = self.turkish_lower(text)
+        """
+        LLM davranış talimatı
+        
+        Args:
+            text: Kullanıcı metni
+        
+        Returns:
+            Davranış talimatı
+        """
+        result = self.detect_emotion(text)
+        
+        if result.sentiment == Sentiment.POSITIVE:
+            return (
+                "[DAVRANIŞ: Enerjik, minnettar ve samimi ol. "
+                "Gülümseyen bir ton kullan.]"
+            )
+        elif result.sentiment == Sentiment.NEGATIVE:
+            return (
+                "[DAVRANIŞ: Alttan al, son derece nazik ve profesyonel ol. "
+                "Çözüm odaklı ve özür dileyen bir ton kullan.]"
+            )
+        else:
+            return (
+                "[DAVRANIŞ: Net, kısa ve ciddi bir profesyonellikle "
+                "yanıt ver.]"
+            )
+    
+    # ───────────────────────────────────────────────────────────
+    # RESERVATION EXTRACTION
+    # ───────────────────────────────────────────────────────────
+    
+    def extract_reservation_details(self, text: str) -> ReservationData:
+        """
+        Rezervasyon bilgisi ayıklama
+        
+        Args:
+            text: Rezervasyon metni
+        
+        Returns:
+            ReservationData objesi
+        """
+        text_lower = self.turkish_lower(text)
         
         with self.lock:
-            # 1. Kişi Sayısı Ayıklama
-            count = "Bilinmiyor"
-            count_match = re.search(r'(\d+)\s*(?:kişi|kisilik|tane|masa|pax)', text)
-            if count_match:
-                count = count_match.group(1)
-            else:
-                for word, val in self.word_to_num.items():
-                    if f"{word} kişi" in text or f"{word} kişilik" in text:
-                        count = str(val)
-                        break
+            # Person count
+            person_count = self._extract_person_count(text_lower)
             
-            # 2. Saat Ayıklama
-            time_val = "Belirtilmedi"
-            time_match = re.search(r'(\d{1,2})[:. ](\d{2})', text)
-            if time_match:
-                h, m = int(time_match.group(1)), int(time_match.group(2))
-                if h < 24 and m < 60:
-                    time_val = f"{str(h).zfill(2)}:{str(m).zfill(2)}"
+            # Time
+            time = self._extract_time(text_lower)
             
-            if time_val == "Belirtilmedi":
-                if "akşam" in text: 
-                    time_val = "Akşam (Saat Belirsiz)"
-                    for word, val in self.word_to_num.items():
-                        if f"akşam {word}" in text:
-                            time_val = f"{val + 12}:00" if val < 12 else f"{val}:00"
-                elif "öğle" in text: time_val = "Öğle (Saat Belirsiz)"
-                elif "yarın" in text: time_val = "Yarın"
+            # Phone
+            phone = self._extract_phone(text)
             
-            # 3. Telefon Numarası Ayıklama
-            phone = None
-            phone_pattern = r'(\+?9?0?\s?5\d{2}\s?-?\d{3}\s?-?\d{2}\s?-?\d{2})'
-            phone_matches = re.findall(phone_pattern, text)
+            self.metrics.reservations_extracted += 1
             
-            if phone_matches:
-                raw_num = phone_matches[0]
-                clean_num = re.sub(r'\D', '', raw_num)
-                if clean_num.startswith("05") and len(clean_num) == 11:
-                    phone = f"+90{clean_num[1:]}"
-                elif clean_num.startswith("5") and len(clean_num) == 10:
-                    phone = f"+90{clean_num}"
-                elif clean_num.startswith("905") and len(clean_num) == 12:
-                    phone = f"+{clean_num}"
-                else:
-                    phone = raw_num 
-
-            return {
-                "kisi_sayisi": count,
-                "saat": time_val,
-                "iletisim": phone,
-                "ham_metin_ozeti": f"{count} kişi / {time_val}"
-            }
+            return ReservationData(
+                person_count=person_count,
+                time=time,
+                phone=phone,
+                summary=f"{person_count} kişi / {time}"
+            )
+    
+    def _extract_person_count(self, text: str) -> str:
+        """Kişi sayısı çıkar"""
+        # Numeric pattern
+        count_match = re.search(
+            r'(\d+)\s*(?:kişi|kisilik|tane|masa|pax)',
+            text
+        )
+        
+        if count_match:
+            return count_match.group(1)
+        
+        # Word pattern
+        for word, val in self.WORD_TO_NUM.items():
+            if f"{word} kişi" in text or f"{word} kişilik" in text:
+                return str(val)
+        
+        return "Bilinmiyor"
+    
+    def _extract_time(self, text: str) -> str:
+        """Saat çıkar"""
+        # HH:MM pattern
+        time_match = re.search(r'(\d{1,2})[:. ](\d{2})', text)
+        
+        if time_match:
+            h = int(time_match.group(1))
+            m = int(time_match.group(2))
+            
+            if h < 24 and m < 60:
+                return f"{str(h).zfill(2)}:{str(m).zfill(2)}"
+        
+        # General time descriptions
+        if "akşam" in text:
+            for word, val in self.WORD_TO_NUM.items():
+                if f"akşam {word}" in text:
+                    hour = val + 12 if val < 12 else val
+                    return f"{hour}:00"
+            return "Akşam (Saat Belirsiz)"
+        
+        if "öğle" in text:
+            return "Öğle (Saat Belirsiz)"
+        
+        if "yarın" in text:
+            return "Yarın"
+        
+        return "Belirtilmedi"
+    
+    def _extract_phone(self, text: str) -> Optional[str]:
+        """Telefon numarası çıkar"""
+        # Turkish phone pattern
+        phone_pattern = r'(\+?9?0?\s?5\d{2}\s?-?\d{3}\s?-?\d{2}\s?-?\d{2})'
+        phone_matches = re.findall(phone_pattern, text)
+        
+        if not phone_matches:
+            return None
+        
+        raw_num = phone_matches[0]
+        clean_num = re.sub(r'\D', '', raw_num)
+        
+        # Format variations
+        if clean_num.startswith("05") and len(clean_num) == 11:
+            return f"+90{clean_num[1:]}"
+        elif clean_num.startswith("5") and len(clean_num) == 10:
+            return f"+90{clean_num}"
+        elif clean_num.startswith("905") and len(clean_num) == 12:
+            return f"+{clean_num}"
+        else:
+            return raw_num
+    
+    # ───────────────────────────────────────────────────────────
+    # UTILITIES
+    # ───────────────────────────────────────────────────────────
+    
+    def get_metrics(self) -> Dict[str, Any]:
+        """
+        NLP metrikleri
+        
+        Returns:
+            Metrik dictionary
+        """
+        return {
+            "sentiment_analyses": self.metrics.sentiment_analyses,
+            "batch_analyses": self.metrics.batch_analyses,
+            "reservations_extracted": self.metrics.reservations_extracted,
+            "keywords_extracted": self.metrics.keywords_extracted,
+            "errors_encountered": self.metrics.errors_encountered,
+            "model_loaded": self.sentiment_pipeline is not None,
+            "gpu_available": HAS_GPU,
+            "device": "GPU (CUDA)" if HAS_GPU else "CPU"
+        }

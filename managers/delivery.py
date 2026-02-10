@@ -1,575 +1,578 @@
+"""
+LotusAI Delivery Manager
+Sürüm: 2.5.3
+Açıklama: Paket servis entegrasyon yönetimi
+
+Özellikler:
+- Selenium automation
+- GPU hızlandırmalı tarayıcı
+- Çoklu platform desteği (Yemeksepeti, Getir, Trendyol)
+- Otomatik kurtarma
+- Akıllı filtreleme
+- Ekran görüntüsü
+- Thread-safe operasyonlar
+"""
+
 import logging
 import time
 import threading
-import os
-import re
 from pathlib import Path
 from datetime import datetime
-from typing import List, Dict, Optional, Any
+from typing import List, Dict, Optional, Any, Tuple
+from dataclasses import dataclass
+from enum import Enum
 
-# --- YAPILANDIRMA VE FALLBACK ---
-try:
-    from config import Config
-except ImportError:
-    class Config:
-        WORK_DIR = os.getcwd()
-        USE_GPU = False
-        YEMEKSEPETI_URL = "https://partner.yemeksepeti.com"
-        GETIR_URL = "https://restoran.getir.com"
-        TRENDYOL_URL = "https://partner.trendyol.com"
+# ═══════════════════════════════════════════════════════════════
+# CONFIG
+# ═══════════════════════════════════════════════════════════════
+from config import Config
 
-# --- LOGLAMA ---
 logger = logging.getLogger("LotusAI.Delivery")
 
-# Selenium Kütüphane Kontrolleri
+
+# ═══════════════════════════════════════════════════════════════
+# SELENIUM
+# ═══════════════════════════════════════════════════════════════
+SELENIUM_AVAILABLE = False
+
 try:
     from selenium import webdriver
     from selenium.webdriver.chrome.service import Service
     from selenium.webdriver.chrome.options import Options
     from selenium.webdriver.common.by import By
-    from selenium.common.exceptions import WebDriverException, NoSuchWindowException, TimeoutException
+    from selenium.common.exceptions import (
+        WebDriverException,
+        NoSuchWindowException,
+        TimeoutException
+    )
     from webdriver_manager.chrome import ChromeDriverManager
     SELENIUM_AVAILABLE = True
 except ImportError:
-    SELENIUM_AVAILABLE = False
-    logger.error("❌ Selenium eksik. 'pip install selenium webdriver-manager' çalıştırın.")
+    logger.error(
+        "❌ Selenium yok. "
+        "'pip install selenium webdriver-manager' çalıştırın"
+    )
 
+
+# ═══════════════════════════════════════════════════════════════
+# ENUMS
+# ═══════════════════════════════════════════════════════════════
+class Platform(Enum):
+    """Paket servis platformları"""
+    YEMEKSEPETI = "yemeksepeti"
+    GETIR = "getir"
+    TRENDYOL = "trendyol"
+
+
+class ServiceStatus(Enum):
+    """Servis durumları"""
+    ACTIVE = "active"
+    INACTIVE = "inactive"
+    ERROR = "error"
+    RECOVERING = "recovering"
+
+
+# ═══════════════════════════════════════════════════════════════
+# DATA STRUCTURES
+# ═══════════════════════════════════════════════════════════════
+@dataclass
+class PlatformConfig:
+    """Platform yapılandırması"""
+    platform: Platform
+    name: str
+    url: str
+    keywords: List[str]
+
+
+@dataclass
+class OrderAlert:
+    """Sipariş uyarısı"""
+    platform: str
+    message: str
+    timestamp: datetime
+    screenshot_path: Optional[str] = None
+
+
+@dataclass
+class DeliveryMetrics:
+    """Delivery manager metrikleri"""
+    alerts_generated: int = 0
+    screenshots_taken: int = 0
+    tab_recoveries: int = 0
+    errors_encountered: int = 0
+    total_checks: int = 0
+
+
+# ═══════════════════════════════════════════════════════════════
+# DELIVERY MANAGER
+# ═══════════════════════════════════════════════════════════════
 class DeliveryManager:
     """
-    LotusAI Paket Servis Entegrasyon Yöneticisi (GPU Hızlandırmalı Versiyon).
-     
+    LotusAI Paket Servis Entegrasyon Yöneticisi
+    
     Yetenekler:
-    - GPU Hızlandırma: Tarayıcı render işlemlerini GPU'ya aktararak CPU tasarrufu sağlar (Config Kontrollü).
-    - Çoklu Panel Yönetimi: Yemeksepeti, Getir, Trendyol takibi.
-    - Akıllı Filtreleme: Yanlış alarmları eleyen gelişmiş kontrol mekanizması.
-    - Otomatik Onarım: Çöken sekmeleri veya tarayıcıyı tespit edip yeniden başlatır.
+    - Selenium automation: Web tabanlı platform kontrolü
+    - GPU hızlandırma: Tarayıcı render için GPU kullanımı
+    - Çoklu platform: Yemeksepeti, Getir, Trendyol
+    - Otomatik kurtarma: Çöken sekmeleri yeniden açar
+    - Akıllı filtreleme: Yanlış alarmları engeller
+    - Screenshot: Sipariş kanıtı için görüntü
+    
+    Selenium ile tarayıcı kontrolü yaparak paket servis platformlarındaki
+    yeni siparişleri otomatik tespit eder.
     """
-     
+    
+    # Platform configurations
+    PLATFORM_CONFIGS = {
+        Platform.YEMEKSEPETI: PlatformConfig(
+            platform=Platform.YEMEKSEPETI,
+            name="Yemeksepeti",
+            url=getattr(Config, 'YEMEKSEPETI_URL', "https://partner.yemeksepeti.com"),
+            keywords=["yeni sipariş", "zil çalıyor", "sipariş var", "bekleyen ("]
+        ),
+        Platform.GETIR: PlatformConfig(
+            platform=Platform.GETIR,
+            name="Getir",
+            url=getattr(Config, 'GETIR_URL', "https://restoran.getir.com"),
+            keywords=["yeni sipariş", "sipariş geldi", "onay bekleyen"]
+        ),
+        Platform.TRENDYOL: PlatformConfig(
+            platform=Platform.TRENDYOL,
+            name="Trendyol",
+            url=getattr(Config, 'TRENDYOL_URL', "https://partner.trendyol.com"),
+            keywords=["yeni sipariş", "aktif sipariş", "bekleyen ("]
+        )
+    }
+    
+    # Ignore phrases (false positives)
+    IGNORE_PHRASES = [
+        "bekleyen sipariş yok",
+        "aktif siparişiniz bulunmamaktadır",
+        "sipariş bulunmamaktadır",
+        "0 bekleyen",
+        "(0)",
+        "yok"
+    ]
+    
+    # Alert cooldown (seconds)
+    ALERT_COOLDOWN = 120  # 2 dakika
+    
+    # Tab recovery delay
+    TAB_LOAD_DELAY = 1.0
+    
+    # Check delay
+    CHECK_DELAY = 0.3
+    
     def __init__(self):
-        self.driver = None 
-        self.is_selenium_active = False
+        """Delivery manager başlatıcı"""
+        # Selenium
+        self.driver: Optional[webdriver.Chrome] = None
+        self.status = ServiceStatus.INACTIVE
+        
+        # Thread safety
         self.lock = threading.RLock()
         
-        # Dizin Yapılandırması
-        default_work_dir = getattr(Config, "WORK_DIR", os.getcwd())
-        self.work_dir = Path(default_work_dir)
+        # Paths
+        self.work_dir = Config.WORK_DIR
         self.user_data_dir = self.work_dir / "chrome_user_data"
         self.screenshots_dir = self.work_dir / "static" / "delivery_previews"
         
+        # Create directories
         try:
             self.user_data_dir.mkdir(parents=True, exist_ok=True)
             self.screenshots_dir.mkdir(parents=True, exist_ok=True)
         except Exception as e:
             logger.error(f"Dizin oluşturma hatası: {e}")
         
-        self.last_alerts = {} 
+        # Alert tracking
+        self.last_alerts: Dict[str, float] = {}
         
-        # Platform Konfigürasyonu
-        self.platforms = {
-            "YEMEKSEPETI": {
-                "name": "Yemeksepeti",
-                "url": getattr(Config, 'YEMEKSEPETI_URL', "https://partner.yemeksepeti.com"),
-                "keywords": ["yeni sipariş", "zil çalıyor", "sipariş var", "bekleyen ("]
-            },
-            "GETIR": {
-                "name": "Getir",
-                "url": getattr(Config, 'GETIR_URL', "https://restoran.getir.com"),
-                "keywords": ["yeni sipariş", "sipariş geldi", "onay bekleyen"]
-            },
-            "TRENDYOL": {
-                "name": "Trendyol",
-                "url": getattr(Config, 'TRENDYOL_URL', "https://partner.trendyol.com"),
-                "keywords": ["yeni sipariş", "aktif sipariş", "bekleyen ("]
-            }
-        }
-
-        self.ignore_phrases = [
-            "bekleyen sipariş yok", "aktif siparişiniz bulunmamaktadır",
-            "sipariş bulunmamaktadır", "0 bekleyen", "(0)", "yok"
-        ]
-
+        # Metrics
+        self.metrics = DeliveryMetrics()
+    
+    # ───────────────────────────────────────────────────────────
+    # SERVICE CONTROL
+    # ───────────────────────────────────────────────────────────
+    
     def start_service(self, headless: bool = False) -> bool:
-        """Selenium tarayıcısını donanım hızlandırma ve anti-bot ayarlarıyla başlatır."""
+        """
+        Selenium tarayıcısını başlat
+        
+        Args:
+            headless: Headless mode
+        
+        Returns:
+            Başarılı ise True
+        """
         if not SELENIUM_AVAILABLE:
+            logger.error("Selenium mevcut değil")
             return False
-
+        
         with self.lock:
-            if self.is_selenium_active and self.driver:
+            # Already active
+            if self.status == ServiceStatus.ACTIVE and self.driver:
                 return True
-
-            use_gpu = getattr(Config, "USE_GPU", False)
-            mode_msg = "GPU Hızlandırmalı" if use_gpu else "CPU Modunda"
-            logger.info(f"🛵 Paket Servis Tarayıcısı ({mode_msg}) başlatılıyor...")
+            
+            mode = "GPU" if Config.USE_GPU else "CPU"
+            logger.info(f"🛵 Paket servis başlatılıyor ({mode} modu)...")
             
             try:
-                chrome_options = Options()
-                chrome_options.add_argument(f"--user-data-dir={self.user_data_dir}")
-                chrome_options.add_argument("--start-maximized")
+                # Chrome options
+                chrome_options = self._create_chrome_options(headless)
                 
-                # --- GPU VE DONANIM HIZLANDIRMA AYARLARI (Config Kontrollü) ---
-                if use_gpu:
-                    chrome_options.add_argument("--enable-gpu") # GPU kullanımını zorla
-                    chrome_options.add_argument("--enable-software-rasterizer")
-                    chrome_options.add_argument("--ignore-gpu-blocklist") # Desteklenmeyen GPU'larda bile dene
-                    chrome_options.add_argument("--num-raster-threads=4") # Render işlemini hızlandır
-                else:
-                    chrome_options.add_argument("--disable-gpu") # CPU modu için GPU'yu kapat
-                    chrome_options.add_argument("--disable-software-rasterizer")
-                
-                if headless:
-                    # Yeni headless modu GPU desteğini daha iyi yönetir
-                    chrome_options.add_argument("--headless=new") 
-                    if not use_gpu:
-                        chrome_options.add_argument("--disable-gpu")
-                
-                # --- ANTİ-BOT VE PERFORMANS AYARLARI ---
-                chrome_options.add_argument("--disable-blink-features=AutomationControlled")
-                chrome_options.add_experimental_option("excludeSwitches", ["enable-automation"])
-                chrome_options.add_experimental_option('useAutomationExtension', False)
-                chrome_options.add_argument("--no-sandbox")
-                chrome_options.add_argument("--disable-dev-shm-usage")
-                chrome_options.add_argument("--log-level=3")
-                chrome_options.add_argument("--silent")
-                chrome_options.add_argument("--disable-notifications") # Bildirim pencerelerini engelle
-
+                # Service
                 service = Service(ChromeDriverManager().install())
-                self.driver = webdriver.Chrome(service=service, options=chrome_options)
                 
-                # WebDriver izlerini gizle (JavaScript seviyesinde)
-                self.driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
+                # Create driver
+                self.driver = webdriver.Chrome(
+                    service=service,
+                    options=chrome_options
+                )
                 
-                self.is_selenium_active = True
+                # Hide webdriver
+                self.driver.execute_script(
+                    "Object.defineProperty(navigator, 'webdriver', "
+                    "{get: () => undefined})"
+                )
+                
+                # Load panels
                 self._load_initial_panels()
                 
-                logger.info(f"✅ Paket Servis servisi aktif edildi ({mode_msg}).")
-                return True
+                self.status = ServiceStatus.ACTIVE
+                logger.info(f"✅ Paket servis aktif ({mode})")
                 
+                return True
+            
             except Exception as e:
-                logger.critical(f"❌ Tarayıcı Başlatma Hatası: {e}")
-                self.is_selenium_active = False
+                logger.critical(f"❌ Tarayıcı başlatma hatası: {e}")
+                self.status = ServiceStatus.ERROR
+                self.metrics.errors_encountered += 1
                 return False
-
-    def _load_initial_panels(self):
-        """Platformları sekmelerde açar."""
-        if not self.driver: return
+    
+    def _create_chrome_options(self, headless: bool) -> Options:
+        """Chrome seçenekleri oluştur"""
+        chrome_options = Options()
+        
+        # User data
+        chrome_options.add_argument(
+            f"--user-data-dir={self.user_data_dir}"
+        )
+        chrome_options.add_argument("--start-maximized")
+        
+        # GPU acceleration (Config controlled)
+        if Config.USE_GPU:
+            chrome_options.add_argument("--enable-gpu")
+            chrome_options.add_argument("--enable-software-rasterizer")
+            chrome_options.add_argument("--ignore-gpu-blocklist")
+            chrome_options.add_argument("--num-raster-threads=4")
+        else:
+            chrome_options.add_argument("--disable-gpu")
+            chrome_options.add_argument("--disable-software-rasterizer")
+        
+        # Headless
+        if headless:
+            chrome_options.add_argument("--headless=new")
+            if not Config.USE_GPU:
+                chrome_options.add_argument("--disable-gpu")
+        
+        # Anti-bot
+        chrome_options.add_argument(
+            "--disable-blink-features=AutomationControlled"
+        )
+        chrome_options.add_experimental_option(
+            "excludeSwitches",
+            ["enable-automation"]
+        )
+        chrome_options.add_experimental_option(
+            "useAutomationExtension",
+            False
+        )
+        
+        # Performance
+        chrome_options.add_argument("--no-sandbox")
+        chrome_options.add_argument("--disable-dev-shm-usage")
+        chrome_options.add_argument("--log-level=3")
+        chrome_options.add_argument("--silent")
+        chrome_options.add_argument("--disable-notifications")
+        
+        return chrome_options
+    
+    def _load_initial_panels(self) -> None:
+        """Platform panellerini yükle"""
+        if not self.driver:
+            return
         
         try:
-            platform_keys = list(self.platforms.keys())
-            if not platform_keys: return
-
-            # İlk platformu ana sekmede aç
-            first_key = platform_keys[0]
-            self.driver.get(self.platforms[first_key]["url"])
+            configs = list(self.PLATFORM_CONFIGS.values())
             
-            # Diğerlerini yeni sekmelerde aç
-            for key in platform_keys[1:]:
-                data = self.platforms[key]
-                self.driver.execute_script(f"window.open('{data['url']}', '_blank');")
-                time.sleep(1) # Sekmeler arası yük dengelemesi
+            if not configs:
+                return
             
-            logger.info(f"🌐 {len(self.platforms)} panel sekmesi hazırlandı.")
+            # First platform in main tab
+            first_config = configs[0]
+            self.driver.get(first_config.url)
+            
+            # Others in new tabs
+            for config in configs[1:]:
+                self.driver.execute_script(
+                    f"window.open('{config.url}', '_blank');"
+                )
+                time.sleep(self.TAB_LOAD_DELAY)
+            
+            logger.info(f"🌐 {len(configs)} panel hazırlandı")
+        
         except Exception as e:
-            logger.error(f"❌ Panel yükleme hatası: {e}")
-
-    def check_new_orders(self) -> List[str]:
-        """Tarayıcı sekmelerini tarayarak sipariş kontrolü yapar."""
-        alerts = []
-        if not self.is_selenium_active or not self.driver: 
-            return alerts
-            
-        with self.lock:
-            try:
-                handles = self.driver.window_handles
-                
-                # Sekme kaybı durumunda kurtarma
-                if len(handles) < len(self.platforms):
-                    logger.warning("⚠️ Eksik panel tespit edildi, kurtarılıyor...")
-                    self._recover_missing_tabs()
-                    return alerts
-
-                for handle in handles:
-                    try:
-                        self.driver.switch_to.window(handle)
-                        # Render'ın tamamlanması için çok kısa bir es
-                        time.sleep(0.3) 
-                        
-                        current_url = self.driver.current_url.lower()
-                        active_platform = self._identify_platform(current_url)
-                        
-                        if active_platform:
-                            p_name = active_platform['name']
-                            
-                            # DOM ve Metin Analizi
-                            body_text = self.driver.find_element(By.TAG_NAME, "body").text.lower()
-                            page_title = self.driver.title.lower()
-                            
-                            # Akıllı Kelime Eşleştirme
-                            found_trigger = any(kw in body_text for kw in active_platform['keywords']) or \
-                                            any(kw in page_title for kw in active_platform['keywords'])
-                            
-                            if found_trigger:
-                                # Negatif Filtreleme (Sipariş yok mesajlarını ele)
-                                if not any(ip in body_text for ip in self.ignore_phrases):
-                                    # Cooldown: Aynı platform için 2 dakika (120 sn) bekle
-                                    now = time.time()
-                                    if now - self.last_alerts.get(p_name, 0) > 120:
-                                        msg = f"🔔 {p_name}: Yeni bir sipariş veya hareketlilik algılandı!"
-                                        alerts.append(msg)
-                                        logger.info(msg)
-                                        self.last_alerts[p_name] = now
-                                        
-                                        # Kanıt için ekran görüntüsü al
-                                        self.take_panel_screenshot(p_name)
-                                        
-                                        # Bellek sızıntısını ve donmaları önlemek için ağır panelleri tazele
-                                        if any(x in current_url for x in ["yemeksepeti", "trendyol"]):
-                                            self.driver.refresh()
-                                            logger.debug(f"🔄 {p_name} paneli tazelendi.")
-                            
-                    except (NoSuchWindowException, WebDriverException) as e:
-                        logger.debug(f"Sekme geçiş hatası (Göz ardı edilebilir): {e}")
-                        continue
-                        
-            except Exception as e:
-                logger.error(f"❌ Sipariş tarama döngüsünde kritik hata: {e}")
-                
-        return alerts
-
-    def _identify_platform(self, url: str) -> Optional[Dict]:
-        """URL içeriğinden platformu teşhis eder."""
-        for data in self.platforms.values():
-            domain_part = data['url'].split("//")[-1].split(".")[0]
-            if domain_part in url:
-                return data
-        return None
-
-    def _recover_missing_tabs(self):
-        """Kapanan sekmeleri tespit eder ve yeniden açar."""
-        with self.lock:
-            try:
-                handles = self.driver.window_handles
-                current_urls = []
-                for h in handles:
-                    try:
-                        self.driver.switch_to.window(h)
-                        current_urls.append(self.driver.current_url.lower())
-                    except: continue
-
-                for key, data in self.platforms.items():
-                    domain_part = data['url'].split("//")[-1].split(".")[0]
-                    if not any(domain_part in url for url in current_urls):
-                        logger.info(f"🔄 {data['name']} sekmesi kurtarılıyor...")
-                        self.driver.execute_script(f"window.open('{data['url']}', '_blank');")
-            except Exception as e:
-                logger.error(f"Tab kurtarma sırasında hata: {e}")
-
-    def take_panel_screenshot(self, platform_name: str) -> Optional[str]:
-        """Tarayıcıdan güncel görüntüyü diske kaydeder."""
-        if not self.driver: return None
-        try:
-            timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-            filename = f"{platform_name.lower()}_{timestamp}.png"
-            filepath = self.screenshots_dir / filename
-            self.driver.save_screenshot(str(filepath))
-            return str(filepath)
-        except Exception as e:
-            logger.warning(f"📸 Ekran görüntüsü alma başarısız ({platform_name}): {e}")
-            return None
-
-    def stop_service(self):
-        """Tarayıcıyı ve tüm kaynaklarını güvenli bir şekilde serbest bırakır."""
+            logger.error(f"Panel yükleme hatası: {e}")
+            self.metrics.errors_encountered += 1
+    
+    def stop_service(self) -> None:
+        """Tarayıcıyı kapat"""
         with self.lock:
             if self.driver:
                 try:
                     self.driver.quit()
-                    logger.info("🔌 Paket servis tarayıcısı ve GPU kaynakları kapatıldı.")
-                except: pass
+                    logger.info("🔌 Paket servis kapatıldı")
+                except Exception:
+                    pass
                 finally:
                     self.driver = None
-                    self.is_selenium_active = False
-
+                    self.status = ServiceStatus.INACTIVE
+    
+    # ───────────────────────────────────────────────────────────
+    # ORDER CHECKING
+    # ───────────────────────────────────────────────────────────
+    
+    def check_new_orders(self) -> List[OrderAlert]:
+        """
+        Yeni siparişleri kontrol et
+        
+        Returns:
+            OrderAlert listesi
+        """
+        alerts = []
+        
+        if self.status != ServiceStatus.ACTIVE or not self.driver:
+            return alerts
+        
+        with self.lock:
+            try:
+                handles = self.driver.window_handles
+                
+                # Tab recovery check
+                if len(handles) < len(self.PLATFORM_CONFIGS):
+                    logger.warning("⚠️ Eksik panel, kurtarılıyor...")
+                    self.status = ServiceStatus.RECOVERING
+                    self._recover_missing_tabs()
+                    self.status = ServiceStatus.ACTIVE
+                    return alerts
+                
+                # Check each tab
+                for handle in handles:
+                    try:
+                        self.driver.switch_to.window(handle)
+                        time.sleep(self.CHECK_DELAY)
+                        
+                        # Identify platform
+                        current_url = self.driver.current_url.lower()
+                        platform_config = self._identify_platform(current_url)
+                        
+                        if platform_config:
+                            alert = self._check_platform_for_orders(
+                                platform_config,
+                                current_url
+                            )
+                            
+                            if alert:
+                                alerts.append(alert)
+                    
+                    except (NoSuchWindowException, WebDriverException) as e:
+                        logger.debug(f"Sekme hatası (göz ardı): {e}")
+                        continue
+                
+                self.metrics.total_checks += 1
+            
+            except Exception as e:
+                logger.error(f"❌ Sipariş kontrolü hatası: {e}")
+                self.metrics.errors_encountered += 1
+        
+        return alerts
+    
+    def _check_platform_for_orders(
+        self,
+        config: PlatformConfig,
+        current_url: str
+    ) -> Optional[OrderAlert]:
+        """Platform'da sipariş kontrolü"""
+        try:
+            # Get page content
+            body_text = self.driver.find_element(By.TAG_NAME, "body").text.lower()
+            page_title = self.driver.title.lower()
+            
+            # Keyword matching
+            found_trigger = (
+                any(kw in body_text for kw in config.keywords) or
+                any(kw in page_title for kw in config.keywords)
+            )
+            
+            if not found_trigger:
+                return None
+            
+            # Negative filtering
+            if any(phrase in body_text for phrase in self.IGNORE_PHRASES):
+                return None
+            
+            # Cooldown check
+            now = time.time()
+            last_alert_time = self.last_alerts.get(config.name, 0)
+            
+            if now - last_alert_time <= self.ALERT_COOLDOWN:
+                return None
+            
+            # Create alert
+            message = f"🔔 {config.name}: Yeni sipariş veya hareketlilik!"
+            
+            # Take screenshot
+            screenshot_path = self.take_panel_screenshot(config.name)
+            
+            # Update last alert time
+            self.last_alerts[config.name] = now
+            
+            # Refresh heavy platforms
+            if any(x in current_url for x in ["yemeksepeti", "trendyol"]):
+                self.driver.refresh()
+                logger.debug(f"🔄 {config.name} paneli tazelendi")
+            
+            self.metrics.alerts_generated += 1
+            logger.info(message)
+            
+            return OrderAlert(
+                platform=config.name,
+                message=message,
+                timestamp=datetime.now(),
+                screenshot_path=screenshot_path
+            )
+        
+        except Exception as e:
+            logger.error(f"Platform kontrol hatası ({config.name}): {e}")
+            return None
+    
+    def _identify_platform(self, url: str) -> Optional[PlatformConfig]:
+        """URL'den platform tespit et"""
+        for config in self.PLATFORM_CONFIGS.values():
+            domain_part = config.url.split("//")[-1].split(".")[0]
+            if domain_part in url:
+                return config
+        
+        return None
+    
+    # ───────────────────────────────────────────────────────────
+    # TAB RECOVERY
+    # ───────────────────────────────────────────────────────────
+    
+    def _recover_missing_tabs(self) -> None:
+        """Eksik sekmeleri kurtar"""
+        with self.lock:
+            try:
+                handles = self.driver.window_handles
+                current_urls = []
+                
+                # Get current URLs
+                for handle in handles:
+                    try:
+                        self.driver.switch_to.window(handle)
+                        current_urls.append(self.driver.current_url.lower())
+                    except Exception:
+                        continue
+                
+                # Check missing platforms
+                for config in self.PLATFORM_CONFIGS.values():
+                    domain_part = config.url.split("//")[-1].split(".")[0]
+                    
+                    if not any(domain_part in url for url in current_urls):
+                        logger.info(f"🔄 {config.name} kurtarılıyor...")
+                        self.driver.execute_script(
+                            f"window.open('{config.url}', '_blank');"
+                        )
+                        self.metrics.tab_recoveries += 1
+            
+            except Exception as e:
+                logger.error(f"Tab kurtarma hatası: {e}")
+                self.metrics.errors_encountered += 1
+    
+    # ───────────────────────────────────────────────────────────
+    # SCREENSHOT
+    # ───────────────────────────────────────────────────────────
+    
+    def take_panel_screenshot(self, platform_name: str) -> Optional[str]:
+        """
+        Panel ekran görüntüsü
+        
+        Args:
+            platform_name: Platform adı
+        
+        Returns:
+            Dosya yolu veya None
+        """
+        if not self.driver:
+            return None
+        
+        try:
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            filename = f"{platform_name.lower()}_{timestamp}.png"
+            filepath = self.screenshots_dir / filename
+            
+            self.driver.save_screenshot(str(filepath))
+            
+            self.metrics.screenshots_taken += 1
+            return str(filepath)
+        
+        except Exception as e:
+            logger.warning(f"Screenshot hatası ({platform_name}): {e}")
+            return None
+    
+    # ───────────────────────────────────────────────────────────
+    # STATUS & METRICS
+    # ───────────────────────────────────────────────────────────
+    
     def get_status_summary(self) -> str:
-        """GAYA ve sistem geneli için durum bilgisi üretir."""
-        if not self.is_selenium_active:
-            return "Paket Servis Takibi: 🔴 DEVRE DIŞI"
+        """
+        Durum özeti
+        
+        Returns:
+            Formatlanmış durum
+        """
+        if self.status == ServiceStatus.INACTIVE:
+            return "Paket Servis: 🔴 DEVRE DIŞI"
+        
+        if self.status == ServiceStatus.ERROR:
+            return "Paket Servis: ⚠️ HATA"
+        
         try:
             tab_count = len(self.driver.window_handles)
-            use_gpu = getattr(Config, "USE_GPU", False)
-            gpu_status = "GPU Aktif" if use_gpu else "CPU Modu"
-            return f"Paket Servis Takibi: 🟢 AKTİF ({tab_count} Panel - {gpu_status})"
-        except:
-            return "Paket Servis Takibi: ⚠️ BAĞLANTI SORUNU"
-
-
-# import logging
-# import time
-# import threading
-# import os
-# from pathlib import Path
-# from datetime import datetime
-# from config import Config
-
-# # --- LOGLAMA ---
-# # LotusAI merkezi log sistemine entegre named logger
-# logger = logging.getLogger("LotusAI.Delivery")
-
-# # Paket servis takibi için Selenium kütüphaneleri
-# try:
-#     from selenium import webdriver
-#     from selenium.webdriver.chrome.service import Service
-#     from selenium.webdriver.chrome.options import Options
-#     from selenium.webdriver.common.by import By
-#     from selenium.common.exceptions import WebDriverException, NoSuchWindowException, TimeoutException
-#     from webdriver_manager.chrome import ChromeDriverManager
-#     SELENIUM_AVAILABLE = True
-# except ImportError:
-#     SELENIUM_AVAILABLE = False
-#     logger.error("Selenium kütüphaneleri eksik. 'pip install selenium webdriver-manager' çalıştırın.")
-
-# class DeliveryManager:
-#     """
-#     LotusAI Paket Servis Entegrasyon Yöneticisi.
-#     Yemeksepeti, Getir ve Trendyol panellerini tek bir tarayıcıda yönetir.
-#     GAYA ajanı bu modülden gelen verileri işleyerek rapor sunar.
-#     """
-#     def __init__(self):
-#         self.driver = None 
-#         self.is_selenium_active = False
-#         self.lock = threading.Lock()
-        
-#         # Kullanıcı veri dizini (Oturumların açık kalması için kritik)
-#         work_dir = getattr(Config, 'WORK_DIR', Path.cwd())
-#         self.user_data_dir = work_dir / "chrome_user_data"
-#         self.user_data_dir.mkdir(parents=True, exist_ok=True)
-        
-#         # Ekran görüntüleri için klasör
-#         self.screenshots_dir = work_dir / "static" / "delivery_previews"
-#         self.screenshots_dir.mkdir(parents=True, exist_ok=True)
-        
-#         # Son tespit edilen siparişlerin kaydı (Mükerrer uyarıyı önlemek için)
-#         self.last_alerts = {} 
-        
-#         # Restoran Panelleri Konfigürasyonu
-#         self.platforms = {
-#             "YEMEKSEPETI": {
-#                 "name": "Yemeksepeti",
-#                 "url": getattr(Config, 'YEMEKSEPETI_URL', "https://partner.yemeksepeti.com"),
-#                 "keywords": ["yeni sipariş", "new order", "zil çalıyor", "sipariş var", "bekleyen ("]
-#             },
-#             "GETIR": {
-#                 "name": "Getir",
-#                 "url": getattr(Config, 'GETIR_URL', "https://restoran.getir.com"),
-#                 "keywords": ["yeni sipariş", "sipariş geldi", "onay bekleyen"]
-#             },
-#             "TRENDYOL": {
-#                 "name": "Trendyol",
-#                 "url": getattr(Config, 'TRENDYOL_URL', "https://partner.trendyol.com"),
-#                 "keywords": ["yeni sipariş", "aktif sipariş", "bekleyen ("]
-#             }
-#         }
-
-#         # Yanlış alarmı önlemek için göz ardı edilecek metinler
-#         self.ignore_phrases = [
-#             "bekleyen sipariş yok", 
-#             "aktif siparişiniz bulunmamaktadır",
-#             "sipariş bulunmamaktadır",
-#             "yeni sipariş nasıl alınır",
-#             "0 bekleyen",
-#             "(0)",
-#             "yok"
-#         ]
-
-#     def start_service(self):
-#         """Selenium tarayıcısını gelişmiş anti-detection ve performans ayarlarıyla başlatır."""
-#         if not SELENIUM_AVAILABLE:
-#             logger.error("Selenium modülü yüklü değil, servis başlatılamıyor.")
-#             return False
-
-#         with self.lock:
-#             if self.is_selenium_active and self.driver:
-#                 logger.info("Paket Servis servisi zaten aktif.")
-#                 return True
-
-#             logger.info("🛵 Paket Servis Tarayıcısı Hazırlanıyor...")
+            gpu_status = "GPU" if Config.USE_GPU else "CPU"
             
-#             try:
-#                 chrome_options = Options()
-                
-#                 # --- OTURUM VE PERSISTENCE ---
-#                 chrome_options.add_argument(f"--user-data-dir={self.user_data_dir}")
-#                 chrome_options.add_argument("--start-maximized")
-                
-#                 # --- GİZLİLİK VE ANTİ-BOT (Detection Prevention) ---
-#                 chrome_options.add_argument("--disable-blink-features=AutomationControlled")
-#                 chrome_options.add_experimental_option("excludeSwitches", ["enable-automation"])
-#                 chrome_options.add_experimental_option('useAutomationExtension', False)
-#                 chrome_options.add_argument("--no-sandbox")
-#                 chrome_options.add_argument("--disable-dev-shm-usage")
-                
-#                 # Gereksiz konsol kirliliğini önle
-#                 chrome_options.add_argument("--log-level=3")
-#                 chrome_options.add_argument("--silent")
-
-#                 # Otomatik Driver Kurulumu
-#                 service = Service(ChromeDriverManager().install())
-#                 self.driver = webdriver.Chrome(service=service, options=chrome_options)
-                
-#                 # Webdriver olduğunu gizle
-#                 self.driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
-                
-#                 self.is_selenium_active = True
-                
-#                 # İlk açılışta panelleri yükle
-#                 self._load_initial_panels()
-                
-#                 logger.info("✅ Paket Servis tarayıcısı ve paneller başarıyla açıldı.")
-#                 return True
-                
-#             except Exception as e:
-#                 logger.critical(f"Tarayıcı Başlatma Hatası: {e}")
-#                 self.is_selenium_active = False
-#                 return False
-
-#     def _load_initial_panels(self):
-#         """Tüm tanımlı platformları sekmelerde açar."""
-#         if not self.driver: return
+            return (
+                f"Paket Servis: 🟢 AKTİF "
+                f"({tab_count} Panel - {gpu_status})"
+            )
         
-#         try:
-#             # İlk platform (Yemeksepeti)
-#             self.driver.get(self.platforms["YEMEKSEPETI"]["url"])
-            
-#             # Diğerlerini yeni sekmelerde aç
-#             for key, data in self.platforms.items():
-#                 if key == "YEMEKSEPETI": continue
-#                 self.driver.execute_script(f"window.open('{data['url']}', '_blank');")
-            
-#             logger.info("Tüm servis sekmeleri oluşturuldu.")
-#         except Exception as e:
-#             logger.error(f"Panel yükleme hatası: {e}")
-
-#     def take_panel_screenshot(self, platform_name):
-#         """Gaya'nın raporuna eklemesi için mevcut panelin görüntüsünü kaydeder."""
-#         if not self.driver: return None
-#         try:
-#             filename = f"{platform_name.lower()}_{datetime.now().strftime('%H%M%S')}.png"
-#             filepath = self.screenshots_dir / filename
-#             self.driver.save_screenshot(str(filepath))
-#             return str(filepath)
-#         except Exception as e:
-#             logger.warning(f"Ekran görüntüsü alınamadı ({platform_name}): {e}")
-#             return None
-
-#     def check_new_orders(self):
-#         """
-#         Sekmeleri dolaşarak sipariş kontrolü yapar. 
-#         GAYA ajanı bu fonksiyonu döngüsel olarak çağırır.
-#         """
-#         alerts = []
-#         if not self.is_selenium_active or not self.driver: 
-#             return alerts
-            
-#         with self.lock:
-#             try:
-#                 handles = self.driver.window_handles
-                
-#                 for handle in handles:
-#                     try:
-#                         self.driver.switch_to.window(handle)
-#                         time.sleep(0.5) # Sayfanın odağa alınması ve render için kısa bekleme
-                        
-#                         current_url = self.driver.current_url.lower()
-#                         active_platform = None
-                        
-#                         # URL'den hangi platformda olduğumuzu anla
-#                         for key, data in self.platforms.items():
-#                             if data['url'].split("//")[-1].split(".")[0] in current_url:
-#                                 active_platform = data
-#                                 break
-                        
-#                         if active_platform:
-#                             p_name = active_platform['name']
-                            
-#                             # Sayfa içeriğini analiz et
-#                             body_element = self.driver.find_element(By.TAG_NAME, "body")
-#                             body_text = body_element.text.lower()
-#                             page_title = self.driver.title.lower()
-                            
-#                             # Sipariş var mı kontrolü
-#                             found_trigger = any(kw in body_text for kw in active_platform['keywords']) or \
-#                                            any(kw in page_title for kw in active_platform['keywords'])
-                            
-#                             if found_trigger:
-#                                 # Yanlış alarmları ele (Filtreleme)
-#                                 is_false_alarm = any(ip in body_text for ip in self.ignore_phrases)
-                                
-#                                 if not is_false_alarm:
-#                                     # Aynı platform için son 2 dakikada uyarı verilmiş mi kontrol et
-#                                     last_alert_time = self.last_alerts.get(p_name, 0)
-#                                     if time.time() - last_alert_time > 120: # 2 dakika cooldown
-#                                         alert_msg = f"🔔 {p_name}: Yeni sipariş veya hareketlilik tespit edildi!"
-                                        
-#                                         if alert_msg not in alerts:
-#                                             alerts.append(alert_msg)
-#                                             logger.info(alert_msg)
-#                                             self.last_alerts[p_name] = time.time()
-                                            
-#                                             # Görüntü kanıtı al
-#                                             self.take_panel_screenshot(p_name)
-                                            
-#                                             # Otomatik Sayfa Yenileme (Paneli güncel tutmak için)
-#                                             # Bazı paneller uzun süre dokunulmazsa bağlantıyı koparır.
-#                                             if "yemeksepeti" in current_url:
-#                                                 self.driver.refresh()
-                            
-#                     except (NoSuchWindowException, WebDriverException):
-#                         # Eğer bir pencere kapandıysa veya hata verdiyse servisi yeniden canlandırmayı dene
-#                         logger.warning("Bir sekme ulaşılamaz durumda, kontrol atlanıyor.")
-#                         continue
-                        
-#             except Exception as e:
-#                 logger.error(f"Sipariş tarama genel hatası: {e}")
-                
-#         return alerts
-
-#     def stop_service(self):
-#         """Kaynakları temizleyerek tarayıcıyı kapatır."""
-#         with self.lock:
-#             if self.driver:
-#                 try:
-#                     self.driver.quit()
-#                     logger.info("Paket servis tarayıcısı kapatıldı.")
-#                 except Exception as e:
-#                     logger.warning(f"Kapatma hatası: {e}")
-#                 finally:
-#                     self.driver = None
-#                     self.is_selenium_active = False
-
-#     def restart_service(self):
-#         """Kritik hatalarda sistemi ayağa kaldırır."""
-#         logger.warning("🔄 Paket Servis servisi yeniden başlatılıyor...")
-#         self.stop_service()
-#         time.sleep(2)
-#         return self.start_service()
-
-#     def get_status_summary(self):
-#         """Gaya'nın sistem durumu raporuna eklemesi için detaylı özet."""
-#         if not self.is_selenium_active:
-#             return "Paket Servis Takibi: 🔴 DEVRE DIŞI"
+        except Exception:
+            return "Paket Servis: ⚠️ BAĞLANTI SORUNU"
+    
+    def get_metrics(self) -> Dict[str, Any]:
+        """
+        Delivery metrikleri
         
-#         try:
-#             tab_count = len(self.driver.window_handles)
-#             platforms_monitored = []
-            
-#             # Hangi platformlar açık kontrol et
-#             current_handles = self.driver.window_handles
-#             for handle in current_handles:
-#                 self.driver.switch_to.window(handle)
-#                 url = self.driver.current_url
-#                 for key, data in self.platforms.items():
-#                     if data['url'].split("//")[-1].split(".")[0] in url:
-#                         platforms_monitored.append(data['name'])
-            
-#             p_list = ", ".join(set(platforms_monitored))
-#             return f"Paket Servis Takibi: 🟢 AKTİF ({tab_count} Panel: {p_list})"
-#         except:
-#             return "Paket Servis Takibi: ⚠️ BAĞLANTI SORUNU"
+        Returns:
+            Metrik dictionary
+        """
+        return {
+            "status": self.status.value,
+            "alerts_generated": self.metrics.alerts_generated,
+            "screenshots_taken": self.metrics.screenshots_taken,
+            "tab_recoveries": self.metrics.tab_recoveries,
+            "errors_encountered": self.metrics.errors_encountered,
+            "total_checks": self.metrics.total_checks,
+            "selenium_available": SELENIUM_AVAILABLE,
+            "gpu_enabled": Config.USE_GPU
+        }

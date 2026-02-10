@@ -1,3 +1,9 @@
+"""
+LotusAI Merkezi Yapılandırma Modülü
+Sürüm: 2.5.3
+Açıklama: Sistem ayarları, API anahtarları, donanım tespiti ve dizin yönetimi
+"""
+
 import os
 import sys
 import logging
@@ -6,18 +12,25 @@ from logging.handlers import RotatingFileHandler
 from pathlib import Path
 from dotenv import load_dotenv
 from typing import Dict, Any, Optional, List
+from dataclasses import dataclass
 
-# --- UYARI FİLTRELEME ---
+# ═══════════════════════════════════════════════════════════════
+# UYARI FİLTRELERİ
+# ═══════════════════════════════════════════════════════════════
 warnings.filterwarnings("ignore", category=UserWarning, message=".*pkg_resources is deprecated.*")
 warnings.filterwarnings("ignore", category=UserWarning, module="pygame")
 warnings.filterwarnings("ignore", category=FutureWarning, module="torch")
 
-# --- LOGLAMA YAPILANDIRMASI ---
+# ═══════════════════════════════════════════════════════════════
+# TEMEL DİZİN YAPILANDIRMASI
+# ═══════════════════════════════════════════════════════════════
 BASE_DIR = Path(__file__).resolve().parent
 LOG_DIR = BASE_DIR / "logs"
 LOG_DIR.mkdir(parents=True, exist_ok=True)
 
-# Log seviyesini .env'den alabilme özelliği
+# ═══════════════════════════════════════════════════════════════
+# LOGLAMA SİSTEMİ
+# ═══════════════════════════════════════════════════════════════
 LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO").upper()
 
 logging.basicConfig(
@@ -27,7 +40,7 @@ logging.basicConfig(
         logging.StreamHandler(sys.stdout),
         RotatingFileHandler(
             LOG_DIR / "lotus_system.log",
-            maxBytes=15 * 1024 * 1024, # 15MB
+            maxBytes=15 * 1024 * 1024,  # 15MB
             backupCount=10,
             encoding="utf-8"
         )
@@ -35,197 +48,483 @@ logging.basicConfig(
 )
 logger = logging.getLogger("LotusAI.Config")
 
-# --- ORTAM DEĞİŞKENLERİ YÜKLEME ---
+# ═══════════════════════════════════════════════════════════════
+# ORTAM DEĞİŞKENLERİ
+# ═══════════════════════════════════════════════════════════════
 ENV_PATH = BASE_DIR / ".env"
 if not ENV_PATH.exists():
     logger.warning("⚠️ '.env' dosyası bulunamadı! Varsayılan ayarlar kullanılacak.")
 else:
     load_dotenv(dotenv_path=ENV_PATH)
+    logger.info(f"✅ Ortam değişkenleri yüklendi: {ENV_PATH}")
 
-# --- YARDIMCI FONKSİYONLAR ---
+
+# ═══════════════════════════════════════════════════════════════
+# YARDIMCI FONKSİYONLAR
+# ═══════════════════════════════════════════════════════════════
 def get_bool_env(key: str, default: bool = False) -> bool:
+    """
+    Environment değişkenini boolean'a çevirir.
+    
+    Args:
+        key: Değişken adı
+        default: Varsayılan değer
+    
+    Returns:
+        Boolean değer
+    """
     val = os.getenv(key, str(default)).lower()
     return val in ["true", "1", "yes", "on"]
 
+
 def get_int_env(key: str, default: int = 0) -> int:
+    """
+    Environment değişkenini integer'a çevirir.
+    
+    Args:
+        key: Değişken adı
+        default: Varsayılan değer
+    
+    Returns:
+        Integer değer
+    """
     try:
         return int(os.getenv(key, default))
     except (ValueError, TypeError):
+        logger.warning(f"⚠️ '{key}' geçersiz değer, varsayılan kullanılıyor: {default}")
         return default
 
-# --- DONANIM HIZLANDIRMA (GPU) MERKEZİ KONTROLÜ ---
-def check_hardware():
-    """Donanım yeteneklerini kontrol eder ve detaylı bilgi döner."""
-    has_cuda = False
-    gpu_name = "N/A"
+
+def get_list_env(key: str, default: Optional[List[str]] = None, separator: str = ",") -> List[str]:
+    """
+    Environment değişkenini liste'ye çevirir.
     
-    # Kullanıcı .env üzerinden GPU'yu zorla kapattıysa hiç kontrol etme
+    Args:
+        key: Değişken adı
+        default: Varsayılan liste
+        separator: Ayırıcı karakter
+    
+    Returns:
+        String listesi
+    """
+    if default is None:
+        default = []
+    
+    value = os.getenv(key, "")
+    if not value:
+        return default
+    
+    return [item.strip() for item in value.split(separator) if item.strip()]
+
+
+# ═══════════════════════════════════════════════════════════════
+# DONANIM TESPİTİ
+# ═══════════════════════════════════════════════════════════════
+@dataclass
+class HardwareInfo:
+    """Donanım bilgilerini tutar"""
+    has_cuda: bool
+    gpu_name: str
+    gpu_count: int = 0
+    cpu_count: int = 0
+
+
+def check_hardware() -> HardwareInfo:
+    """
+    Sistem donanımını kontrol eder ve detaylı bilgi döner.
+    
+    Returns:
+        HardwareInfo nesnesi
+    """
+    info = HardwareInfo(has_cuda=False, gpu_name="N/A")
+    
+    # Kullanıcı GPU'yu manuel olarak devre dışı bıraktıysa
     if not get_bool_env("USE_GPU", True):
         logger.info("ℹ️ GPU kullanımı .env ayarları ile devre dışı bırakıldı.")
-        return False, "Disabled by User"
-
+        info.gpu_name = "Devre Dışı (Kullanıcı)"
+        return info
+    
+    # PyTorch/CUDA kontrolü
     try:
         import torch
+        
         if torch.cuda.is_available():
-            has_cuda = True
-            gpu_name = torch.cuda.get_device_name(0)
-            gpu_count = torch.cuda.device_count()
-            logger.info(f"🚀 Donanım Hızlandırma Aktif: {gpu_name} ({gpu_count} GPU tespit edildi)")
+            info.has_cuda = True
+            info.gpu_name = torch.cuda.get_device_name(0)
+            info.gpu_count = torch.cuda.device_count()
+            
+            logger.info(
+                f"🚀 Donanım Hızlandırma Aktif: {info.gpu_name} "
+                f"({info.gpu_count} GPU tespit edildi)"
+            )
         else:
-            logger.info("ℹ️ GPU bulunamadı veya CUDA aktif değil, sistem CPU modunda çalışacak.")
-    except Exception as e:
-        logger.warning(f"⚠️ PyTorch/CUDA hatası: {e}. Sistem CPU modunda devam edecek.")
-        has_cuda = False
+            logger.info("ℹ️ CUDA bulunamadı, sistem CPU modunda çalışacak.")
+            info.gpu_name = "CUDA Bulunamadı"
     
-    return has_cuda, gpu_name
+    except ImportError:
+        logger.warning("⚠️ PyTorch yüklü değil, GPU kontrolü atlanıyor.")
+        info.gpu_name = "PyTorch Yok"
+    
+    except Exception as e:
+        logger.warning(f"⚠️ Donanım kontrolü hatası: {e}")
+        info.gpu_name = "Tespit Edilemedi"
+    
+    # CPU bilgisi
+    try:
+        import multiprocessing
+        info.cpu_count = multiprocessing.cpu_count()
+    except:
+        info.cpu_count = 1
+    
+    return info
 
-# Bu değişkenler global olarak bir kez hesaplanır ve diğer modüllerce kullanılır
-HAS_CUDA, GPU_NAME = check_hardware()
 
+# Global donanım bilgisi
+HARDWARE = check_hardware()
+
+
+# ═══════════════════════════════════════════════════════════════
+# ANA YAPILANDIRMA SINIFI
+# ═══════════════════════════════════════════════════════════════
 class Config:
     """
-    LotusAI Merkezi Yapılandırma Sınıfı.
-    Sürüm 2.5.2 - Ajan Odaklı Anahtar Yönetimi (GÜNCELLENDİ)
+    LotusAI Merkezi Yapılandırma Sınıfı
+    
+    Sürüm: 2.5.3
+    Özellikler:
+    - Çoklu API anahtarı yönetimi
+    - Ajan bazlı konfigürasyon
+    - Otomatik donanım tespiti
+    - Dizin yönetimi
     """
-    # --- GENEL SİSTEM BİLGİLERİ ---
-    PROJECT_NAME = "LotusAI"
-    VERSION = "2.5.2"
-    DEBUG_MODE = get_bool_env("DEBUG_MODE", True)
-    WORK_DIR = Path(os.getenv("WORK_DIR", BASE_DIR))
-
-    # --- DİZİN YAPILANDIRMASI ---
-    UPLOAD_DIR = WORK_DIR / "uploads"
-    TEMPLATE_DIR = WORK_DIR / "templates"
-    STATIC_DIR = WORK_DIR / "static"
-    LOG_DIR = WORK_DIR / "logs"
-    VOICES_DIR = WORK_DIR / "voices"
-    FACES_DIR = WORK_DIR / "faces"
-    MODELS_DIR = WORK_DIR / "models"
-    DATA_DIR = WORK_DIR / "core" / "data"
-
-    REQUIRED_DIRS = [UPLOAD_DIR, LOG_DIR, VOICES_DIR, STATIC_DIR, FACES_DIR, MODELS_DIR, DATA_DIR]
+    
+    # ───────────────────────────────────────────────────────────
+    # GENEL SİSTEM BİLGİLERİ
+    # ───────────────────────────────────────────────────────────
+    PROJECT_NAME: str = "LotusAI"
+    VERSION: str = "2.5.3"
+    DEBUG_MODE: bool = get_bool_env("DEBUG_MODE", False)
+    WORK_DIR: Path = Path(os.getenv("WORK_DIR", BASE_DIR))
+    
+    # ───────────────────────────────────────────────────────────
+    # DİZİN YAPILANDIRMASI
+    # ───────────────────────────────────────────────────────────
+    UPLOAD_DIR: Path = WORK_DIR / "uploads"
+    TEMPLATE_DIR: Path = WORK_DIR / "templates"
+    STATIC_DIR: Path = WORK_DIR / "static"
+    LOG_DIR: Path = WORK_DIR / "logs"
+    VOICES_DIR: Path = WORK_DIR / "voices"
+    FACES_DIR: Path = WORK_DIR / "faces"
+    MODELS_DIR: Path = WORK_DIR / "models"
+    DATA_DIR: Path = WORK_DIR / "core" / "data"
+    
+    REQUIRED_DIRS: List[Path] = [
+        UPLOAD_DIR, LOG_DIR, VOICES_DIR, STATIC_DIR,
+        FACES_DIR, MODELS_DIR, DATA_DIR
+    ]
+    
+    # ───────────────────────────────────────────────────────────
+    # SİSTEM ZAMANLAMALARI
+    # ───────────────────────────────────────────────────────────
+    CONVERSATION_TIMEOUT: int = get_int_env("CONVERSATION_TIMEOUT", 60)
+    SYSTEM_CHECK_INTERVAL: int = get_int_env("SYSTEM_CHECK_INTERVAL", 300)
+    
+    # ───────────────────────────────────────────────────────────
+    # AI SAĞLAYICI AYARLARI
+    # ───────────────────────────────────────────────────────────
+    AI_PROVIDER: str = os.getenv("AI_PROVIDER", "gemini").lower()
+    
+    # Donanım bilgileri
+    USE_GPU: bool = HARDWARE.has_cuda
+    GPU_INFO: str = HARDWARE.gpu_name
+    CPU_COUNT: int = HARDWARE.cpu_count
+    
+    # ───────────────────────────────────────────────────────────
+    # GEMINI (GOOGLE) MODEL AYARLARI
+    # ───────────────────────────────────────────────────────────
+    GEMINI_MODEL_DEFAULT: str = os.getenv("GEMINI_MODEL", "gemini-1.5-flash")
+    GEMINI_MODEL_PRO: str = os.getenv("GEMINI_MODEL_PRO", "gemini-1.5-pro")
+    GEMINI_TEMPERATURE: float = float(os.getenv("GEMINI_TEMPERATURE", "0.7"))
+    GEMINI_MAX_TOKENS: int = get_int_env("GEMINI_MAX_TOKENS", 8192)
+    
+    # ───────────────────────────────────────────────────────────
+    # API ANAHTAR YÖNETİMİ (AKILLI FALLBACK)
+    # ───────────────────────────────────────────────────────────
+    _MAIN_KEY: Optional[str] = None
+    _USING_FALLBACK_KEY: bool = False
+    
+    # Öncelik sırası: Ana key > Atlas > Diğer ajanlar
+    _KEY_PRIORITY = [
+        "GEMINI_API_KEY",
+        "GEMINI_API_KEY_ATLAS",
+        "GEMINI_API_KEY_SIDAR",
+        "GEMINI_API_KEY_KURT",
+        "GEMINI_API_KEY_KERBEROS",
+        "GEMINI_API_KEY_POYRAZ",
+        "GEMINI_API_KEY_GAYA"
+    ]
+    
+    # Ana anahtarı bul
+    for key_name in _KEY_PRIORITY:
+        _MAIN_KEY = os.getenv(key_name)
+        if _MAIN_KEY:
+            if key_name != "GEMINI_API_KEY":
+                _USING_FALLBACK_KEY = True
+                logger.info(f"ℹ️ Ana API anahtarı bulunamadı, {key_name} kullanılacak.")
+            break
+    
+    # ───────────────────────────────────────────────────────────
+    # AJAN YAPILANDIRMASI
+    # ───────────────────────────────────────────────────────────
+    AGENT_CONFIGS: Dict[str, Dict[str, str]] = {
+        "ATLAS": {
+            "key": os.getenv("GEMINI_API_KEY_ATLAS", _MAIN_KEY or ""),
+            "model": GEMINI_MODEL_PRO,
+            "role": "Koordinatör"
+        },
+        "SIDAR": {
+            "key": os.getenv("GEMINI_API_KEY_SIDAR", _MAIN_KEY or ""),
+            "model": GEMINI_MODEL_DEFAULT,
+            "role": "Yönetim"
+        },
+        "KURT": {
+            "key": os.getenv("GEMINI_API_KEY_KURT", _MAIN_KEY or ""),
+            "model": GEMINI_MODEL_DEFAULT,
+            "role": "Güvenlik"
+        },
+        "POYRAZ": {
+            "key": os.getenv("GEMINI_API_KEY_POYRAZ", _MAIN_KEY or ""),
+            "model": GEMINI_MODEL_DEFAULT,
+            "role": "Analiz"
+        },
+        "KERBEROS": {
+            "key": os.getenv("GEMINI_API_KEY_KERBEROS", _MAIN_KEY or ""),
+            "model": GEMINI_MODEL_PRO,
+            "role": "Güvenlik+"
+        },
+        "GAYA": {
+            "key": os.getenv("GEMINI_API_KEY_GAYA", _MAIN_KEY or ""),
+            "model": GEMINI_MODEL_DEFAULT,
+            "role": "Asistan"
+        }
+    }
+    
+    # ───────────────────────────────────────────────────────────
+    # OLLAMA (YEREL AI) AYARLARI
+    # ───────────────────────────────────────────────────────────
+    TEXT_MODEL: str = os.getenv("TEXT_MODEL", "llama3.1")
+    VISION_MODEL: str = os.getenv("VISION_MODEL", "llava")
+    OLLAMA_URL: str = os.getenv("OLLAMA_URL", "http://localhost:11434/api")
+    OLLAMA_TIMEOUT: int = get_int_env("OLLAMA_TIMEOUT", 30)
+    
+    # ───────────────────────────────────────────────────────────
+    # MANAGER (YÖNETİCİ) ÖZEL AYARLARI
+    # ───────────────────────────────────────────────────────────
+    FACE_REC_MODEL: str = "cnn" if USE_GPU else "hog"
+    LIVE_VISUAL_CHECK: bool = get_bool_env("LIVE_VISUAL_CHECK", True)
+    PATRON_IMAGE_PATH: Path = FACES_DIR / os.getenv("PATRON_IMAGE_PATH", "patron.jpg")
+    
+    # Finans ayarları
+    FINANCE_MODE: bool = get_bool_env("FINANCE_MODE", True)
+    DEFAULT_CURRENCY: str = os.getenv("DEFAULT_CURRENCY", "TRY")
+    SUPPORTED_CURRENCIES: List[str] = get_list_env(
+        "SUPPORTED_CURRENCIES",
+        ["TRY", "USD", "EUR", "GBP"]
+    )
+    
+    # Ses ayarları
+    USE_XTTS: bool = get_bool_env("USE_XTTS", False)
+    TTS_ENGINE: str = os.getenv("TTS_ENGINE", "pyttsx3")
+    VOICE_SPEED: int = get_int_env("VOICE_SPEED", 150)
+    
+    # ───────────────────────────────────────────────────────────
+    # GÜVENLİK AYARLARI
+    # ───────────────────────────────────────────────────────────
+    API_AUTH_ENABLED: bool = get_bool_env("API_AUTH_ENABLED", True)
+    MAX_LOGIN_ATTEMPTS: int = get_int_env("MAX_LOGIN_ATTEMPTS", 3)
+    SESSION_TIMEOUT: int = get_int_env("SESSION_TIMEOUT", 3600)  # saniye
+    
+    # ───────────────────────────────────────────────────────────
+    # METOTLAR
+    # ───────────────────────────────────────────────────────────
     
     @classmethod
-    def initialize_directories(cls):
-        """Sistem için gerekli dizinleri oluşturur."""
+    def initialize_directories(cls) -> bool:
+        """
+        Sistem için gerekli dizinleri oluşturur.
+        
+        Returns:
+            Başarılı ise True
+        """
+        success = True
         for folder in cls.REQUIRED_DIRS:
             try:
                 folder.mkdir(parents=True, exist_ok=True)
+                logger.debug(f"✅ Dizin hazır: {folder.name}")
             except Exception as e:
-                logger.error(f"❌ Dizin hazırlama hatası ({folder.name}): {e}")
-
-    # --- SİSTEM ZAMANLAMALARI ---
-    CONVERSATION_TIMEOUT = get_int_env("CONVERSATION_TIMEOUT", 60)
-    SYSTEM_CHECK_INTERVAL = get_int_env("SYSTEM_CHECK_INTERVAL", 300)
-
-    # --- AI SAĞLAYICI AYARLARI ---
-    AI_PROVIDER = os.getenv("AI_PROVIDER", "gemini").lower()
+                logger.error(f"❌ Dizin oluşturulamadı ({folder.name}): {e}")
+                success = False
+        
+        return success
     
-    # Global değişkeni kullan, tekrar kontrol etme
-    USE_GPU = HAS_CUDA 
-    GPU_INFO = GPU_NAME
-
-    # --- GEMINI (GOOGLE) AYARLARI ---
-    GEMINI_MODEL_DEFAULT = os.getenv("GEMINI_MODEL", "gemini-1.5-flash")
-    GEMINI_MODEL_PRO = os.getenv("GEMINI_MODEL_PRO", "gemini-1.5-pro")
-    
-    # --- AKILLI ANAHTAR YÖNETİMİ ---
-    # 1. Önce doğrudan ana key'i kontrol et
-    _MAIN_KEY = os.getenv("GEMINI_API_KEY")
-    _USING_FALLBACK_KEY = False
-
-    # 2. Eğer ana key yoksa, ajan keylerinden birini (Atlas) ana key yap
-    if not _MAIN_KEY:
-        _MAIN_KEY = os.getenv("GEMINI_API_KEY_ATLAS")
-        if _MAIN_KEY:
-            _USING_FALLBACK_KEY = True
-            logger.info("ℹ️ Çoklu Ajan Modu: Genel işlemler için ATLAS anahtarı kullanılacak.")
-    
-    # 3. Hala yoksa diğerlerini dene
-    if not _MAIN_KEY:
-        _MAIN_KEY = os.getenv("GEMINI_API_KEY_SIDAR") or \
-                    os.getenv("GEMINI_API_KEY_KURT") or \
-                    os.getenv("GEMINI_API_KEY_KERBEROS")
-        if _MAIN_KEY:
-             _USING_FALLBACK_KEY = True
-
-    HARDCODED_KEY = "" 
-    if not _MAIN_KEY and HARDCODED_KEY:
-        _MAIN_KEY = HARDCODED_KEY
-
-    # Ajan Yapılandırması
-    AGENT_CONFIGS: Dict[str, Any] = {
-        "ATLAS": {"key": os.getenv("GEMINI_API_KEY_ATLAS", _MAIN_KEY), "model": GEMINI_MODEL_PRO},
-        "SIDAR": {"key": os.getenv("GEMINI_API_KEY_SIDAR", _MAIN_KEY), "model": GEMINI_MODEL_DEFAULT},
-        "KURT": {"key": os.getenv("GEMINI_API_KEY_KURT", _MAIN_KEY), "model": GEMINI_MODEL_DEFAULT},
-        "POYRAZ": {"key": os.getenv("GEMINI_API_KEY_POYRAZ", _MAIN_KEY), "model": GEMINI_MODEL_DEFAULT},
-        "KERBEROS": {"key": os.getenv("GEMINI_API_KEY_KERBEROS", _MAIN_KEY), "model": GEMINI_MODEL_PRO},
-        "GAYA": {"key": os.getenv("GEMINI_API_KEY_GAYA", _MAIN_KEY), "model": GEMINI_MODEL_DEFAULT}
-    }
-
-    # --- OLLAMA (YEREL AI) AYARLARI ---
-    TEXT_MODEL = os.getenv("TEXT_MODEL", "llama3.1")
-    VISION_MODEL = os.getenv("VISION_MODEL", "llava")
-    OLLAMA_URL = os.getenv("OLLAMA_URL", "http://localhost:11434/api")
-
-    # --- MANAGER (YÖNETİCİ) ÖZEL AYARLARI ---
-    FACE_REC_MODEL = "cnn" if USE_GPU else "hog"
-    LIVE_VISUAL_CHECK = get_bool_env("LIVE_VISUAL_CHECK", True)
-    PATRON_IMAGE_PATH = FACES_DIR / os.getenv("PATRON_IMAGE_PATH", "patron.jpg")
-
-    FINANCE_MODE = get_bool_env("FINANCE_MODE", True)
-    DEFAULT_CURRENCY = os.getenv("DEFAULT_CURRENCY", "TRY")
-
-    USE_XTTS = get_bool_env("USE_XTTS", False)
-    
-    # --- GÜVENLİK ---
-    API_AUTH_ENABLED = get_bool_env("API_AUTH_ENABLED", True)
-
     @classmethod
     def get_agent_settings(cls, agent_name: str) -> Dict[str, str]:
-        """Ajan ayarlarını döner."""
+        """
+        Belirli bir ajan için ayarları döner.
+        
+        Args:
+            agent_name: Ajan adı (büyük/küçük harf duyarsız)
+        
+        Returns:
+            Ajan ayarları (key, model, role)
+        """
         name_upper = agent_name.upper()
+        
         if name_upper in cls.AGENT_CONFIGS:
             config = cls.AGENT_CONFIGS[name_upper].copy()
+            
+            # Eğer ajan anahtarı yoksa ana anahtarı kullan
             if not config.get("key") and cls._MAIN_KEY:
                 config["key"] = cls._MAIN_KEY
+                logger.debug(f"Ajan {agent_name} için ana anahtar kullanılıyor")
+            
             return config
         
-        return {"key": cls._MAIN_KEY, "model": cls.GEMINI_MODEL_DEFAULT}
-
+        # Bilinmeyen ajan için varsayılan ayarlar
+        logger.warning(f"⚠️ Bilinmeyen ajan: {agent_name}, varsayılan ayarlar kullanılıyor")
+        return {
+            "key": cls._MAIN_KEY or "",
+            "model": cls.GEMINI_MODEL_DEFAULT,
+            "role": "Bilinmiyor"
+        }
+    
     @classmethod
-    def set_provider_mode(cls, mode: str):
-        """Sağlayıcı modunu ayarlar. Launcher'dan gelen 'online' değerini 'gemini'ye çevirir."""
-        valid_modes = ["gemini", "ollama", "local"]
+    def set_provider_mode(cls, mode: str) -> None:
+        """
+        AI sağlayıcı modunu ayarlar.
+        
+        Args:
+            mode: 'online', 'gemini', 'local' veya 'ollama'
+        """
+        mode_map = {
+            "online": "gemini",
+            "local": "ollama",
+            "ollama": "ollama",
+            "gemini": "gemini"
+        }
+        
         m_lower = mode.lower()
         
-        # Mapping: Launcher'dan gelen kelimeleri sistemin anladığı kelimelere çevir
-        if m_lower == "online":
-            cls.AI_PROVIDER = "gemini"
-        elif m_lower in ["local", "ollama"]:
-            cls.AI_PROVIDER = "ollama"
-        elif m_lower == "gemini":
-            cls.AI_PROVIDER = "gemini"
+        if m_lower in mode_map:
+            cls.AI_PROVIDER = mode_map[m_lower]
+            logger.info(f"✅ AI Sağlayıcı modu: {cls.AI_PROVIDER.upper()}")
         else:
             logger.error(f"❌ Geçersiz sağlayıcı modu: {mode}")
-
+            logger.info(f"   Geçerli modlar: {', '.join(mode_map.keys())}")
+    
     @classmethod
     def validate_critical_settings(cls) -> bool:
-        """Hayati ayarların ve sistem bütünlüğünün kontrolü."""
-        cls.initialize_directories()
+        """
+        Kritik sistem ayarlarını doğrular.
         
-        if cls.AI_PROVIDER == "gemini" and not cls._MAIN_KEY:
-            logger.error("❌ KRİTİK HATA: Hiçbir GEMINI API Key bulunamadı!")
-            return False 
-            
-        return True
+        Returns:
+            Tüm kritik ayarlar geçerliyse True
+        """
+        is_valid = True
+        
+        # 1. Dizinleri oluştur
+        if not cls.initialize_directories():
+            logger.warning("⚠️ Bazı dizinler oluşturulamadı")
+            is_valid = False
+        
+        # 2. API anahtarı kontrolü (Gemini modu için)
+        if cls.AI_PROVIDER == "gemini":
+            if not cls._MAIN_KEY:
+                logger.error(
+                    "❌ KRİTİK HATA: Hiçbir GEMINI API anahtarı bulunamadı!\n"
+                    "   .env dosyasına GEMINI_API_KEY ekleyin."
+                )
+                is_valid = False
+            else:
+                # Anahtar uzunluk kontrolü
+                if len(cls._MAIN_KEY) < 30:
+                    logger.warning("⚠️ API anahtarı çok kısa görünüyor, geçersiz olabilir")
+        
+        # 3. Patron resmi kontrolü (eğer yüz tanıma aktifse)
+        if cls.LIVE_VISUAL_CHECK:
+            if not cls.PATRON_IMAGE_PATH.exists():
+                logger.warning(
+                    f"⚠️ Patron resmi bulunamadı: {cls.PATRON_IMAGE_PATH}\n"
+                    "   Yüz tanıma devre dışı bırakılabilir."
+                )
+        
+        # 4. Ollama kontrolü (local mod için)
+        if cls.AI_PROVIDER == "ollama":
+            try:
+                import requests
+                response = requests.get(
+                    "http://localhost:11434/api/tags",
+                    timeout=2
+                )
+                if response.status_code != 200:
+                    logger.warning("⚠️ Ollama servisi yanıt vermiyor")
+            except:
+                logger.warning(
+                    "⚠️ Ollama servisi kontrol edilemedi\n"
+                    "   Terminal'de 'ollama serve' komutunu çalıştırın"
+                )
+        
+        return is_valid
+    
+    @classmethod
+    def get_system_info(cls) -> Dict[str, Any]:
+        """
+        Sistem bilgilerini dictionary olarak döner.
+        
+        Returns:
+            Sistem bilgileri
+        """
+        return {
+            "project": cls.PROJECT_NAME,
+            "version": cls.VERSION,
+            "provider": cls.AI_PROVIDER,
+            "gpu_enabled": cls.USE_GPU,
+            "gpu_info": cls.GPU_INFO,
+            "cpu_count": cls.CPU_COUNT,
+            "debug_mode": cls.DEBUG_MODE,
+            "agents": list(cls.AGENT_CONFIGS.keys())
+        }
+    
+    @classmethod
+    def print_config_summary(cls) -> None:
+        """Yapılandırma özetini terminale yazdırır"""
+        print("\n" + "═" * 60)
+        print(f"  {cls.PROJECT_NAME} v{cls.VERSION} - Yapılandırma Özeti")
+        print("═" * 60)
+        print(f"  AI Sağlayıcı    : {cls.AI_PROVIDER.upper()}")
+        print(f"  GPU Desteği     : {'✓ ' + cls.GPU_INFO if cls.USE_GPU else '✗ CPU Modu'}")
+        print(f"  CPU Çekirdek    : {cls.CPU_COUNT}")
+        print(f"  Aktif Ajanlar   : {len(cls.AGENT_CONFIGS)}")
+        print(f"  Debug Modu      : {'Açık' if cls.DEBUG_MODE else 'Kapalı'}")
+        print("═" * 60 + "\n")
 
-# Başlangıç Doğrulaması
+
+# ═══════════════════════════════════════════════════════════════
+# BAŞLANGIÇ DOĞRULAMA
+# ═══════════════════════════════════════════════════════════════
 if not Config.validate_critical_settings():
     if Config.AI_PROVIDER == "gemini":
-        logger.critical("🚨 Kritik API anahtarları eksik! Sistem çalışmayabilir.")
+        logger.critical(
+            "🚨 Kritik ayar eksik! Sistem düzgün çalışmayabilir.\n"
+            "   Lütfen .env dosyasını kontrol edin."
+        )
 else:
-    logger.info(f"✅ {Config.PROJECT_NAME} v{Config.VERSION} yapılandırması başarıyla tamamlandı.")
+    logger.info(
+        f"✅ {Config.PROJECT_NAME} v{Config.VERSION} yapılandırması tamamlandı"
+    )
+    
+    if Config.DEBUG_MODE:
+        Config.print_config_summary()
 
 # import os
 # import sys

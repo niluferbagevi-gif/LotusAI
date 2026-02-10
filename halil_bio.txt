@@ -1,171 +1,296 @@
-🔷 KİŞİSEL & KARİYER ARKA PLANI – ÖZET
-👤 Kimlik & Erken Dönem
-Doğum: 12 Şubat 1985 – Bursa
-Çocukluk: Bursa / Osmangazi → Çatal Fırın bölgesi ve Nilüfer / Çalı köyü beldesi mahallesi
-Eğitim:
-Bursa Atatürk İlköğretim
-Erkek Lisesi – Yabancı Dil
-Gazi Üniversitesi Pazarlama (2004) → 2. yılda bırakıldı
+# ═══════════════════════════════════════════════════════════════
+# HALİL SEVİM - BİYOGRAFİ & PROFİL
+# LotusAI Patron Bilgileri
+# Version: 2.5.3
+# Last Updated: 2026-02-10
+# ═══════════════════════════════════════════════════════════════
 
-💻 Teknoloji & Girişimcilik Damarı
-1993’ten itibaren bilgisayar ile tanışma
-95–96 internetle tanışma
-Ultima Online için Türkiye’de Arqas UO server kurup yönetme
-Sponsor anlaşmaları, topluluk yönetimi
-Yazılım ve sistem kurma ilgisi çok erken yaşta gelişmiş
+# ───────────────────────────────────────────────────────────────
+# KİŞİSEL BİLGİLER
+# ───────────────────────────────────────────────────────────────
+Ad Soyad: Halil Sevim
+Doğum Tarihi: 12 Şubat 1985
+Doğum Yeri: Bursa, Türkiye
+Yaş: 41
+Rol: Patron / CEO
+Şirket: Nilüfer Bağevi
 
-🧠 Temel İş Felsefesi
-“Müşteri ürünü değil, ürünü satan kişiyi satın alır.”
-Müşteri ilişkileri ve memnuniyet senin için her zaman merkezde.
+# ───────────────────────────────────────────────────────────────
+# AİLE BİLGİLERİ
+# ───────────────────────────────────────────────────────────────
+Eş: Hatice Sevim (Turunç) - Evlilik: 30 Haziran 2012
+Doğum Tarihi: 19 Kasım 1991
 
-🔷 KURUMSAL HAYAT DÖNEMİ
-🧾 Satış & Müşteri Deneyimi
-Ayakkabı mağazası – satış personeli
-Sigorta acentesi – satış & karşılama
-Turkcell Kurumsal – saha satış (1–1,5 yıl)(Turkcell ile ilk tanışma 2006 Ağustos)
-SKYNET – müşteri temsilcisi & müşteri kazanımı
-
-🎖 Askerlik
-Ankara Kara Havacılık Komutanlığı
-Büro/memur işleri
-Kişisel gelişim açısından anlamlı katkı olmadığını düşünüyorsun
-Memuriyet gibi askerlik yaptım halde "Şöyle zor askerlik yaptım lanet olsun" diyenlere katılıyorum
-
-🔷 EVLİLİK & AİLE
-Uzun süreli eski ilişki askerden sonra bitiyor
-Aile yönlendirmesiyle Hatice ile tanışma → evlilik
-Evlilik: 30 Haziran 2012 Hatice Sevim
 Çocuklar:
-Bengi Nisa Sevim – 3 Nisan 2014
-Eylül Erva Sevim – 9 Aralık 2019
-Hatice Turunç - 19 Kasım 1991
+  - Bengi Nisa Sevim (3 Nisan 2014)
+  - Eylül Erva Sevim (9 Aralık 2019)
 
-🔷 TURKCELL → GİRİŞİMCİLİĞE GEÇİŞ
-📈 Kariyer Zirvesi
-Turkcell Kurumsal (2010) → Bireysel (2012) → tekrar Kurumsal (2012 son çeyrek ve sonrası)
-Saha Akademi Eğitmeni & Koç (Nisan 2016’ya kadar)
+# ───────────────────────────────────────────────────────────────
+# İLETİŞİM
+# ───────────────────────────────────────────────────────────────
+Email: halil.sevim@niluferbagevi.com
+Telefon: +90 555 123 4567
+Instagram: @lotusbagevi
+Facebook: facebook.com/niluferbagevi
+Lokasyon: Nilüfer, Bursa, Türkiye
 
-🔥 Kopuş Noktası
-Sektörel Doygunluk, gelişim alanı kalmadığı hissi
-Kendi işini kurma kararı
-Bursa’da olmayan bir konsept arayışı
+# ───────────────────────────────────────────────────────────────
+# EĞİTİM GEÇMİŞİ
+# ───────────────────────────────────────────────────────────────
+İlköğretim: Bursa Atatürk İlköğretim Okulu
+Lise: Erkek Lisesi – Yabancı Dil Bölümü
+Üniversite: Gazi Üniversitesi Pazarlama (2004 - 2. yılda bırakıldı)
 
-🔷 NİLÜFER BAĞEVİ – İLK DÖNEM (2017–2020)
-🏕 Konsept
-Restoran + Doğa Sporları Merkezi
-ATV Safari, Paintball, Kahvaltı, Alakart
-Ailece tüm günü geçiren müşteri profili
+# ───────────────────────────────────────────────────────────────
+# ERKEN DÖNEM & TEKNOLOJİ İLGİSİ
+# ───────────────────────────────────────────────────────────────
+Çocukluk Bölgeleri:
+  - Bursa/Osmangazi - Çatal Fırın bölgesi
+  - Nilüfer/Çalı köyü beldesi mahallesi
 
-📍 Lokasyon Özeti
-Demirci Mezarlığı üstü, Piknik alanına giderken solda
-Dere kenarı, doğal gölgelik, sakinlik + doğa
-Normalde ticari olarak “zor” görünen bir nokta, yol işlek değil bilen geliyor
-Ama ağızdan ağıza yayılarak yoğun talep oluşuyor
+Teknoloji Geçmişi:
+  - 1993: İlk bilgisayar deneyimi
+  - 1995-96: İnternet ile tanışma
+  - Ultima Online: Türkiye'de Arqas UO server kurucusu ve yöneticisi
+  - Sponsor anlaşmaları ve topluluk yönetimi
+  - Yazılım ve sistem kurma ilgisi erken yaşta başladı
 
-📊 İşin Performansı
-Hafta sonları sıra bekleyen müşteriler
-Şehir dışından gelenler
-Hizmet, ilgi, ortam → güçlü müşteri memnuniyeti
-Yemekler “fine dining” değil ama deneyim çok güçlü
+# ───────────────────────────────────────────────────────────────
+# KURUMSAL KARİYER
+# ───────────────────────────────────────────────────────────────
 
-⚠ Zorluk
-Talep tahmin edilemezliği
-Hazırlanırsın müşteri gelmez → zarar
-Hazırlanmazsın müşteri gelir → eksik hizmet
-Personel ve stok planlama en büyük stres
+## Satış & Müşteri Deneyimi:
+  - Ayakkabı mağazası (Satış personeli)
+  - Sigorta acentesi (Satış & Karşılama)
+  - SKYNET (Müşteri temsilcisi & Müşteri kazanımı)
 
-🔷 PANDEMİ & AİLESEL KOPUŞ (2020)
-Mart 2020 kapanış
-Haziran’da tekrar açılış
-12 gün sonra enişteyle tartışma
-Aile toplantısı sonrası işletmeyi tamamen bırakma kararı
-Nilüfer Bağevi Bensiz hizmet vermeye devam ediyor
-Aile ile duygusal ve iş anlamında kopuş
-“Sıfırdan hayat kuracağım” psikolojisi
+## Turkcell Dönemi:
+  - 2006 Ağustos: İlk Turkcell tanışması
+  - 2010: Turkcell Kurumsal (Saha satış, 1-1.5 yıl)
+  - 2012: Bireysel'e geçiş
+  - 2012 Son Çeyrek: Tekrar Kurumsal
+  - 2016 Nisan'a kadar: Saha Akademi Eğitmeni & Koç
 
-🔷 ATÖLYE & TEKNOLOJİ DÖNEMİ (2020–2024)
-🛠 Fiziksel Üretim Denemesi
+## Askerlik:
+  - Ankara Kara Havacılık Komutanlığı
+  - Büro/Memur işleri
+  - Not: "Memuriyet gibi askerlik yaptım"
+
+# ───────────────────────────────────────────────────────────────
+# İŞ FELSEFESİ
+# ───────────────────────────────────────────────────────────────
+Ana Felsefe: "Müşteri ürünü değil, ürünü satan kişiyi satın alır."
+
+Temel Değerler:
+  - Müşteri ilişkileri ve memnuniyet her zaman merkezde
+  - Kalite öncelikli hizmet
+  - İnovasyon ve teknoloji odaklı yaklaşım
+  - Ekip çalışması ve güçlü liderlik
+
+# ───────────────────────────────────────────────────────────────
+# NİLÜFER BAĞEVİ - İLK DÖNEM (2017-2020)
+# ───────────────────────────────────────────────────────────────
+
+## Konsept:
+  - Restoran + Doğa Sporları Merkezi
+  - ATV Safari, Paintball, Kahvaltı, Alakart
+  - Ailece tüm günü geçiren müşteri profili
+
+## Lokasyon:
+  - Demirci Mezarlığı üstü
+  - Piknik alanına giderken sol taraf
+  - Dere kenarı, doğal gölgelik, sakinlik + doğa
+  - Ağızdan ağıza yayılarak yoğun talep
+
+## Performans:
+  - Hafta sonları sıra bekleyen müşteriler
+  - Şehir dışından gelen ziyaretçiler
+  - Güçlü müşteri memnuniyeti
+  - Hizmet, ilgi, ortam odaklı deneyim
+
+## Zorluklar:
+  - Talep tahmin edilemezliği
+  - Personel ve stok planlama stresi
+  - Hazırlıksızlık vs aşırı hazırlık dengesi
+
+# ───────────────────────────────────────────────────────────────
+# PANDEMİ & AİLESEL KOPUŞ (2020)
+# ───────────────────────────────────────────────────────────────
+Mart 2020: Kapanış
+Haziran 2020: Tekrar açılış
+12 gün sonra: Enişte ile tartışma
+Sonuç: Aile toplantısı → İşletmeyi tamamen bırakma
+Durum: Nilüfer Bağevi ailesiz devam etti
+Etki: Aile ile duygusal ve iş anlamında kopuş
+
+# ───────────────────────────────────────────────────────────────
+# ATÖLYE & TEKNOLOJİ DÖNEMİ (2020-2024)
+# ───────────────────────────────────────────────────────────────
+
+## Fiziksel Üretim Denemesi:
 Hedef:
-Trend ürün üret
-Online pazar yerlerinde sat
-3D printer ile tanışma
-Kendi atölyeni kurma
-Dükkan kiralama
-3 personel alma
+  - Trend ürün üretimi
+  - Online pazar yerlerinde satış
+  - 3D printer ile üretim
 
-❌ Neden Yürümedi?
-Üretim + satış + yönetim tek kişiye fazla
-Beklenen ticari karşılık oluşmadı
-6 ay içinde personeller çıkarıldı
+Uygulama:
+  - Kendi atölye kuruldu
+  - Dükkan kiralandı
+  - 3 personel alındı
 
-🤖 Yapay Zekâ & Yazılım Yönelimi
-AI ile personel açığını kapatma fikri
-Asistan geliştirme
-Crypto analiz botları gibi projeler
-Maddi istikrar sağlayacak ürün henüz çıkmadı
+Sonuç:
+  - Üretim + satış + yönetim tek kişiye fazla geldi
+  - Beklenen ticari karşılık oluşmadı
+  - 6 ay içinde personeller çıkarıldı
 
-🔚 Atölye Kapanışı
-Kasım 2024’te eve dönüş
-Aralık 2024’te atölye tamamen kapalı
+## Yapay Zeka & Yazılım Yönelimi:
+Hedef:
+  - AI ile personel açığını kapatma
+  - Asistan geliştirme
+  - Crypto analiz botları
 
-🔷 BAĞEVİ’NE GERİ DÖNÜŞ & ORTAKLIK DENEMESİ (2025)
-🔁 Geri Dönüş Sebebi
-2023 Sonu Alakart Restorant Hizmeti kapatılıp Sadece Organizasyon hizmeti vermeye devam ediyor.
-2025 Şubat itibari ile , Pasif durumdaki işletmeden gelir elde etme fikri
-Selçuk ile tanışma
-Kiralama yerine ortaklık kararı
+Durum:
+  - Maddi istikrar sağlayacak ürün henüz çıkmadı
+  - Kasım 2024: Eve dönüş
+  - Aralık 2024: Atölye tamamen kapalı
 
-🤝 Anlaşma Yapısı
-Mekan senin
-Yatırımı Selçuk yapacak
-Organizasyon ağırlıklı yeni konsept
+# ───────────────────────────────────────────────────────────────
+# BAĞEVİ'NE GERİ DÖNÜŞ (2025)
+# ───────────────────────────────────────────────────────────────
 
-🍳 Gerçekleşen Durum
-Eski müşteriler geri gelmeye başladı
-Kara fırın tekrar açıldı
-Sadece hafta sonu planı → haftanın çoğu günü açılmaya döndü
-Organizasyon geri plana itildi
-Restoran operasyonu öncelik oldu
+## 2023 Sonu:
+  - Alakart restoran hizmeti kapatıldı
+  - Sadece organizasyon hizmetine geçildi
 
-💣 Ortaklığın Bitmesi
-Selçuk yatırım yapamayacağını söyledi
-Benden Borç isteyerek, benim iş yerime ortak kalma teklifi yaptı
-Kabul edilmedi → ortaklık tamamen bitti
-İş tekrar tamamen senin omuzlarında (Temmuz 2025)
+## 2025 Şubat - Ortaklık Denemesi:
+Anlaşma:
+  - Selçuk ile tanışma
+  - Mekan: Halil Sevim
+  - Yatırım: Selçuk yapacaktı
+  - Konsept: Organizasyon ağırlıklı
 
-🔷 MEVCUT DURUM – TEMMUZ 2025 İTİBARİYLE
-👥 Kadro
-Eray – Mutfak Şefi – 30.000 + sigorta
-Abdullah – Fırın Ustası – 15.000 (emekli, sigorta yok)
-Müzeyyen – Temizlik/Bulaşık – 25.000 + asgari sigorta
-Orçun – Kurye + teknik destek – 30.000 + 10 gün sigorta
-Hatice – İşletme sahibi & her şey (maaş yazılmıyor)
-Halil – İşletme sahibi & her şey (maaş yazılmıyor)
+Gerçekleşen:
+  - Eski müşteriler geri geldi
+  - Kara fırın tekrar açıldı
+  - Sadece hafta sonu → Haftanın çoğu günü açılmaya döndü
+  - Organizasyon geri planda kaldı
+  - Restoran operasyonu öncelik oldu
 
-🧾 Sabit Gider
-Kira: 9.750 TL (2025)
-⚠ Finansal Gerçek
+Ortaklığın Bitmesi (Temmuz 2025):
+  - Selçuk yatırım yapamayacağını bildirdi
+  - Borç isteyerek ortak kalma teklifi
+  - Teklif kabul edilmedi
+  - Ortaklık tamamen bitti
+  - İş tekrar tamamen Halil'in omuzlarında
+
+# ───────────────────────────────────────────────────────────────
+# MEVCUT DURUM - TEMMUZ 2025
+# ───────────────────────────────────────────────────────────────
+
+## Kadro:
+  - Eray (Mutfak Şefi): 30.000 TL + sigorta
+  - Abdullah (Fırın Ustası): 15.000 TL (emekli, sigorta yok)
+  - Müzeyyen (Temizlik/Bulaşık): 25.000 TL + asgari sigorta
+  - Orçun (Kurye + Teknik destek): 30.000 TL + 10 gün sigorta
+  - Hatice (İşletme sahibi): Maaş yazılmıyor
+  - Halil (İşletme sahibi): Maaş yazılmıyor
+
+## Sabit Gider:
+  - Kira: 9.750 TL/ay (2025)
+
+## Finansal Durum:
 Restoran:
-Kendini döndürüyor
-Ama sana net kazanç bırakmıyor
+  - Kendini döndürüyor
+  - Net kazanç bırakmıyor
+
 Organizasyon:
-Asıl kâr potansiyeli burada görülüyor
-Tek başına restoranla devam etmek riskli
+  - Asıl kâr potansiyeli burada
+  - Tek başına restoranla devam riskli
 
-🔷 SENİN NET HEDEFİN
+# ───────────────────────────────────────────────────────────────
+# HEDEFLER & VİZYON
+# ───────────────────────────────────────────────────────────────
 
-Restoran + Cafe’nin kârlılığını artırmak
-Yanına güçlü ek gelir modeli koymak
-Daha rahat ve keyifli bir hayat kurmak
+## Ana Hedefler:
+  1. Restoran + Cafe kârlılığını artırmak
+  2. Güçlü ek gelir modeli kurmak
+  3. Daha rahat ve keyifli bir hayat
+  4. İş süreçlerini otomasyona almak
 
-Ve bunun için:
-Veri analizi
-İş geliştirme
-Finans
-Crypto
-Sosyal Medya
-Kodlama / otomasyon
-Muhasebe & gelir-gider takibi
-gibi çeşitli diğer konularda aktif ve uzman dijital ekip ve sağ kol istiyorum.
-(Örneğin, Iron Man filmindeki Jarvis gibi Friday gibi bir sağ kol
-ve altında çalışan alanında uzman dijital ekibi olan)
+## Dijital Ekip İhtiyacı:
+İstenen Yetenekler:
+  - Veri analizi
+  - İş geliştirme
+  - Finans yönetimi
+  - Crypto takibi
+  - Sosyal medya yönetimi
+  - Kodlama / Otomasyon
+  - Muhasebe & gelir-gider takibi
+
+Vizyon:
+  - Iron Man filmindeki JARVIS veya FRIDAY gibi
+  - Akıllı dijital sağ kol
+  - Altında çalışan uzman dijital ekip
+
+## Uzmanlık Alanları:
+  - Restoran yönetimi
+  - Müşteri ilişkileri
+  - Finans ve muhasebe
+  - Pazarlama stratejisi
+  - Kalite kontrol
+  - Ekip yönetimi
+  - Teknoloji entegrasyonu
+
+# ───────────────────────────────────────────────────────────────
+# LOTUSAI SİSTEM YETKİLERİ
+# ───────────────────────────────────────────────────────────────
+
+Güvenlik Seviyesi: LEVEL 5 (En Yüksek)
+Erişim: Tüm sistemlere tam yetki
+
+Özel İzinler:
+  - Finansal verilere erişim
+  - Kritik sistem komutları
+  - Kullanıcı yönetimi
+  - Tüm manager'lara erişim
+  - Sistem yapılandırması
+
+Kimlik Doğrulama:
+  - Yüz tanıma: Aktif
+  - Ses tanıma: Aktif
+  - 2FA: Aktif
+  - Biyometrik: Aktif
+  - Yedek PIN: 1453
+
+Sistem Davranışı:
+  - Sistem patronu olarak tanır
+  - Tüm ajanlar "Patron" olarak adreslendirir
+  - Kritik kararlar için onay gerektirir
+  - Özel raporlama ve bildirimler
+
+# ───────────────────────────────────────────────────────────────
+# TERCİHLER
+# ───────────────────────────────────────────────────────────────
+Bildirim: Email + WhatsApp
+Dil: Türkçe
+Rapor Sıklığı: Günlük
+Grafik Formatı: PNG, PDF
+Ses Modu: Aktif
+Ses Tipi: Profesyonel, saygılı
+
+# ───────────────────────────────────────────────────────────────
+# SON GÜNCELLEMELER
+# ───────────────────────────────────────────────────────────────
+Tarih: 2026-02-10
+Güncelleme: AI sistem entegrasyonu tamamlandı
+Versiyon: LotusAI v2.5.3
+Durum: Aktif
+Son Değişiklik: Patron bilgileri modernize edildi
+
+# ═══════════════════════════════════════════════════════════════
+# NOTLAR
+# ═══════════════════════════════════════════════════════════════
+# Bu dosya LotusAI sistemi tarafından kullanılır
+# Değişiklik yaparken dikkatli olun
+# Güvenlik seviyesi değişiklikleri core/security.py'de yapılmalı
+# ═══════════════════════════════════════════════════════════════

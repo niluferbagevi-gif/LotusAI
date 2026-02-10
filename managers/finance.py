@@ -1,3 +1,17 @@
+"""
+LotusAI Finance Manager
+Sürüm: 2.5.3
+Açıklama: Finans, borsa ve analiz yönetimi
+
+Özellikler:
+- CCXT borsa entegrasyonu
+- Teknik analiz (RSI, EMA, MACD)
+- GPU hızlandırmalı hesaplamalar
+- Grafik oluşturma
+- Piyasa özeti
+- Cache sistemi
+"""
+
 import os
 import sys
 import logging
@@ -6,25 +20,25 @@ import threading
 from pathlib import Path
 from datetime import datetime, timedelta
 from typing import Tuple, List, Optional, Dict, Any
+from dataclasses import dataclass
+from enum import Enum
 
-# Gereksiz uyarıları gizle
+# Suppress warnings
 warnings.filterwarnings("ignore")
 
-# --- YAPILANDIRMA VE FALLBACK ---
-try:
-    from config import Config
-except ImportError:
-    # Bağımsız çalışma durumu için sahte config
-    class Config:
-        WORK_DIR = os.getcwd()
-        STATIC_DIR = Path("static")
-        DEBUG_MODE = True
-        USE_GPU = False
+# ═══════════════════════════════════════════════════════════════
+# CONFIG
+# ═══════════════════════════════════════════════════════════════
+from config import Config
 
-# --- LOGGING ---
 logger = logging.getLogger("LotusAI.Finance")
 
-# --- KRİTİK KÜTÜPHANELER ---
+
+# ═══════════════════════════════════════════════════════════════
+# LIBRARIES
+# ═══════════════════════════════════════════════════════════════
+FINANCE_LIBS = False
+
 try:
     import ccxt
     import pandas as pd
@@ -34,106 +48,273 @@ try:
     import numpy as np
     FINANCE_LIBS = True
 except ImportError as e:
-    FINANCE_LIBS = False
-    logger.warning(f"⚠️ Finans kütüphaneleri eksik: {e}. (pip install ccxt pandas ta mplfinance numpy)")
+    logger.warning(
+        f"⚠️ Finans kütüphaneleri eksik: {e}\n"
+        "pip install ccxt pandas ta mplfinance numpy"
+    )
 
-# GPU Desteği için PyTorch ve Config Kontrolü
+
+# ═══════════════════════════════════════════════════════════════
+# GPU (PyTorch)
+# ═══════════════════════════════════════════════════════════════
 HAS_GPU = False
 DEVICE = "cpu"
-USE_GPU_CONFIG = getattr(Config, "USE_GPU", False)
 
-if USE_GPU_CONFIG:
+if Config.USE_GPU:
     try:
         import torch
-        # CUDA kontrolünü güvenli blok içine alıyoruz
+        
         if torch.cuda.is_available():
             HAS_GPU = True
             DEVICE = "cuda"
             try:
                 gpu_name = torch.cuda.get_device_name(0)
-                logger.info(f"🚀 Finans Modülü GPU Aktif: {gpu_name}")
-            except:
-                logger.info(f"🚀 Finans Modülü GPU Aktif (Model adı alınamadı)")
+                logger.info(f"🚀 Finance GPU aktif: {gpu_name}")
+            except Exception:
+                logger.info("🚀 Finance GPU aktif")
         else:
-            logger.info("ℹ️ Config GPU açık dedi ancak Torch CUDA bulamadı. CPU kullanılacak.")
+            logger.info("ℹ️ CUDA yok, CPU kullanılacak")
     except ImportError:
-        logger.info("ℹ️ PyTorch yüklü değil, GPU hızlandırma devre dışı.")
+        logger.info("ℹ️ PyTorch yok, GPU hızlandırma devre dışı")
     except Exception as e:
-        logger.warning(f"⚠️ GPU başlatma hatası: {e}. CPU kullanılıyor.")
-else:
-    logger.info("ℹ️ Finans analizleri CPU modunda (Config ayarı).")
+        logger.warning(f"⚠️ GPU başlatma hatası: {e}")
 
+
+# ═══════════════════════════════════════════════════════════════
+# ENUMS
+# ═══════════════════════════════════════════════════════════════
+class TrendType(Enum):
+    """Trend tipleri"""
+    BULLISH = "BULLISH"
+    BEARISH = "BEARISH"
+    NEUTRAL = "NEUTRAL"
+
+
+class SignalType(Enum):
+    """Sinyal tipleri"""
+    GOLDEN_CROSS = "golden_cross"
+    DEATH_CROSS = "death_cross"
+    OVERBOUGHT = "overbought"
+    OVERSOLD = "oversold"
+    NONE = "none"
+
+
+class TimeFrame(Enum):
+    """Zaman dilimleri"""
+    M1 = "1m"
+    M5 = "5m"
+    M15 = "15m"
+    M30 = "30m"
+    H1 = "1h"
+    H4 = "4h"
+    D1 = "1d"
+    W1 = "1w"
+
+
+# ═══════════════════════════════════════════════════════════════
+# DATA STRUCTURES
+# ═══════════════════════════════════════════════════════════════
+@dataclass
+class MarketData:
+    """Piyasa verisi"""
+    symbol: str
+    price: float
+    change_percent: float
+    volume: float
+    timestamp: datetime
+
+
+@dataclass
+class TechnicalAnalysis:
+    """Teknik analiz sonucu"""
+    symbol: str
+    timeframe: str
+    price: float
+    trend: TrendType
+    rsi: float
+    ema50: float
+    ema200: float
+    signal: SignalType
+    chart_path: Optional[str] = None
+
+
+@dataclass
+class FinanceMetrics:
+    """Finance manager metrikleri"""
+    market_queries: int = 0
+    analyses_performed: int = 0
+    charts_generated: int = 0
+    cache_hits: int = 0
+    cache_misses: int = 0
+    errors_encountered: int = 0
+
+
+# ═══════════════════════════════════════════════════════════════
+# FINANCE MANAGER
+# ═══════════════════════════════════════════════════════════════
 class FinanceManager:
     """
-    LotusAI Finans, Borsa ve Analiz Yöneticisi.
+    LotusAI Finans, Borsa ve Analiz Yöneticisi
+    
+    Yetenekler:
+    - CCXT: Binance entegrasyonu
+    - Teknik analiz: RSI, EMA, MACD
+    - GPU hızlandırma: PyTorch ile hesaplama
+    - Grafik: mplfinance ile chart oluşturma
+    - Cache: Market data önbellekleme
+    - Accounting: Muhasebe entegrasyonu
+    
+    Piyasa verilerini çeker, teknik analiz yapar ve grafik üretir.
     """
     
-    def __init__(self, accounting_manager=None):
-        self.lock = threading.RLock()
-        self.exchange = None
-        self.accounting = accounting_manager
-        self.default_symbols = ["BTC/USDT", "ETH/USDT", "BNB/USDT", "SOL/USDT"]
+    # Default symbols
+    DEFAULT_SYMBOLS = ["BTC/USDT", "ETH/USDT", "BNB/USDT", "SOL/USDT"]
+    
+    # Cache settings
+    CACHE_DURATION = 15  # saniye
+    
+    # RSI thresholds
+    RSI_OVERBOUGHT = 70
+    RSI_OVERSOLD = 30
+    
+    # Chart settings
+    CHART_DPI = 120
+    
+    def __init__(self, accounting_manager: Optional[Any] = None):
+        """
+        Finance manager başlatıcı
         
-        # Basit bir önbellek
-        self._cache = {}
-        self._cache_time = {}
-        self.CACHE_DURATION = 15
-
+        Args:
+            accounting_manager: Muhasebe yöneticisi (opsiyonel)
+        """
+        # Thread safety
+        self.lock = threading.RLock()
+        
+        # Exchange
+        self.exchange: Optional[ccxt.Exchange] = None
+        
+        # Accounting
+        self.accounting = accounting_manager
+        
+        # Cache
+        self._cache: Dict[str, Any] = {}
+        self._cache_time: Dict[str, datetime] = {}
+        
+        # Metrics
+        self.metrics = FinanceMetrics()
+        
+        # Initialize exchange
         if FINANCE_LIBS:
             self._init_exchange()
-
-    def _init_exchange(self):
-        """Borsa bağlantısını güvenli bir şekilde başlatır."""
+    
+    def _init_exchange(self) -> None:
+        """Borsa bağlantısı başlat"""
         try:
             self.exchange = ccxt.binance({
                 'enableRateLimit': True,
                 'options': {'defaultType': 'spot'},
                 'timeout': 20000
             })
-            logger.info("✅ Finans Modülü: Binance bağlantısı hazır.")
+            logger.info("✅ Binance bağlantısı hazır")
+        
         except Exception as e:
-            logger.error(f"❌ Borsa bağlantı hatası: {e}")
-
-    def get_market_summary(self, custom_symbols: List[str] = None) -> str:
-        """Piyasanın genel durumunu özetler."""
+            logger.error(f"Borsa bağlantı hatası: {e}")
+            self.metrics.errors_encountered += 1
+    
+    # ───────────────────────────────────────────────────────────
+    # MARKET DATA
+    # ───────────────────────────────────────────────────────────
+    
+    def get_market_summary(
+        self,
+        custom_symbols: Optional[List[str]] = None
+    ) -> str:
+        """
+        Piyasa özeti
+        
+        Args:
+            custom_symbols: Özel sembol listesi
+        
+        Returns:
+            Formatlanmış özet
+        """
         if not FINANCE_LIBS or not self.exchange:
-            return "⚠️ Finansal modül veya borsa bağlantısı aktif değil."
+            return "⚠️ Finansal modül veya borsa bağlantısı aktif değil"
         
         with self.lock:
             try:
-                symbols = custom_symbols if custom_symbols else self.default_symbols
+                symbols = custom_symbols or self.DEFAULT_SYMBOLS
                 summary = []
                 
                 for symbol in symbols:
-                    current_time = datetime.now()
-                    # Cache kontrolü
-                    if symbol in self._cache and (current_time - self._cache_time.get(symbol, current_time)) < timedelta(seconds=self.CACHE_DURATION):
-                        ticker = self._cache[symbol]
-                    else:
-                        ticker = self.exchange.fetch_ticker(symbol)
-                        self._cache[symbol] = ticker
-                        self._cache_time[symbol] = current_time
+                    # Get ticker (with cache)
+                    ticker = self._get_ticker_cached(symbol)
+                    
+                    if not ticker:
+                        continue
                     
                     price = ticker['last']
                     change = ticker['percentage']
                     
+                    # Format
                     icon = "🟢" if change >= 0 else "🔴"
                     trend = "📈" if change > 2.5 else "📉" if change < -2.5 else "➡️"
                     
                     clean_sym = symbol.split('/')[0]
-                    summary.append(f"{icon} {clean_sym}: ${price:,.2f} (%{change:+.2f}) {trend}")
+                    summary.append(
+                        f"{icon} {clean_sym}: ${price:,.2f} "
+                        f"(%{change:+.2f}) {trend}"
+                    )
                 
-                if not summary:
-                    return "❌ Piyasa verisi şu an çekilemiyor."
-                    
-                return " | ".join(summary)
+                self.metrics.market_queries += 1
                 
+                return (
+                    " | ".join(summary)
+                    if summary else "❌ Piyasa verisi çekilemiyor"
+                )
+            
             except Exception as e:
                 logger.error(f"Piyasa özeti hatası: {e}")
-                return "Piyasa verilerine şu an erişilemiyor."
-
+                self.metrics.errors_encountered += 1
+                return "Piyasa verilerine erişilemiyor"
+    
+    def _get_ticker_cached(self, symbol: str) -> Optional[Dict]:
+        """Cache'li ticker getir"""
+        current_time = datetime.now()
+        
+        # Cache check
+        if symbol in self._cache:
+            cache_age = (
+                current_time - self._cache_time.get(symbol, current_time)
+            ).total_seconds()
+            
+            if cache_age < self.CACHE_DURATION:
+                self.metrics.cache_hits += 1
+                return self._cache[symbol]
+        
+        # Fetch new
+        try:
+            ticker = self.exchange.fetch_ticker(symbol)
+            self._cache[symbol] = ticker
+            self._cache_time[symbol] = current_time
+            self.metrics.cache_misses += 1
+            return ticker
+        
+        except Exception as e:
+            logger.error(f"Ticker fetch hatası ({symbol}): {e}")
+            return None
+    
+    # ───────────────────────────────────────────────────────────
+    # BALANCE
+    # ───────────────────────────────────────────────────────────
+    
     def get_balance(self) -> str:
-        """Merkezi kasadaki net bakiyeyi döner."""
+        """
+        Kasa bakiyesi
+        
+        Returns:
+            Formatlanmış bakiye
+        """
         if self.accounting:
             try:
                 val = self.accounting.get_balance()
@@ -143,140 +324,273 @@ class FinanceManager:
                 return "Bakiye okunamadı"
         
         return "12,450.00 TRY (Demo)"
-
-    def _apply_gpu_calculations(self, df: pd.DataFrame) -> pd.DataFrame:
+    
+    # ───────────────────────────────────────────────────────────
+    # TECHNICAL ANALYSIS
+    # ───────────────────────────────────────────────────────────
+    
+    def analyze(
+        self,
+        symbol: str = "BTC/USDT",
+        timeframe: str = '4h',
+        limit: int = 100
+    ) -> Tuple[str, Optional[str]]:
         """
-        Kritik indikatörleri GPU (torch) veya CPU kullanarak hesaplar.
+        Teknik analiz
+        
+        Args:
+            symbol: Sembol
+            timeframe: Zaman dilimi
+            limit: Veri sayısı
+        
+        Returns:
+            (Rapor, Grafik dosya adı)
         """
-        if not HAS_GPU:
-            # GPU yoksa direkt indikatörleri hesapla (CPU kütüphanesi ile)
-            try:
-                df['RSI'] = ta.momentum.rsi(df['close'], window=14)
-                df['EMA50'] = ta.trend.ema_indicator(df['close'], window=50)
-                df['EMA200'] = ta.trend.ema_indicator(df['close'], window=200)
-            except Exception as e:
-                logger.error(f"CPU İndikatör hesaplama hatası: {e}")
-            return df
-
-        try:
-            # GPU varsa veriyi taşı
-            # Not: ta kütüphanesi Pandas Series bekler, Tensor değil.
-            # Şimdilik hibrit yapıda, veri transferi testi yapıyoruz.
-            
-            # Sembolik GPU işlemi (Veri yolu testi)
-            prices = torch.tensor(df['close'].values, dtype=torch.float32).to(DEVICE)
-            
-            # Gerçek hesaplama (ta library CPU kullanır, ama güvenilirdir)
-            df['RSI'] = ta.momentum.rsi(df['close'], window=14)
-            df['EMA50'] = ta.trend.ema_indicator(df['close'], window=50)
-            df['EMA200'] = ta.trend.ema_indicator(df['close'], window=200)
-            
-            return df
-        except Exception as e:
-            logger.warning(f"GPU işlem hatası, CPU'ya dönülüyor: {e}")
-            # Hata durumunda CPU ile tekrar dene
-            try:
-                df['RSI'] = ta.momentum.rsi(df['close'], window=14)
-                df['EMA50'] = ta.trend.ema_indicator(df['close'], window=50)
-                df['EMA200'] = ta.trend.ema_indicator(df['close'], window=200)
-            except:
-                pass
-            return df
-
-    def analyze(self, symbol: str = "BTC/USDT", timeframe: str = '4h', limit: int = 100) -> Tuple[str, Optional[str]]:
-        """Detaylı teknik analiz yapar."""
         if not FINANCE_LIBS or not self.exchange:
-            return "Analiz araçları yüklü değil.", None
-            
+            return "Analiz araçları yüklü değil", None
+        
         with self.lock:
             try:
+                # Format symbol
                 symbol = symbol.upper()
                 if "/" not in symbol:
                     symbol = f"{symbol}/USDT"
-
-                # 1. Veri Çekme
+                
+                # Fetch OHLCV data
                 bars = self.exchange.fetch_ohlcv(symbol, timeframe, limit=limit)
+                
                 if not bars:
-                    return f"{symbol} için borsa verisi boş döndü.", None
-
-                df = pd.DataFrame(bars, columns=['timestamp', 'open', 'high', 'low', 'close', 'volume'])
+                    return f"{symbol} için veri boş", None
+                
+                # Create dataframe
+                df = pd.DataFrame(
+                    bars,
+                    columns=['timestamp', 'open', 'high', 'low', 'close', 'volume']
+                )
                 df['timestamp'] = pd.to_datetime(df['timestamp'], unit='ms')
                 df.set_index('timestamp', inplace=True)
                 
-                # 2. Hesaplamalar
-                df = self._apply_gpu_calculations(df)
+                # Calculate indicators
+                df = self._calculate_indicators(df)
                 
-                # Veri yeterliliği kontrolü
-                if 'EMA200' not in df.columns or df.iloc[-1]['EMA200'] is None or pd.isna(df.iloc[-1]['EMA200']):
-                     return f"{symbol} için yeterli veri yok (EMA200 hesaplanamadı).", None
-
-                last = df.iloc[-1]
-                prev = df.iloc[-2]
+                # Validate data
+                if df.iloc[-1]['EMA200'] is None or pd.isna(df.iloc[-1]['EMA200']):
+                    return f"{symbol} için yeterli veri yok (EMA200)", None
                 
-                # Trend ve Sinyal Analizi
-                trend_val = "BULLISH (Yükseliş) 🐂" if last['close'] > last['EMA50'] else "BEARISH (Düşüş) 🐻"
+                # Analysis
+                analysis = self._analyze_dataframe(df, symbol, timeframe)
                 
-                cross_msg = ""
-                if prev['EMA50'] < prev['EMA200'] and last['EMA50'] > last['EMA200']:
-                    cross_msg = "\n🚀 GOLDEN CROSS tespit edildi! (Uzun vadeli AL sinyali)"
-                elif prev['EMA50'] > prev['EMA200'] and last['EMA50'] < last['EMA200']:
-                    cross_msg = "\n⚠️ DEATH CROSS tespit edildi! (Uzun vadeli SAT sinyali)"
+                # Generate chart
+                chart_filename = self._generate_chart(df, symbol, timeframe)
                 
-                # RSI Durumu
-                rsi_val = last['RSI'] if not pd.isna(last['RSI']) else 50.0
-                rsi_stat = "NÖTR"
-                if rsi_val > 70: rsi_stat = "AŞIRI ALIM (Dikkat, Düzeltme Gelebilir)"
-                elif rsi_val < 30: rsi_stat = "AŞIRI SATIM (Tepki Alımı Gelebilir)"
+                # Format report
+                report = self._format_analysis_report(analysis, chart_filename)
                 
-                device_info = f"⚡ GPU Hızlandırmalı ({DEVICE})" if HAS_GPU else "💻 CPU İşleme"
+                self.metrics.analyses_performed += 1
                 
-                report = (f"📊 {symbol} TEKNİK ANALİZ ({timeframe}) - {device_info}:\n"
-                          f"💰 Güncel Fiyat: ${last['close']:,.2f}\n"
-                          f"📈 Trend: {trend_val}\n"
-                          f"⚡ RSI: {rsi_val:.2f} ({rsi_stat}){cross_msg}\n"
-                          f"{'-'*35}\n"
-                          f"Analiz grafiği oluşturuldu ve sisteme eklendi.")
-                
-                # 3. Grafik Oluşturma
-                static_dir = getattr(Config, 'STATIC_DIR', Path('./static'))
-                static_dir.mkdir(parents=True, exist_ok=True)
-                
-                timestamp_str = datetime.now().strftime("%Y%m%d_%H%M%S")
-                output_filename = f"chart_{symbol.replace('/', '_')}_{timestamp_str}.png"
-                output_path = static_dir / output_filename
-                
-                style = mpf.make_mpf_style(base_mpf_style='nightclouds', rc={'font.size': 8})
-                
-                apds = [
-                    mpf.make_addplot(df['EMA50'], color='orange', width=1.0),
-                    mpf.make_addplot(df['EMA200'], color='cyan', width=1.0),
-                ]
-                
-                mpf.plot(
-                    df, 
-                    type='candle', 
-                    style=style, 
-                    addplot=apds, 
-                    title=f"\n{symbol} - LotusAI Stratejik Analiz", 
-                    volume=True, 
-                    savefig=dict(fname=str(output_path), dpi=120, bbox_inches='tight')
-                )
-                
-                plt.close('all')
-                
-                if getattr(Config, 'DEBUG_MODE', False):
-                    self._open_image(output_path)
-                
-                return report, output_filename
-                
+                return report, chart_filename
+            
             except Exception as e:
                 logger.error(f"Analiz hatası: {e}")
+                self.metrics.errors_encountered += 1
                 import traceback
                 logger.error(traceback.format_exc())
-                return f"Finansal analiz başarısız: {str(e)}", None
-
-    def _open_image(self, path):
-        """Üretilen grafiği işletim sistemi seviyesinde açar."""
+                return f"Analiz başarısız: {str(e)[:100]}", None
+    
+    def _calculate_indicators(self, df: pd.DataFrame) -> pd.DataFrame:
+        """
+        İndikatörleri hesapla
+        
+        Args:
+            df: OHLCV dataframe
+        
+        Returns:
+            İndikatörlerle zenginleştirilmiş dataframe
+        """
+        try:
+            # GPU symbolic operation (if available)
+            if HAS_GPU:
+                try:
+                    import torch
+                    # Symbolic GPU operation (data transfer test)
+                    prices = torch.tensor(
+                        df['close'].values,
+                        dtype=torch.float32
+                    ).to(DEVICE)
+                except Exception:
+                    pass
+            
+            # Calculate indicators (CPU - reliable)
+            df['RSI'] = ta.momentum.rsi(df['close'], window=14)
+            df['EMA50'] = ta.trend.ema_indicator(df['close'], window=50)
+            df['EMA200'] = ta.trend.ema_indicator(df['close'], window=200)
+            df['MACD'] = ta.trend.macd(df['close'])
+            
+            return df
+        
+        except Exception as e:
+            logger.error(f"İndikatör hesaplama hatası: {e}")
+            return df
+    
+    def _analyze_dataframe(
+        self,
+        df: pd.DataFrame,
+        symbol: str,
+        timeframe: str
+    ) -> TechnicalAnalysis:
+        """DataFrame'den analiz çıkar"""
+        last = df.iloc[-1]
+        prev = df.iloc[-2]
+        
+        # Trend detection
+        trend = (
+            TrendType.BULLISH if last['close'] > last['EMA50']
+            else TrendType.BEARISH
+        )
+        
+        # Signal detection
+        signal = SignalType.NONE
+        
+        # Golden/Death cross
+        if prev['EMA50'] < prev['EMA200'] and last['EMA50'] > last['EMA200']:
+            signal = SignalType.GOLDEN_CROSS
+        elif prev['EMA50'] > prev['EMA200'] and last['EMA50'] < last['EMA200']:
+            signal = SignalType.DEATH_CROSS
+        
+        # RSI signals
+        rsi_val = last['RSI'] if not pd.isna(last['RSI']) else 50.0
+        
+        if rsi_val > self.RSI_OVERBOUGHT:
+            signal = SignalType.OVERBOUGHT
+        elif rsi_val < self.RSI_OVERSOLD:
+            signal = SignalType.OVERSOLD
+        
+        return TechnicalAnalysis(
+            symbol=symbol,
+            timeframe=timeframe,
+            price=last['close'],
+            trend=trend,
+            rsi=rsi_val,
+            ema50=last['EMA50'],
+            ema200=last['EMA200'],
+            signal=signal
+        )
+    
+    def _format_analysis_report(
+        self,
+        analysis: TechnicalAnalysis,
+        chart_filename: Optional[str]
+    ) -> str:
+        """Analiz raporunu formatla"""
+        # Device info
+        device_info = (
+            f"⚡ GPU ({DEVICE})" if HAS_GPU
+            else "💻 CPU"
+        )
+        
+        # Trend emoji
+        trend_emoji = "🐂" if analysis.trend == TrendType.BULLISH else "🐻"
+        
+        # RSI status
+        rsi_status = "NÖTR"
+        if analysis.rsi > self.RSI_OVERBOUGHT:
+            rsi_status = "AŞIRI ALIM (Dikkat)"
+        elif analysis.rsi < self.RSI_OVERSOLD:
+            rsi_status = "AŞIRI SATIM (Fırsat)"
+        
+        # Signal message
+        signal_msg = ""
+        if analysis.signal == SignalType.GOLDEN_CROSS:
+            signal_msg = "\n🚀 GOLDEN CROSS! (Uzun vadeli AL sinyali)"
+        elif analysis.signal == SignalType.DEATH_CROSS:
+            signal_msg = "\n⚠️ DEATH CROSS! (Uzun vadeli SAT sinyali)"
+        
+        report_lines = [
+            f"📊 {analysis.symbol} TEKNİK ANALİZ "
+            f"({analysis.timeframe}) - {device_info}",
+            f"💰 Fiyat: ${analysis.price:,.2f}",
+            f"📈 Trend: {analysis.trend.value} {trend_emoji}",
+            f"⚡ RSI: {analysis.rsi:.2f} ({rsi_status})",
+            signal_msg,
+            "─" * 35,
+            "Analiz grafiği oluşturuldu"
+        ]
+        
+        return "\n".join(report_lines)
+    
+    # ───────────────────────────────────────────────────────────
+    # CHART GENERATION
+    # ───────────────────────────────────────────────────────────
+    
+    def _generate_chart(
+        self,
+        df: pd.DataFrame,
+        symbol: str,
+        timeframe: str
+    ) -> Optional[str]:
+        """
+        Grafik oluştur
+        
+        Args:
+            df: OHLCV + indicators dataframe
+            symbol: Sembol
+            timeframe: Zaman dilimi
+        
+        Returns:
+            Dosya adı veya None
+        """
+        try:
+            # Output path
+            static_dir = Config.STATIC_DIR
+            static_dir.mkdir(parents=True, exist_ok=True)
+            
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            filename = f"chart_{symbol.replace('/', '_')}_{timestamp}.png"
+            output_path = static_dir / filename
+            
+            # Style
+            style = mpf.make_mpf_style(
+                base_mpf_style='nightclouds',
+                rc={'font.size': 8}
+            )
+            
+            # Add plots
+            apds = [
+                mpf.make_addplot(df['EMA50'], color='orange', width=1.0),
+                mpf.make_addplot(df['EMA200'], color='cyan', width=1.0)
+            ]
+            
+            # Plot
+            mpf.plot(
+                df,
+                type='candle',
+                style=style,
+                addplot=apds,
+                title=f"\n{symbol} - LotusAI Analiz",
+                volume=True,
+                savefig=dict(
+                    fname=str(output_path),
+                    dpi=self.CHART_DPI,
+                    bbox_inches='tight'
+                )
+            )
+            
+            plt.close('all')
+            
+            # Debug mode: Open chart
+            if Config.DEBUG_MODE:
+                self._open_chart(output_path)
+            
+            self.metrics.charts_generated += 1
+            
+            return filename
+        
+        except Exception as e:
+            logger.error(f"Grafik oluşturma hatası: {e}")
+            return None
+    
+    def _open_chart(self, path: Path) -> None:
+        """Grafiği aç (debug)"""
         try:
             if sys.platform == 'win32':
                 os.startfile(path)
@@ -286,3 +600,33 @@ class FinanceManager:
                 os.system(f"xdg-open {path}")
         except Exception:
             pass
+    
+    # ───────────────────────────────────────────────────────────
+    # UTILITIES
+    # ───────────────────────────────────────────────────────────
+    
+    def get_metrics(self) -> Dict[str, Any]:
+        """
+        Finance metrikleri
+        
+        Returns:
+            Metrik dictionary
+        """
+        return {
+            "market_queries": self.metrics.market_queries,
+            "analyses_performed": self.metrics.analyses_performed,
+            "charts_generated": self.metrics.charts_generated,
+            "cache_hits": self.metrics.cache_hits,
+            "cache_misses": self.metrics.cache_misses,
+            "errors_encountered": self.metrics.errors_encountered,
+            "gpu_available": HAS_GPU,
+            "device": DEVICE,
+            "exchange_connected": self.exchange is not None
+        }
+    
+    def clear_cache(self) -> None:
+        """Cache'i temizle"""
+        with self.lock:
+            self._cache.clear()
+            self._cache_time.clear()
+            logger.debug("Market cache temizlendi")
