@@ -10,3 +10,74 @@ sudo apt update
 sudo apt install language-pack-tr
 sudo update-locale LANG=tr_TR.UTF-8
 sudo apt install fonts-dejavu fonts-liberation fontconfig
+
+
+git init
+git add .
+git commit -m "İlk yükleme: Proje dosyaları eklendi"
+git remote add origin https://github.com/kullanici-adin/proje-adin.git
+git branch -M main
+git push -u origin main
+
+
+
+sudo snap install ollama
+curl -fsSL https://ollama.com/install.sh | sh
+# Görüntü analiz yeteneği için (Kritik)
+ollama pull llava
+# Metin zekası için (Zaten yaptınız ama güncelliği kontrol eder)
+ollama pull llama3.1
+# (Opsiyonel) Gelişmiş yerel hafıza vektörleme için
+ollama pull nomic-embed-text
+
+
+1. Selenium / ChromeDriver Hatası (Paket Servis Modülü)
+sudo apt update
+sudo apt install -y libnss3 libatk-bridge2.0-0 libcups2 libdrm2 libxkbcommon0 libxcomposite1 libxdamage1 libxrandr2 libgbm1 libasound2 libpango-1.0-0 libatspi0
+
+Ayrıca sisteminizde Google Chrome kurulu değilse şu komutu da çalıştırın:
+sudo wget https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
+sudo apt install ./google-chrome-stable_current_amd64.deb
+
+-----------------------------
+
+# Geçici klasöre git
+cd /tmp
+
+# Google Chrome'un en güncel sürümünü indir
+wget https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
+
+# Paketi yükle (apt install komutu eksik bağımlılıkları otomatik tamamlar)
+sudo apt install ./google-chrome-stable_current_amd64.deb -y
+
+sudo apt update && sudo apt install -y \
+libnss3 \
+libatk-bridge2.0-0* \
+libatk1.0-0* \
+libcups2* \
+libgbm1 \
+libasound2* \
+libpangocairo-1.0-0 \
+libxshmfence1 \
+libglu1-mesa \
+libxcomposite1 \
+libxdamage1 \
+libxrandr2
+
+sudo usermod -aG audio,video $USER
+su - $USER
+rm -rf ~/.wdm/drivers/chromedriver
+
+
+sudo apt install -y libasound2-plugins alsa-utils pulseaudio-utils
+sudo ln -s /usr/lib/x86_64-linux-gnu/alsa-lib /home/niluf/miniconda3/envs/lts/lib/alsa-lib
+
+ls /dev/video*
+    
+ollama serve 
+
+conda activate lts
+
+cd ~/LotusAI
+
+python main.py

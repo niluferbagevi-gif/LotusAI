@@ -16,36 +16,32 @@ except ImportError:
         CAMERA_INDEX = 0
         DEBUG_MODE = False
 
-# --- LOGLAMA ---
+# --- LOGLAMA YAPILANDIRMASI ---
 logger = logging.getLogger("LotusAI.Camera")
 
 class CameraManager:
     """
     LotusAI Kamera Görüntü Yöneticisi.
-    
-    Not: OpenCV'nin standart pip sürümü CUDA desteklemez. 
-    Kamera yakalama (I/O) işlemleri CPU tabanlıdır ve bu en kararlı yöntemdir.
-    GPU, sadece çok ağır görüntü işleme algoritmalarında (DNN vb.) gereklidir.
+    v2.6.5 - Dinamik Port Tarama ve CUDA Destekli Keskinleştirme.
     """
     
     def __init__(self):
-        # Thread Safety
+        # İş parçacığı güvenliği için kilit
         self.lock = threading.RLock()
         
         # Durum Değişkenleri
         self.is_busy = False
         self._active_cap = None
         
-        # OpenCV CUDA Kontrolü (Sadece bilgilendirme amaçlı)
+        # OpenCV CUDA Kontrolü (Görüntü işleme hızlandırması için)
         self.cuda_available = False
         try:
-            # OpenCV'nin CUDA modülü var mı ve cihaz sayısı > 0 mı?
             if hasattr(cv2, 'cuda') and cv2.cuda.getCudaEnabledDeviceCount() > 0:
                 self.cuda_available = True
+                # Önbelleğe alınmış Gaussian filtresi
                 self.gpu_filter = cv2.cuda.createGaussianFilter(cv2.CV_8UC3, cv2.CV_8UC3, (0, 0), 2.0)
-                logger.info("🚀 OpenCV CUDA Desteği Aktif (Görüntü işleme GPU'da yapılacak)")
+                logger.info("🚀 Kamera: OpenCV CUDA Desteği Aktif (Görüntü işleme GPU üzerinde yapılacak)")
             else:
-                # Bu bir hata değildir, standart davranıştır.
                 logger.info("ℹ️ Kamera servisi CPU modunda başlatılıyor (Standart OpenCV).")
         except Exception:
             logger.info("ℹ️ Kamera servisi CPU modunda başlatılıyor.")
@@ -55,69 +51,93 @@ class CameraManager:
         self.snapshot_dir = self.work_dir / "snapshots"
         self.snapshot_dir.mkdir(parents=True, exist_ok=True)
 
-        # Ayarlar
+        # Temel Ayarlar
         self.camera_index = getattr(Config, "CAMERA_INDEX", 0)
         self.resolution = (640, 480) 
         self.flip_horizontal = True  
 
     def start(self):
-        """Kamera servisinin donanım hazırlığını kontrol eder."""
+        """Kamera donanımını hazırlar. Hata durumunda alternatif portları tarar."""
         with self.lock:
-            if self._test_hardware():
+            # Önce yapılandırmadaki varsayılan portu dene
+            if self._test_hardware(self.camera_index):
                 logger.info(f"✅ Kamera servisi hazır. (Port: {self.camera_index})")
             else:
-                logger.warning(f"⚠️ Kamera (ID:{self.camera_index}) algılandı ancak erişim sağlanamıyor.")
+                logger.warning(f"⚠️ Kamera (ID:{self.camera_index}) erişilemiyor. Aktif cihazlar taranıyor...")
+                active_ports = self.list_cameras()
+                
+                if active_ports:
+                    self.camera_index = active_ports[0]
+                    logger.info(f"✅ Çalışan kamera bulundu ve seçildi: Port {self.camera_index}")
+                else:
+                    logger.error("❌ Sistemde erişilebilir hiçbir kamera bulunamadı!")
 
-    def _test_hardware(self) -> bool:
-        """Kamera donanımının erişilebilir olup olmadığını test eder."""
+    def _test_hardware(self, index: int) -> bool:
+        """Belirli bir porttaki kameranın görüntü verip vermediğini test eder."""
         try:
-            backend = cv2.CAP_DSHOW if hasattr(cv2, 'CAP_DSHOW') and self.work_dir.drive else cv2.CAP_ANY
-            cap = cv2.VideoCapture(self.camera_index, backend)
-            available = cap.isOpened()
-            if available:
-                cap.release()
-            return available
-        except Exception as e:
-            logger.error(f"Donanım testi hatası: {e}")
+            # Linux sistemlerde V4L2 backend'i bazen daha kararlıdır
+            cap = cv2.VideoCapture(index, cv2.CAP_ANY)
+            if not cap.isOpened():
+                return False
+            
+            # Kameranın gerçekten görüntü döndürdüğünü doğrula
+            ret, frame = cap.read()
+            cap.release()
+            return ret and frame is not None
+        except Exception:
             return False
+
+    def list_cameras(self) -> List[int]:
+        """Sistemdeki aktif kamera portlarını (0-4 arası) tarar."""
+        active_ports = []
+        # Modern sistemlerde genellikle 0-2 arası portlar kullanılır
+        for i in range(5):
+            cap = cv2.VideoCapture(i, cv2.CAP_ANY)
+            if cap.isOpened():
+                ret, frame = cap.read()
+                if ret and frame is not None:
+                    active_ports.append(i)
+                cap.release()
+        return active_ports
 
     def get_frame(self, raw: bool = True, preprocess: bool = False) -> Optional[Union[np.ndarray, str]]:
         """
-        Kameradan anlık bir kare yakalar.
+        Kameradan anlık bir kare yakalar ve opsiyonel olarak ön işlemeden geçirir.
         """
+        if self.is_busy:
+            return None
+
         with self.lock:
             self.is_busy = True
             frame = None
             cap = None
             
             try:
-                # Backend seçimi (Windows için DSHOW tercih edilir)
-                backend = cv2.CAP_DSHOW if hasattr(cv2, 'CAP_DSHOW') and self.work_dir.drive else cv2.CAP_ANY
-                cap = cv2.VideoCapture(self.camera_index, backend)
-                
+                cap = cv2.VideoCapture(self.camera_index)
                 if not cap.isOpened():
-                    logger.error(f"❌ Kamera donanımına erişilemedi! İndeks: {self.camera_index}")
+                    logger.error(f"❌ Kamera bağlantısı koptu! İndeks: {self.camera_index}")
                     return None
 
-                # Ayarları uygula
+                # Donanım ayarlarını uygula
                 cap.set(cv2.CAP_PROP_FRAME_WIDTH, self.resolution[0])
                 cap.set(cv2.CAP_PROP_FRAME_HEIGHT, self.resolution[1])
-                cap.set(cv2.CAP_PROP_BUFFERSIZE, 1) # Gecikmeyi önlemek için buffer 1
+                cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
 
-                # Isınma Döngüsü (Karanlık görüntüyü önler)
-                # 2 kare yeterlidir, 5 kare çok zaman kaybettirir.
+                # Isınma döngüsü (Otomatik pozlamanın dengelenmesi için)
                 for _ in range(2):
                     cap.grab()
 
                 ret, frame = cap.read()
                 
                 if not ret or frame is None:
-                    logger.warning("🚫 Kameradan boş veri döndü.")
+                    logger.warning("🚫 Kameradan boş görüntü döndü.")
                     frame = None
                 else:
+                    # Görüntü yönünü düzelt (Ayna modu)
                     if self.flip_horizontal:
                         frame = cv2.flip(frame, 1)
                     
+                    # Netleştirme ve iyileştirme
                     if preprocess:
                         frame = self._preprocess_frame(frame)
 
@@ -129,7 +149,7 @@ class CameraManager:
                     cap.release()
                 self.is_busy = False
 
-            # Çıktı Formatı
+            # Dönüş formatını belirle
             if frame is not None:
                 if not raw:
                     return self._convert_to_base64(frame)
@@ -138,29 +158,26 @@ class CameraManager:
             return None
 
     def _preprocess_frame(self, frame: np.ndarray) -> np.ndarray:
-        """Görüntü netleştirme (Unsharp Mask)."""
-        # Eğer özel derlenmiş OpenCV varsa GPU kullan
+        """Görüntü netleştirme işlemi (Unsharp Masking)."""
         if self.cuda_available:
             try:
                 gpu_frame = cv2.cuda_GpuMat()
                 gpu_frame.upload(frame)
                 gpu_blur = self.gpu_filter.apply(gpu_frame)
-                # GPU üzerinde ağırlıklı toplama
+                # Keskinlik artırma: Orijinal * 1.5 - Bulanık * 0.5
                 res_gpu = cv2.cuda.addWeighted(gpu_frame, 1.5, gpu_blur, -0.5, 0)
                 return res_gpu.download()
             except Exception:
-                # GPU hatası olursa CPU'ya düş
                 pass
 
-        # CPU Modu (Standart ve Hızlı)
-        # GaussianBlur CPU üzerinde oldukça hızlıdır.
+        # CPU tabanlı hızlı netleştirme
         gaussian = cv2.GaussianBlur(frame, (0, 0), 2.0)
         return cv2.addWeighted(frame, 1.5, gaussian, -0.5, 0)
 
     def _convert_to_base64(self, frame: np.ndarray) -> Optional[str]:
-        """Web UI için Base64 dönüşümü."""
+        """Web arayüzünde gösterim için görüntüyü Base64 formatına çevirir."""
         try:
-            # Sıkıştırma kalitesini 85'ten 80'e çekerek hız kazanabiliriz
+            # JPG sıkıştırma (Kalite: 80)
             _, buffer = cv2.imencode('.jpg', frame, [int(cv2.IMWRITE_JPEG_QUALITY), 80])
             jpg_as_text = base64.b64encode(buffer).decode('utf-8')
             return f"data:image/jpeg;base64,{jpg_as_text}"
@@ -168,9 +185,9 @@ class CameraManager:
             logger.error(f"Base64 dönüşüm hatası: {e}")
             return None
 
-    def save_snapshot(self, prefix: str = "security") -> Optional[str]:
-        """Anlık görüntüyü diske kaydeder."""
-        frame = self.get_frame(raw=True, preprocess=True) # Snapshotlarda kalite için preprocess=True
+    def save_snapshot(self, prefix: str = "guvenlik") -> Optional[str]:
+        """Anlık görüntüyü snapshot dizinine kaydeder."""
+        frame = self.get_frame(raw=True, preprocess=True)
         if frame is not None:
             try:
                 timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -184,23 +201,9 @@ class CameraManager:
                 logger.error(f"Snapshot kayıt hatası: {e}")
         return None
 
-    def list_cameras(self) -> List[int]:
-        """Sistemdeki aktif kamera portlarını tarar."""
-        active_ports = []
-        # İlk 3 port genellikle yeterlidir, taramayı hızlandırmak için 5'ten 3'e düşürüldü
-        for i in range(3):
-            # Linux/Mac'te backend belirtmek taramayı hızlandırabilir
-            cap = cv2.VideoCapture(i)
-            if cap.isOpened():
-                ret, _ = cap.read()
-                if ret:
-                    active_ports.append(i)
-                cap.release()
-        return active_ports
-    
     def stop(self):
-        """Servis kapanış işlemi."""
+        """Kamera servisini güvenli bir şekilde kapatır."""
         with self.lock:
             if self._active_cap:
                 self._active_cap.release()
-            logger.info("🔌 Kamera servisi kapatıldı.")
+            logger.info("🔌 Kamera servisi durduruldu.")

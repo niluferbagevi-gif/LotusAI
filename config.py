@@ -10,7 +10,6 @@ from typing import Dict, Any, Optional, List
 # --- UYARI FİLTRELEME ---
 warnings.filterwarnings("ignore", category=UserWarning, message=".*pkg_resources is deprecated.*")
 warnings.filterwarnings("ignore", category=UserWarning, module="pygame")
-# Pynvml ve Torch uyarılarını bastırmak için filtreleme
 warnings.filterwarnings("ignore", category=FutureWarning, module="torch")
 
 # --- LOGLAMA YAPILANDIRMASI ---
@@ -86,7 +85,7 @@ HAS_CUDA, GPU_NAME = check_hardware()
 class Config:
     """
     LotusAI Merkezi Yapılandırma Sınıfı.
-    Sürüm 2.5.2 - Ajan Odaklı Anahtar Yönetimi
+    Sürüm 2.5.2 - Ajan Odaklı Anahtar Yönetimi (GÜNCELLENDİ)
     """
     # --- GENEL SİSTEM BİLGİLERİ ---
     PROJECT_NAME = "LotusAI"
@@ -196,9 +195,17 @@ class Config:
 
     @classmethod
     def set_provider_mode(cls, mode: str):
-        valid_modes = ["gemini", "ollama"]
-        if mode.lower() in valid_modes:
-            cls.AI_PROVIDER = mode.lower()
+        """Sağlayıcı modunu ayarlar. Launcher'dan gelen 'online' değerini 'gemini'ye çevirir."""
+        valid_modes = ["gemini", "ollama", "local"]
+        m_lower = mode.lower()
+        
+        # Mapping: Launcher'dan gelen kelimeleri sistemin anladığı kelimelere çevir
+        if m_lower == "online":
+            cls.AI_PROVIDER = "gemini"
+        elif m_lower in ["local", "ollama"]:
+            cls.AI_PROVIDER = "ollama"
+        elif m_lower == "gemini":
+            cls.AI_PROVIDER = "gemini"
         else:
             logger.error(f"❌ Geçersiz sağlayıcı modu: {mode}")
 

@@ -54,6 +54,7 @@ dependencies:
 
       # --- Yapay Zeka & NLP (LLM Stack) ---
       - google-generativeai
+      - ollama              # EKLENDİ: Python üzerinden Ollama API kontrolü için
       - chromadb>=0.4.24
       - langchain
       - langchain-community # EKLENDİ: LangChain v0.1+ sonrası araçlar buraya taşındı (ZORUNLU)

@@ -97,7 +97,7 @@ else:
 class MediaManager:
     """
     LotusAI Medya, İçerik ve Sosyal Medya Yöneticisi.
-    v2.6 - Config Entegreli GPU ve Hata Yönetimi
+    v2.6.6 - Tam Sürüm, Donanım Hızlandırmalı ve Hata Yönetimli
     """
     
     def __init__(self):
@@ -191,7 +191,8 @@ class MediaManager:
             model = getattr(Config, 'GEMINI_MODEL', 'gemini-1.5-flash')
             url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={self.api_key}"
             
-            for delay in [1, 2, 4]:
+            # Üstel geri çekilme (Exponential backoff) ile retry mekanizması
+            for delay in [1, 2, 4, 8, 16]:
                 try:
                     response = requests.post(url, json=payload, timeout=20)
                     if response.status_code == 200:
@@ -200,7 +201,7 @@ class MediaManager:
                     elif response.status_code == 429:
                         time.sleep(delay)
                     else:
-                        logger.debug(f"Gemini API Hatası: {response.text}")
+                        logger.debug(f"Gemini API Hatası ({response.status_code}): {response.text}")
                         break
                 except Exception as e:
                     logger.debug(f"Gemini API Denemesi Başarısız: {e}")
@@ -254,11 +255,13 @@ class MediaManager:
             if self.is_search_active and len(report) < 3:
                 try:
                     google_links = []
+                    # search() fonksiyonu generator döndürür
                     for j in search(query, num_results=3, lang="tr", advanced=True):
                         google_links.append(f"- {j.title}: {j.url}")
                     if google_links:
                         report.append(f"\n[WEB BAĞLANTILARI]:\n" + "\n".join(google_links))
-                except: pass
+                except Exception as e:
+                    logger.debug(f"Google Search hatası: {e}")
 
             return "\n".join(report)
 
@@ -266,11 +269,13 @@ class MediaManager:
         """Google Trends verilerini çeker."""
         if not self.is_trends_active: return "Trends modülü pasif."
         try:
+            # TrendReq nesnesi oluşturulurken timeout ve retry eklenebilir
             pytrends = TrendReq(hl='tr-TR', tz=180)
             trending = pytrends.trending_searches(pn='turkey')
             top_5 = trending.head(5)[0].tolist()
             return "🔥 " + ", ".join(top_5)
         except Exception as e:
+            logger.error(f"Trends çekme hatası: {e}")
             return "Gündem verilerine şu an erişilemiyor."
 
     def generate_concept_image(self, prompt: str) -> str:
@@ -279,6 +284,7 @@ class MediaManager:
             # Daha kaliteli sonuç için prompt zenginleştirme
             styled_prompt = f"professional commercial photography, hyperrealistic, 8k, bokeh, elegant lighting, {prompt}"
             safe_prompt = requests.utils.quote(styled_prompt)
+            # Pollinations AI ücretsiz ve hızlı bir görsel üretim servisidir
             url = f"https://image.pollinations.ai/prompt/{safe_prompt}?nologo=true&width=1024&height=1024&seed={random.randint(1,9999)}"
             
             response = requests.get(url, timeout=30)
@@ -296,21 +302,25 @@ class MediaManager:
         """Instagram verilerini çeker."""
         if not self.is_insta_active: return "Instagram modülü eksik."
         try:
+            # Oturum verileri ile profil yükleme
             profile = instaloader.Profile.from_username(self.L.context, self.target_insta)
             return f"📸 @{profile.username} | 👥 Takipçi: {profile.followers:,} | 📝 Gönderi: {profile.mediacount}"
         except Exception as e:
+            logger.warning(f"Instagram istatistik hatası: {e}")
             return "Instagram verileri alınamadı (Gizlilik veya Limit)."
 
     def get_facebook_stats(self) -> str:
         """Facebook sayfa özetini getirir."""
         if not self.is_fb_active: return "Facebook modülü eksik."
         try:
+            # facebook_scraper üzerinden gönderileri çekme
             posts = get_posts(self.target_fb, pages=1)
             for post in posts:
                 text = (post.get('text') or "Görsel paylaşım")[:80]
                 return f"📝 En Son: {text}..."
             return "Paylaşım bulunamadı."
         except Exception as e:
+            logger.warning(f"Facebook istatistik hatası: {e}")
             return f"Facebook verilerine ulaşılamadı. ({str(e)[:50]}...)"
 
     def check_competitors(self) -> str:
@@ -341,7 +351,7 @@ class MediaManager:
             briefing.append(f"🚩 ÖNEMLİ GÜN: {special}")
         
         trends = self.get_turkey_trends()
-        context_str = f"Tarih: {now.strftime('%d %m')}, Özel Gün: {special}, Trendler: {trends}"
+        context_str = f"Tarih: {now.strftime('%d %m')}, Özel Gün: {special if special else 'Yok'}, Trendler: {trends}"
         ai_advice = self.ai_content_advisor(context_str)
         
         briefing.append(f"\n💡 AI PAZARLAMA ÖNERİSİ:\n{ai_advice}")
@@ -350,6 +360,7 @@ class MediaManager:
     def trigger_delivery_interface(self):
         """DeliveryManager üzerinden paket servis panellerini tetikler."""
         try:
+            # Circular import önlemek için içeride import
             from managers.delivery import DeliveryManager
             dm = DeliveryManager()
             if hasattr(dm, 'start_service'):

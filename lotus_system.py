@@ -14,9 +14,20 @@ import cv2
 import numpy as np
 import logging
 import torch 
+import contextlib
 from flask import Flask, request, jsonify, render_template
 from werkzeug.utils import secure_filename
 from concurrent.futures import ThreadPoolExecutor
+
+# --- TERMİNAL TEMİZLİĞİ VE LOG FİLTRELEME ---
+# OpenCV'nin terminale doğrudan bastığı düşük seviyeli hataları susturur
+os.environ["OPENCV_LOG_LEVEL"] = "OFF"
+os.environ["OPENCV_VIDEOIO_PRIORITY_MSMF"] = "0" # Windows için opsiyonel
+
+# Harici kütüphanelerin gereksiz HTTP loglarını engeller
+logging.getLogger("httpx").setLevel(logging.WARNING)
+logging.getLogger("httpcore").setLevel(logging.WARNING)
+logging.getLogger("huggingface_hub").setLevel(logging.ERROR)
 
 # --- KRİTİK HATA DÜZELTMESİ (Monkey Patch) ---
 try:
@@ -27,28 +38,42 @@ try:
         transformers.pytorch_utils.isin_mps_friendly = _isin_mps_friendly
 except ImportError:
     pass
-# ---------------------------------------------
+
+# --- ALSA/JACK/FFMPEG HATALARINI SUSTURMA ---
+@contextlib.contextmanager
+def ignore_stderr():
+    """Terminaldeki ALSA, JACK, PortAudio ve OpenCV kirliliğini önlemek için stderr'i geçici olarak susturur."""
+    devnull = os.open(os.devnull, os.O_WRONLY)
+    try:
+        old_stderr = os.dup(sys.stderr.fileno())
+        os.dup2(devnull, sys.stderr.fileno())
+        try:
+            yield
+        finally:
+            os.dup2(old_stderr, sys.stderr.fileno())
+            os.close(old_stderr)
+    except Exception:
+        yield 
+    finally:
+        os.close(devnull)
 
 # --- CONFIG YÜKLEME ---
-# Loglama ve GPU kontrolü Config içinde yapıldığı için buradan tekrar yapmıyoruz.
+from config import Config
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger("LotusSystem")
 
-try:
-    from config import Config
-    # GPU Durumunu Config'den alıyoruz (TEK KAYNAK)
-    device = "cuda" if Config.USE_GPU else "cpu"
-    
-    if Config.USE_GPU:
-        # GPU bellek yönetimini optimize et (Sadece Config onay verdiyse)
-        try:
-            torch.cuda.empty_cache()
-            # Buradaki log'u kaldırabiliriz çünkü Config zaten yazdı, 
-            # veya sadece debug seviyesinde tutabiliriz.
-            logger.debug(f"System Device: {device.upper()}") 
-        except Exception as e:
-            logger.warning(f"GPU Bellek temizleme hatası: {e}")
+# GPU Durumunu Config'den alıyoruz (TEK KAYNAK)
+device = "cuda" if Config.USE_GPU else "cpu"
 
+if Config.USE_GPU:
+    try:
+        torch.cuda.empty_cache()
+        logger.debug(f"System Device: {device.upper()} - VRAM Optimized.")
+    except Exception as e:
+        logger.warning(f"GPU Bellek temizleme hatası: {e}")
+
+# Modül Importları
+try:
     from core.system_state import SystemState
     from core.memory import MemoryManager
     from core.security import SecurityManager
@@ -67,11 +92,9 @@ try:
     from agents.engine import AgentEngine
     from agents.poyraz import PoyrazAgent
     from agents.sidar import SidarAgent
-
 except ImportError as e:
     logger.critical(f"KRİTİK HATA: Modüller yüklenirken sorun oluştu.\nHata: {e}")
-    if "config" in str(e) or "core" in str(e):
-        sys.exit(1)
+    sys.exit(1)
 
 # Media Manager Opsiyonel
 try:
@@ -269,14 +292,10 @@ tts_model = None
 if Config.USE_XTTS:
     try:
         from TTS.api import TTS
-        # Config.USE_GPU kontrolü zaten yapılmıştı, burada tekrar kontrol etmeye gerek yok
-        # Ama model yüklerken device parametresi için kullanıyoruz.
-        if Config.USE_GPU:
+        with ignore_stderr():
             logger.info("🔊 XTTS (GPU) Modeli Yükleniyor...")
             tts_model = TTS("tts_models/multilingual/multi-dataset/xtts_v2").to(device)
             logger.info("🔊 XTTS Kullanıma Hazır.")
-        else:
-            logger.warning("⚠️ XTTS CPU modunda çalışacak (Yavaş olabilir) veya devre dışı.")
     except Exception as e:
         logger.error(f"XTTS Başlatılamadı: {e}")
 
@@ -302,61 +321,60 @@ def play_voice(text, agent_name, state_mgr):
     state_mgr.set_state(SystemState.SPEAKING)
     
     try:
-        if mixer.get_init() is None:
-            mixer.init()
+        with ignore_stderr():
+            if mixer.get_init() is None:
+                mixer.init()
 
-        mixer.music.unload()
-        agent_data = AGENTS_CONFIG.get(agent_name, AGENTS_CONFIG.get("ATLAS", {}))
-        
-        wav_path = str(Config.VOICES_DIR / f"{agent_name.lower()}.wav")
-        if not os.path.exists(wav_path):
-             wav_path = agent_data.get("voice_ref", "voices/atlas.wav")
-             
-        edge_voice = agent_data.get("edge", "tr-TR-AhmetNeural")
-        
-        use_xtts_now = Config.USE_XTTS and tts_model and os.path.exists(wav_path)
-        
-        # 1. Öncelik: XTTS (Yerel/GPU)
-        if use_xtts_now:
-            try:
-                output_path = "out.wav"
-                # GPU üzerinde sentezleme
-                tts_model.tts_to_file(text=clean, speaker_wav=wav_path, language="tr", file_path=output_path)
-                mixer.music.load(output_path)
-            except Exception as e:
-                logger.error(f"XTTS Hatası (EdgeTTS'e geçiliyor): {e}")
-                use_xtts_now = False 
-        
-        # 2. Öncelik: EdgeTTS (Bulut)
-        if not use_xtts_now:
-            try:
-                loop = asyncio.new_event_loop()
-                asyncio.set_event_loop(loop)
-                audio = loop.run_until_complete(edge_stream(clean, edge_voice))
-                loop.close()
-                
-                if audio:
-                    mixer.music.load(io.BytesIO(audio))
-                else:
-                    return
-            except Exception as e:
-                logger.error(f"EdgeTTS Fallback Hatası: {e}")
-                return
+            mixer.music.unload()
+            agent_data = AGENTS_CONFIG.get(agent_name, AGENTS_CONFIG.get("ATLAS", {}))
             
-        mixer.music.play()
-        
-        while mixer.music.get_busy():
-            if keyboard.is_pressed('space') or keyboard.is_pressed('esc'): 
-                mixer.music.stop()
-                logger.info("🔇 Konuşma kullanıcı tarafından kesildi.")
-                break
-            time.sleep(0.05)
+            wav_path = str(Config.VOICES_DIR / f"{agent_name.lower()}.wav")
+            if not os.path.exists(wav_path):
+                 wav_path = agent_data.get("voice_ref", "voices/atlas.wav")
+                 
+            edge_voice = agent_data.get("edge", "tr-TR-AhmetNeural")
+            
+            use_xtts_now = Config.USE_XTTS and tts_model and os.path.exists(wav_path)
+            
+            # 1. Öncelik: XTTS (Yerel/GPU)
+            if use_xtts_now:
+                try:
+                    output_path = "out.wav"
+                    tts_model.tts_to_file(text=clean, speaker_wav=wav_path, language="tr", file_path=output_path)
+                    mixer.music.load(output_path)
+                except Exception as e:
+                    logger.error(f"XTTS Hatası (EdgeTTS'e geçiliyor): {e}")
+                    use_xtts_now = False 
+            
+            # 2. Öncelik: EdgeTTS (Bulut)
+            if not use_xtts_now:
+                try:
+                    loop = asyncio.new_event_loop()
+                    asyncio.set_event_loop(loop)
+                    audio = loop.run_until_complete(edge_stream(clean, edge_voice))
+                    loop.close()
+                    
+                    if audio:
+                        mixer.music.load(io.BytesIO(audio))
+                    else:
+                        return
+                except Exception as e:
+                    logger.error(f"EdgeTTS Fallback Hatası: {e}")
+                    return
+                
+            mixer.music.play()
+            
+            while mixer.music.get_busy():
+                if keyboard.is_pressed('space') or keyboard.is_pressed('esc'): 
+                    mixer.music.stop()
+                    logger.info("🔇 Konuşma kullanıcı tarafından kesildi.")
+                    break
+                time.sleep(0.05)
             
     except Exception as e:
         logger.error(f"Ses Çalma İşlemi Başarısız: {e}")
     finally:
         state_mgr.set_state(SystemState.IDLE)
-        # Belleği temizle (GPU için önemli)
         if Config.USE_GPU:
             torch.cuda.empty_cache()
 
@@ -372,8 +390,10 @@ async def main_loop(mode):
     RuntimeContext.state_manager = state_manager
     memory_manager = MemoryManager()
     
+    # Kamera başlatma sırasında terminale basılan V4L2 hatalarını sustur
     camera_manager = CameraManager()
-    camera_manager.start()
+    with ignore_stderr():
+        camera_manager.start()
     
     security_manager = SecurityManager(camera_manager)
     RuntimeContext.security_instance = security_manager
@@ -389,9 +409,10 @@ async def main_loop(mode):
          logger.info("🛵 Paket Servis Modülü Aktif Edildi.")
          delivery_manager.start_service()
     
-    # NLP yöneticisini cihaz bilgisi ile başlat
     nlp_manager = NLPManager()
-    poyraz_agent = PoyrazAgent(nlp_manager)
+    
+    # PoyrazAgent'ı araç seti olmaksızın başlat (Döngüsel bağımlılığı kırmak için)
+    poyraz_agent = PoyrazAgent(nlp_manager, {}) 
     
     sidar_tools = {
         'code': code_manager, 
@@ -419,6 +440,9 @@ async def main_loop(mode):
     if MEDIA_AVAILABLE:
         tools['media'] = MediaManager()
 
+    # Araç seti oluştuktan sonra Poyraz'ı güncelle
+    poyraz_agent.update_tools(tools)
+
     RuntimeContext.engine = AgentEngine(memory_manager, tools)
 
     if (Config.TEMPLATE_DIR / "index.html").exists():
@@ -429,15 +453,26 @@ async def main_loop(mode):
     else:
         logger.error("❌ HATA: Dashboard dosyaları bulunamadı!")
 
-    try: mixer.init()
-    except Exception as e: logger.warning(f"Ses kartı uyarısı: {e}")
+    with ignore_stderr():
+        try: mixer.init()
+        except Exception as e: logger.warning(f"Ses kartı uyarısı: {e}")
 
     r = sr.Recognizer()
-    mic = sr.Microphone()
+    mic = None
     
-    with mic as source:
-         print("🎤 Ortam sesi kalibre ediliyor...")
-         r.adjust_for_ambient_noise(source, duration=1.0)
+    try:
+        with ignore_stderr():
+            mic = sr.Microphone()
+            with mic as source:
+                print("🎤 Ortam sesi kalibre ediliyor...")
+                r.adjust_for_ambient_noise(source, duration=1.0)
+    except OSError as e:
+        logger.warning(f"⚠️ Mikrofon bulunamadı veya erişilemiyor: {e}")
+        logger.warning("🎤 Sesli komut sistemi devre dışı bırakıldı.")
+        RuntimeContext.voice_mode_active = False
+    except Exception as e:
+        logger.error(f"Mikrofon başlatma hatası: {e}")
+        RuntimeContext.voice_mode_active = False
 
     print(f"{Colors.GREEN}✅ {Config.PROJECT_NAME.upper()} TÜM SİSTEMLER AKTİF (Cihaz: {device.upper()}).{Colors.ENDC}")
 
@@ -445,13 +480,15 @@ async def main_loop(mode):
         try:
             current_time = time.time()
 
+            # 30 saniyede bir yeni sipariş kontrolü
             if delivery_manager.is_selenium_active and int(current_time) % 30 == 0:
                 order_alerts = delivery_manager.check_new_orders()
                 if order_alerts:
                     for alert in order_alerts:
                         RuntimeContext.executor.submit(play_voice, f"Yeni bildirim: {alert}", "GAYA", state_manager)
 
-            if RuntimeContext.voice_mode_active and state_manager.should_listen():
+            # Sesli Dinleme Modu
+            if RuntimeContext.voice_mode_active and mic and state_manager.should_listen():
                 state_manager.set_state(SystemState.LISTENING)
                 user_input = ""
                 audio_data = None 
@@ -465,10 +502,9 @@ async def main_loop(mode):
                 
                 if user_input:
                     print(f"{Colors.CYAN}>> KULLANICI: {user_input}{Colors.ENDC}")
-                    
                     sec_result = security_manager.analyze_situation(audio_data=audio_data)
 
-                    if "hafızayı sil" in user_input.lower():
+                    if "hafızayı sil" in user_input.lower() or "hafızayı temizle" in user_input.lower():
                         memory_manager.clear_history()
                         RuntimeContext.executor.submit(play_voice, "Hafıza temizlendi.", "ATLAS", state_manager)
                         continue
