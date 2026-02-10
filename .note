@@ -15,7 +15,7 @@ sudo apt install fonts-dejavu fonts-liberation fontconfig
 git init
 git add .
 git commit -m "İlk yükleme: Proje dosyaları eklendi"
-git remote add origin https://github.com/kullanici-adin/proje-adin.git
+git remote add origin https://github.com/niluferbagevi-gif/LotusAI.git
 git branch -M main
 git push -u origin main
 

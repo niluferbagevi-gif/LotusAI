@@ -1,110 +1,44 @@
 import asyncio
 import time
 import speech_recognition as sr
-from pygame import mixer
-import keyboard
 import threading
 import os
 import sys
-import re
-import io
-import queue
-import webbrowser
-import cv2
-import numpy as np
 import logging
 import torch 
-import contextlib
-from flask import Flask, request, jsonify, render_template
-from werkzeug.utils import secure_filename
-from concurrent.futures import ThreadPoolExecutor
+import webbrowser
 
-# --- TERMİNAL TEMİZLİĞİ VE LOG FİLTRELEME ---
-# OpenCV'nin terminale doğrudan bastığı düşük seviyeli hataları susturur
-os.environ["OPENCV_LOG_LEVEL"] = "OFF"
-os.environ["OPENCV_VIDEOIO_PRIORITY_MSMF"] = "0" # Windows için opsiyonel
-
-# Harici kütüphanelerin gereksiz HTTP loglarını engeller
-logging.getLogger("httpx").setLevel(logging.WARNING)
-logging.getLogger("httpcore").setLevel(logging.WARNING)
-logging.getLogger("huggingface_hub").setLevel(logging.ERROR)
-
-# --- KRİTİK HATA DÜZELTMESİ (Monkey Patch) ---
-try:
-    import transformers.pytorch_utils
-    if not hasattr(transformers.pytorch_utils, "isin_mps_friendly"):
-        def _isin_mps_friendly():
-            return False
-        transformers.pytorch_utils.isin_mps_friendly = _isin_mps_friendly
-except ImportError:
-    pass
-
-# --- ALSA/JACK/FFMPEG HATALARINI SUSTURMA ---
-@contextlib.contextmanager
-def ignore_stderr():
-    """Terminaldeki ALSA, JACK, PortAudio ve OpenCV kirliliğini önlemek için stderr'i geçici olarak susturur."""
-    devnull = os.open(os.devnull, os.O_WRONLY)
-    try:
-        old_stderr = os.dup(sys.stderr.fileno())
-        os.dup2(devnull, sys.stderr.fileno())
-        try:
-            yield
-        finally:
-            os.dup2(old_stderr, sys.stderr.fileno())
-            os.close(old_stderr)
-    except Exception:
-        yield 
-    finally:
-        os.close(devnull)
-
-# --- CONFIG YÜKLEME ---
+# --- MODÜL IMPORTLARI ---
 from config import Config
+from core.utils import setup_logging, patch_transformers, ignore_stderr
+from core.runtime import RuntimeContext
+from core.audio import init_audio_system, play_voice
+from server import run_flask
+
+# Manager Importları
+from core.system_state import SystemState
+from core.memory import MemoryManager
+from core.security import SecurityManager
+from managers.camera import CameraManager
+from managers.code_manager import CodeManager
+from managers.system_health import SystemHealthManager 
+from managers.finance import FinanceManager 
+from managers.operations import OperationsManager
+from managers.accounting import AccountingManager
+from managers.messaging import MessagingManager
+from managers.delivery import DeliveryManager
+from managers.nlp import NLPManager
+from agents.engine import AgentEngine
+from agents.poyraz import PoyrazAgent
+from agents.sidar import SidarAgent
+
+# --- BAŞLANGIÇ AYARLARI ---
+setup_logging()
+patch_transformers()
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger("LotusSystem")
 
-# GPU Durumunu Config'den alıyoruz (TEK KAYNAK)
-device = "cuda" if Config.USE_GPU else "cpu"
-
-if Config.USE_GPU:
-    try:
-        torch.cuda.empty_cache()
-        logger.debug(f"System Device: {device.upper()} - VRAM Optimized.")
-    except Exception as e:
-        logger.warning(f"GPU Bellek temizleme hatası: {e}")
-
-# Modül Importları
-try:
-    from core.system_state import SystemState
-    from core.memory import MemoryManager
-    from core.security import SecurityManager
-
-    from managers.camera import CameraManager
-    from managers.code_manager import CodeManager
-    from managers.system_health import SystemHealthManager 
-    from managers.finance import FinanceManager 
-    from managers.operations import OperationsManager
-    from managers.accounting import AccountingManager
-    from managers.messaging import MessagingManager
-    from managers.delivery import DeliveryManager
-    
-    from managers.nlp import NLPManager
-    from agents.definitions import AGENTS_CONFIG
-    from agents.engine import AgentEngine
-    from agents.poyraz import PoyrazAgent
-    from agents.sidar import SidarAgent
-except ImportError as e:
-    logger.critical(f"KRİTİK HATA: Modüller yüklenirken sorun oluştu.\nHata: {e}")
-    sys.exit(1)
-
-# Media Manager Opsiyonel
-try:
-    from managers.media import MediaManager
-    MEDIA_AVAILABLE = True
-except ImportError:
-    MEDIA_AVAILABLE = False
-    logger.info("MediaManager bulunamadı, medya özellikleri devre dışı.")
-
-# --- RENKLER ---
+# Renkler
 class Colors:
     HEADER = '\033[95m'
     BLUE = '\033[94m'
@@ -114,283 +48,23 @@ class Colors:
     YELLOW = '\033[93m'
     CYAN = '\033[96m'
 
-# --- GLOBAL CONTEXT (RUNTIME) ---
-class RuntimeContext:
-    """Tüm global değişkenlerin merkezi yönetimi."""
-    msg_queue = queue.Queue()
-    messaging_manager = MessagingManager()
-    engine = None 
-    loop = None
-    security_instance = None 
-    state_manager = None
-    
-    # Web Durumları
-    active_web_agent = "ATLAS"
-    voice_mode_active = False
-    executor = ThreadPoolExecutor(max_workers=5)
-
-# --- FLASK VE WEB SİSTEMİ YAPILANDIRMASI ---
-app = Flask(__name__, 
-            template_folder=str(Config.TEMPLATE_DIR), 
-            static_folder=str(Config.STATIC_DIR))
-app.config['UPLOAD_FOLDER'] = str(Config.UPLOAD_DIR)
-
-# --- FLASK ROUTE TANIMLARI ---
-@app.route('/')
-def index():
-    return render_template('index.html')
-
-@app.route('/api/toggle_voice', methods=['POST'])
-def toggle_voice_api():
-    data = request.json
-    if data and 'active' in data:
-        RuntimeContext.voice_mode_active = data['active']
-    else:
-        RuntimeContext.voice_mode_active = not RuntimeContext.voice_mode_active
-        
-    status_msg = "AÇIK" if RuntimeContext.voice_mode_active else "KAPALI"
-    logger.info(f"🎙️ Mikrofon Modu Değiştirildi: {status_msg}")
-    return jsonify({"status": "success", "active": RuntimeContext.voice_mode_active})
-
-@app.route('/api/chat_history', methods=['GET'])
-def get_chat_history():
-    agent_name = request.args.get('agent', 'ATLAS')
-    if RuntimeContext.engine and RuntimeContext.engine.memory:
-        try:
-            history = RuntimeContext.engine.memory.get_agent_history_for_web(agent_name, limit=20)
-            return jsonify({"status": "success", "history": history})
-        except Exception as e:
-            return jsonify({"status": "error", "message": str(e)})
-    return jsonify({"status": "error", "message": "Hafıza modülü hazır değil."})
-
-@app.route('/api/chat', methods=['POST'])
-def web_chat():
-    user_msg = request.form.get('message', '')
-    target_agent_req = request.form.get('target_agent', 'GENEL') 
-    
-    uploaded_file = request.files.get('file')
-    auth_file = request.files.get('auth_frame') 
-    file_path = None
-
-    if uploaded_file and uploaded_file.filename != '':
-        filename = secure_filename(uploaded_file.filename)
-        file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-        uploaded_file.save(file_path)
-
-    if not user_msg and not file_path:
-        return jsonify({"status": "error", "reply": "Mesaj içeriği boş."})
-
-    if user_msg.lower().strip() in ["hafızayı sil", "hafızayı temizle"]:
-        if RuntimeContext.engine and RuntimeContext.engine.memory:
-            RuntimeContext.engine.memory.clear_history()
-            return jsonify({"status": "success", "agent": "SİSTEM", "reply": "Hafıza başarıyla temizlendi."})
-
-    identified_user = None
-    frame_present = False
-    
-    if auth_file and RuntimeContext.security_instance:
-        try:
-            file_bytes = np.frombuffer(auth_file.read(), np.uint8)
-            frame = cv2.imdecode(file_bytes, cv2.IMREAD_COLOR)
-            if frame is not None:
-                frame_present = True
-                identified_user = RuntimeContext.security_instance.check_static_frame(frame)
-        except Exception as e:
-            logger.error(f"Web Auth İşleme Hatası: {e}")
-
-    if identified_user:
-        sec_result = ("ONAYLI", identified_user, None)
-    elif frame_present:
-        sec_result = ("SORGULAMA", {"name": "Yabancı", "level": 0}, "TANIŞMA_MODU")
-    else:
-        sec_result = ("SORGULAMA", {"name": "Web Kullanıcısı", "level": 1}, "KAMERA_YOK")
-
-    try:
-        group_triggers = ["millet", "ekip", "herkes", "gençler", "arkadaşlar", "team", "tüm ekip", "hepiniz"]
-        is_group_call = target_agent_req == "GENEL" and any(t in user_msg.lower() for t in group_triggers)
-
-        if is_group_call and RuntimeContext.engine and RuntimeContext.loop:
-            future = asyncio.run_coroutine_threadsafe(
-                RuntimeContext.engine.get_team_response(user_msg, sec_result),
-                RuntimeContext.loop
-            )
-            replies_list = future.result(timeout=120)
-            return jsonify({"status": "success", "replies": replies_list})
-            
-        final_agent = RuntimeContext.active_web_agent 
-        if target_agent_req != "GENEL" and target_agent_req in AGENTS_CONFIG:
-            final_agent = target_agent_req
-        else:
-            if RuntimeContext.engine:
-                detected_agent = RuntimeContext.engine.determine_agent(user_msg)
-                if detected_agent: final_agent = detected_agent
-                else: final_agent = "ATLAS"
-
-        RuntimeContext.active_web_agent = final_agent 
-
-        if RuntimeContext.loop and RuntimeContext.loop.is_running():
-            future = asyncio.run_coroutine_threadsafe(
-                RuntimeContext.engine.get_response(final_agent, user_msg, sec_result, file_path=file_path), 
-                RuntimeContext.loop
-            )
-            response_data = future.result(timeout=90)
-            
-            if RuntimeContext.voice_mode_active:
-                 RuntimeContext.executor.submit(play_voice, response_data['content'], response_data['agent'], RuntimeContext.state_manager)
-
-            return jsonify({
-                "status": "success", 
-                "agent": response_data['agent'],
-                "reply": response_data['content']
-            })
-        else:
-            return jsonify({"status": "error", "reply": "Lotus motoru şu an hazır değil."})
-            
-    except Exception as e:
-        logger.error(f"Web Chat İşlem Hatası: {e}")
-        return jsonify({"status": "error", "reply": f"Sistem hatası oluştu: {str(e)}"})
-
-@app.route('/webhook', methods=['GET', 'POST'])
-def webhook_handler():
-    if request.method == 'GET':
-        verify_token = os.getenv("WEBHOOK_VERIFY_TOKEN", "lotus_ai_guvenlik_tokeni")
-        mode = request.args.get("hub.mode")
-        token = request.args.get("hub.verify_token")
-        challenge = request.args.get("hub.challenge")
-        if mode == "subscribe" and token == verify_token:
-            return challenge, 200
-        return "Verification failed", 403
-    
-    elif request.method == 'POST':
-        try:
-            data = request.json
-            parsed = RuntimeContext.messaging_manager.parse_incoming_webhook(data)
-            if parsed:
-                RuntimeContext.msg_queue.put(parsed)
-                return jsonify({"status": "ok"}), 200
-            return jsonify({"status": "ignored"}), 200
-        except Exception as e:
-            logger.error(f"Webhook Mesaj Hatası: {e}")
-            return jsonify({"status": "error"}), 500
-
-def run_flask():
-    try:
-        import logging
-        log = logging.getLogger('werkzeug')
-        log.setLevel(logging.ERROR)
-        app.run(host='0.0.0.0', port=5000, use_reloader=False, threaded=True)
-    except Exception as e:
-        logger.error(f"Flask Sunucu Hatası: {e}")
-
-# --- SES İŞLEMLERİ (TTS) ---
-try:
-    import edge_tts
-except ImportError:
-    logger.warning("edge_tts modülü bulunamadı. Bulut tabanlı ses pasif.")
-
-tts_model = None
-if Config.USE_XTTS:
-    try:
-        from TTS.api import TTS
-        with ignore_stderr():
-            logger.info("🔊 XTTS (GPU) Modeli Yükleniyor...")
-            tts_model = TTS("tts_models/multilingual/multi-dataset/xtts_v2").to(device)
-            logger.info("🔊 XTTS Kullanıma Hazır.")
-    except Exception as e:
-        logger.error(f"XTTS Başlatılamadı: {e}")
-
-async def edge_stream(text, voice):
-    try:
-        comm = edge_tts.Communicate(text, voice)
-        data = b""
-        async for chunk in comm.stream():
-            if chunk["type"] == "audio":
-                data += chunk["data"]
-        return data
-    except Exception as e:
-        logger.error(f"EdgeTTS Stream Hatası: {e}")
-        return None
-
-def play_voice(text, agent_name, state_mgr):
-    if not text or not state_mgr: return
-    
-    clean = re.sub(r'#.*', '', text)
-    clean = clean.replace('*', '').replace('_', '').strip()
-    if not clean: return
-    
-    state_mgr.set_state(SystemState.SPEAKING)
-    
-    try:
-        with ignore_stderr():
-            if mixer.get_init() is None:
-                mixer.init()
-
-            mixer.music.unload()
-            agent_data = AGENTS_CONFIG.get(agent_name, AGENTS_CONFIG.get("ATLAS", {}))
-            
-            wav_path = str(Config.VOICES_DIR / f"{agent_name.lower()}.wav")
-            if not os.path.exists(wav_path):
-                 wav_path = agent_data.get("voice_ref", "voices/atlas.wav")
-                 
-            edge_voice = agent_data.get("edge", "tr-TR-AhmetNeural")
-            
-            use_xtts_now = Config.USE_XTTS and tts_model and os.path.exists(wav_path)
-            
-            # 1. Öncelik: XTTS (Yerel/GPU)
-            if use_xtts_now:
-                try:
-                    output_path = "out.wav"
-                    tts_model.tts_to_file(text=clean, speaker_wav=wav_path, language="tr", file_path=output_path)
-                    mixer.music.load(output_path)
-                except Exception as e:
-                    logger.error(f"XTTS Hatası (EdgeTTS'e geçiliyor): {e}")
-                    use_xtts_now = False 
-            
-            # 2. Öncelik: EdgeTTS (Bulut)
-            if not use_xtts_now:
-                try:
-                    loop = asyncio.new_event_loop()
-                    asyncio.set_event_loop(loop)
-                    audio = loop.run_until_complete(edge_stream(clean, edge_voice))
-                    loop.close()
-                    
-                    if audio:
-                        mixer.music.load(io.BytesIO(audio))
-                    else:
-                        return
-                except Exception as e:
-                    logger.error(f"EdgeTTS Fallback Hatası: {e}")
-                    return
-                
-            mixer.music.play()
-            
-            while mixer.music.get_busy():
-                if keyboard.is_pressed('space') or keyboard.is_pressed('esc'): 
-                    mixer.music.stop()
-                    logger.info("🔇 Konuşma kullanıcı tarafından kesildi.")
-                    break
-                time.sleep(0.05)
-            
-    except Exception as e:
-        logger.error(f"Ses Çalma İşlemi Başarısız: {e}")
-    finally:
-        state_mgr.set_state(SystemState.IDLE)
-        if Config.USE_GPU:
-            torch.cuda.empty_cache()
-
-# --- ANA ASYNC MOTOR DÖNGÜSÜ ---
 async def main_loop(mode):
     RuntimeContext.loop = asyncio.get_running_loop()
-
     Config.set_provider_mode(mode)
+    
+    device = "cuda" if Config.USE_GPU else "cpu"
+    if Config.USE_GPU:
+        torch.cuda.empty_cache()
+
     print(f"{Colors.HEADER}--- {Config.PROJECT_NAME.upper()} SİSTEMİ v{Config.VERSION} ---{Colors.ENDC}")
     print(f"{Colors.CYAN}⚙️ Donanım: {Config.GPU_INFO} | Cihaz: {device.upper()} | Sağlayıcı: {Config.AI_PROVIDER.upper()}{Colors.ENDC}")
 
+    # --- SİSTEM BAŞLATMA ---
     state_manager = SystemState()
     RuntimeContext.state_manager = state_manager
     memory_manager = MemoryManager()
     
-    # Kamera başlatma sırasında terminale basılan V4L2 hatalarını sustur
+    # Kamera
     camera_manager = CameraManager()
     with ignore_stderr():
         camera_manager.start()
@@ -398,11 +72,14 @@ async def main_loop(mode):
     security_manager = SecurityManager(camera_manager)
     RuntimeContext.security_instance = security_manager
     
+    # Managerlar
     code_manager = CodeManager(Config.WORK_DIR)
     sys_health_manager = SystemHealthManager()
     finance_manager = FinanceManager()
     accounting_manager = AccountingManager()
     ops_manager = OperationsManager()
+    messaging_manager = MessagingManager()
+    RuntimeContext.messaging_manager = messaging_manager
     
     delivery_manager = DeliveryManager()
     if Config.FINANCE_MODE:
@@ -410,10 +87,10 @@ async def main_loop(mode):
          delivery_manager.start_service()
     
     nlp_manager = NLPManager()
-    
-    # PoyrazAgent'ı araç seti olmaksızın başlat (Döngüsel bağımlılığı kırmak için)
+    init_audio_system()
+
+    # Agent Kurulumu
     poyraz_agent = PoyrazAgent(nlp_manager, {}) 
-    
     sidar_tools = {
         'code': code_manager, 
         'system': sys_health_manager, 
@@ -429,7 +106,7 @@ async def main_loop(mode):
         "finance": finance_manager, 
         "operations": ops_manager, 
         "accounting": accounting_manager, 
-        "messaging": RuntimeContext.messaging_manager, 
+        "messaging": messaging_manager, 
         "delivery": delivery_manager,
         "nlp": nlp_manager, 
         "poyraz_special": poyraz_agent, 
@@ -437,14 +114,16 @@ async def main_loop(mode):
         "state": state_manager
     }
     
-    if MEDIA_AVAILABLE:
+    try:
+        from managers.media import MediaManager
         tools['media'] = MediaManager()
+    except ImportError:
+        pass
 
-    # Araç seti oluştuktan sonra Poyraz'ı güncelle
     poyraz_agent.update_tools(tools)
-
     RuntimeContext.engine = AgentEngine(memory_manager, tools)
 
+    # --- WEB SERVER BAŞLATMA ---
     if (Config.TEMPLATE_DIR / "index.html").exists():
         flask_thread = threading.Thread(target=run_flask, daemon=True)
         flask_thread.start()
@@ -453,45 +132,37 @@ async def main_loop(mode):
     else:
         logger.error("❌ HATA: Dashboard dosyaları bulunamadı!")
 
-    with ignore_stderr():
-        try: mixer.init()
-        except Exception as e: logger.warning(f"Ses kartı uyarısı: {e}")
-
+    # --- MİKROFON AYARLARI ---
     r = sr.Recognizer()
     mic = None
-    
     try:
         with ignore_stderr():
             mic = sr.Microphone()
             with mic as source:
                 print("🎤 Ortam sesi kalibre ediliyor...")
                 r.adjust_for_ambient_noise(source, duration=1.0)
-    except OSError as e:
-        logger.warning(f"⚠️ Mikrofon bulunamadı veya erişilemiyor: {e}")
-        logger.warning("🎤 Sesli komut sistemi devre dışı bırakıldı.")
-        RuntimeContext.voice_mode_active = False
     except Exception as e:
-        logger.error(f"Mikrofon başlatma hatası: {e}")
+        logger.warning(f"⚠️ Mikrofon Erişimi Yok: {e}")
         RuntimeContext.voice_mode_active = False
 
-    print(f"{Colors.GREEN}✅ {Config.PROJECT_NAME.upper()} TÜM SİSTEMLER AKTİF (Cihaz: {device.upper()}).{Colors.ENDC}")
+    print(f"{Colors.GREEN}✅ {Config.PROJECT_NAME.upper()} TÜM SİSTEMLER AKTİF.{Colors.ENDC}")
 
+    # --- SONSUZ DÖNGÜ ---
     while state_manager.is_running():
         try:
             current_time = time.time()
 
-            # 30 saniyede bir yeni sipariş kontrolü
+            # Sipariş Kontrolü (30sn)
             if delivery_manager.is_selenium_active and int(current_time) % 30 == 0:
                 order_alerts = delivery_manager.check_new_orders()
                 if order_alerts:
                     for alert in order_alerts:
                         RuntimeContext.executor.submit(play_voice, f"Yeni bildirim: {alert}", "GAYA", state_manager)
 
-            # Sesli Dinleme Modu
+            # Dinleme Modu
             if RuntimeContext.voice_mode_active and mic and state_manager.should_listen():
                 state_manager.set_state(SystemState.LISTENING)
                 user_input = ""
-                audio_data = None 
                 
                 try:
                     with mic as source:
@@ -504,11 +175,6 @@ async def main_loop(mode):
                     print(f"{Colors.CYAN}>> KULLANICI: {user_input}{Colors.ENDC}")
                     sec_result = security_manager.analyze_situation(audio_data=audio_data)
 
-                    if "hafızayı sil" in user_input.lower() or "hafızayı temizle" in user_input.lower():
-                        memory_manager.clear_history()
-                        RuntimeContext.executor.submit(play_voice, "Hafıza temizlendi.", "ATLAS", state_manager)
-                        continue
-
                     detected_agent = RuntimeContext.engine.determine_agent(user_input)
                     current_agent = detected_agent if detected_agent else "ATLAS"
                     
@@ -520,7 +186,7 @@ async def main_loop(mode):
             
             else:
                 if state_manager.get_state() not in [SystemState.THINKING, SystemState.SPEAKING]:
-                      state_manager.set_state(SystemState.IDLE)
+                       state_manager.set_state(SystemState.IDLE)
                 await asyncio.sleep(0.5)
 
             await asyncio.sleep(0.05)
@@ -529,23 +195,21 @@ async def main_loop(mode):
             logger.error(f"ANA DÖNGÜ HATASI: {main_err}")
             await asyncio.sleep(2)
 
+    # Kapanış
     camera_manager.stop()
     delivery_manager.stop_service()
     RuntimeContext.executor.shutdown(wait=False)
-    logger.info("LotusAI güvenli bir şekilde kapatıldı.")
+    logger.info("LotusAI kapatıldı.")
 
 def start_lotus_system(mode="online"):
     try:
         if sys.platform == 'win32':
              asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
-        
         asyncio.run(main_loop(mode))
     except KeyboardInterrupt:
-        print(f"\n{Colors.YELLOW}[!] LotusAI kullanıcı tarafından kapatıldı.{Colors.ENDC}")
+        print(f"\n{Colors.YELLOW}[!] LotusAI kapatıldı.{Colors.ENDC}")
     except Exception as e:
-        logger.critical(f"BAŞLATMA SIRASINDA KRİTİK HATA: {e}")
-        import traceback
-        traceback.print_exc()
+        logger.critical(f"BAŞLATMA HATASI: {e}")
 
 if __name__ == "__main__":
     mode = os.getenv("AI_PROVIDER", "online")
