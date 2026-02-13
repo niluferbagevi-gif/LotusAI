@@ -19,7 +19,7 @@ import base64
 import numpy as np
 from pathlib import Path
 from datetime import datetime
-from typing import Optional, Union, List, Tuple
+from typing import Optional, Union, List, Tuple, Dict, Any
 from dataclasses import dataclass
 from enum import Enum
 

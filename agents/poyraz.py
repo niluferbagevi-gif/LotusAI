@@ -14,7 +14,7 @@ Sorumluluklar:
 
 import logging
 import threading
-from typing import Dict, Any, Optional, List
+from typing import Dict, Any, Optional, List, Tuple
 from dataclasses import dataclass
 from enum import Enum
 from datetime import datetime

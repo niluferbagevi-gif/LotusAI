@@ -17,7 +17,7 @@ import contextlib
 import logging
 import functools
 from pathlib import Path
-from typing import Any, Callable, Optional, Generator
+from typing import Dict, Any, Callable, Optional, Generator
 from io import StringIO
 
 # ═══════════════════════════════════════════════════════════════

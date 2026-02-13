@@ -12,10 +12,12 @@ sudo update-locale LANG=tr_TR.UTF-8
 sudo apt install fonts-dejavu fonts-liberation fontconfig
 
 
+
+# git remote add origin https://github.com/niluferbagevi-gif/LotusAI.git
+
 git init
 git add .
 git commit -m "İlk yükleme: Proje dosyaları eklendi"
-# git remote add origin https://github.com/niluferbagevi-gif/LotusAI.git
 git branch -M main
 git push -u origin main
 
@@ -81,3 +83,16 @@ conda activate lts
 cd ~/LotusAI
 
 python main.py
+
+
+
+
+
+--------------
+
+
+pip install git+https://github.com/ageitgey/face_recognition_models
+
+pip install git+https://github.com/ageitgey/face_recognition_models --break-system-packages
+
+pip install git+https://github.com/ageitgey/face_recognition_models
