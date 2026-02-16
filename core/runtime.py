@@ -1,6 +1,6 @@
 """
 LotusAI Runtime Context
-Sürüm: 2.5.3
+Sürüm: 2.5.4 (Fix: Metaclass Property Support)
 Açıklama: Global runtime state yönetimi (Thread-safe singleton pattern)
 """
 
@@ -14,8 +14,81 @@ from contextlib import suppress
 
 logger = logging.getLogger("LotusAI.Runtime")
 
+# ═══════════════════════════════════════════════════════════════
+# METACLASS (Sınıf Seviyesi Özellik Yönetimi)
+# ═══════════════════════════════════════════════════════════════
+class RuntimeMeta(type):
+    """
+    RuntimeContext için sınıf seviyesinde property (özellik) erişimi sağlayan yönetici sınıf.
+    Bu yapı sayesinde 'RuntimeContext.engine' gibi çağrılar hata vermeden çalışır.
+    """
+    
+    @property
+    def msg_queue(cls):
+        return cls.get_msg_queue()
 
-class RuntimeContext:
+    @property
+    def messaging_manager(cls):
+        return cls.get_messaging_manager()
+    
+    @messaging_manager.setter
+    def messaging_manager(cls, value):
+        cls.set_messaging_manager(value)
+
+    @property
+    def engine(cls):
+        return cls.get_engine()
+    
+    @engine.setter
+    def engine(cls, value):
+        cls.set_engine(value)
+
+    @property
+    def loop(cls):
+        return cls.get_loop()
+    
+    @loop.setter
+    def loop(cls, value):
+        cls.set_loop(value)
+
+    @property
+    def security_instance(cls):
+        return cls.get_security_instance()
+    
+    @security_instance.setter
+    def security_instance(cls, value):
+        cls.set_security_instance(value)
+
+    @property
+    def state_manager(cls):
+        return cls.get_state_manager()
+    
+    @state_manager.setter
+    def state_manager(cls, value):
+        cls.set_state_manager(value)
+
+    @property
+    def active_web_agent(cls):
+        return cls.get_active_web_agent()
+    
+    @active_web_agent.setter
+    def active_web_agent(cls, value):
+        cls.set_active_web_agent(value)
+
+    @property
+    def voice_mode_active(cls):
+        return cls.is_voice_mode_active()
+    
+    @voice_mode_active.setter
+    def voice_mode_active(cls, value):
+        cls.set_voice_mode(value)
+
+    @property
+    def executor(cls):
+        return cls.get_executor()
+
+
+class RuntimeContext(metaclass=RuntimeMeta):
     """
     LotusAI Global Runtime Context Manager
     
@@ -29,10 +102,6 @@ class RuntimeContext:
     - Asyncio loop
     - Web durumu
     - Thread pool yönetimi
-    
-    Kullanım:
-        RuntimeContext.set_engine(engine)
-        engine = RuntimeContext.get_engine()
     """
     
     # ───────────────────────────────────────────────────────────
@@ -357,55 +426,6 @@ class RuntimeContext:
         for key, value in status.items():
             print(f"  {key:20s}: {value}")
         print("═" * 50 + "\n")
-
-
-# ═══════════════════════════════════════════════════════════════
-# GERİYE UYUMLULUK (Eski Kod İçin Property'ler)
-# ═══════════════════════════════════════════════════════════════
-# NOT: Eski kodlar RuntimeContext.engine gibi erişiyor
-# Bunları property'lere çeviriyoruz
-
-# Mesaj kuyruğu
-RuntimeContext.msg_queue = property(lambda self: RuntimeContext.get_msg_queue())
-
-# Managerlar
-RuntimeContext.messaging_manager = property(
-    lambda self: RuntimeContext.get_messaging_manager(),
-    lambda self, v: RuntimeContext.set_messaging_manager(v)
-)
-
-RuntimeContext.engine = property(
-    lambda self: RuntimeContext.get_engine(),
-    lambda self, v: RuntimeContext.set_engine(v)
-)
-
-RuntimeContext.loop = property(
-    lambda self: RuntimeContext.get_loop(),
-    lambda self, v: RuntimeContext.set_loop(v)
-)
-
-RuntimeContext.security_instance = property(
-    lambda self: RuntimeContext.get_security_instance(),
-    lambda self, v: RuntimeContext.set_security_instance(v)
-)
-
-RuntimeContext.state_manager = property(
-    lambda self: RuntimeContext.get_state_manager(),
-    lambda self, v: RuntimeContext.set_state_manager(v)
-)
-
-RuntimeContext.active_web_agent = property(
-    lambda self: RuntimeContext.get_active_web_agent(),
-    lambda self, v: RuntimeContext.set_active_web_agent(v)
-)
-
-RuntimeContext.voice_mode_active = property(
-    lambda self: RuntimeContext.is_voice_mode_active(),
-    lambda self, v: RuntimeContext.set_voice_mode(v)
-)
-
-RuntimeContext.executor = property(lambda self: RuntimeContext.get_executor())
-
 
 # ═══════════════════════════════════════════════════════════════
 # OTOMATİK BAŞLATMA

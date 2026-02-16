@@ -96,3 +96,20 @@ pip install git+https://github.com/ageitgey/face_recognition_models
 pip install git+https://github.com/ageitgey/face_recognition_models --break-system-packages
 
 pip install git+https://github.com/ageitgey/face_recognition_models
+
+
+
+---------------------------------
+
+
+Eksik Chrome Bağımlılıklarını Yükleyin (WSL İçin)
+Loglarda chromedriver ... exited. Status code was: 127 hatası var. Bu, WSL/Ubuntu üzerinde Chrome'un çalışması için gereken kütüphanelerin eksik olduğunu gösterir. Terminalde şu komutu çalıştırarak bunları yükleyin:
+
+Bash
+sudo apt-get install -y libxss1 libappindicator1 libgconf-2-4 \
+libnss3-dev libasound2 libatk-bridge2.0-0 libgtk-3-0 libgbm-dev
+Ayrıca Google Chrome'un kendisini de kurmanız gerekebilir:
+
+Bash
+wget https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
+sudo apt install ./google-chrome-stable_current_amd64.deb

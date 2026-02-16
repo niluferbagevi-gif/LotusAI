@@ -1,6 +1,6 @@
 """
 LotusAI Delivery Manager
-Sürüm: 2.5.3
+Sürüm: 2.5.4 (Hotfix: Selenium Flag Fix)
 Açıklama: Paket servis entegrasyon yönetimi
 
 Özellikler:
@@ -168,6 +168,7 @@ class DeliveryManager:
         # Selenium
         self.driver: Optional[webdriver.Chrome] = None
         self.status = ServiceStatus.INACTIVE
+        self.is_selenium_active = False  # [FIX] Bu değişken eklendi
         
         # Thread safety
         self.lock = threading.RLock()
@@ -211,6 +212,7 @@ class DeliveryManager:
         with self.lock:
             # Already active
             if self.status == ServiceStatus.ACTIVE and self.driver:
+                self.is_selenium_active = True
                 return True
             
             mode = "GPU" if Config.USE_GPU else "CPU"
@@ -239,6 +241,7 @@ class DeliveryManager:
                 self._load_initial_panels()
                 
                 self.status = ServiceStatus.ACTIVE
+                self.is_selenium_active = True  # [FIX] Durum güncellemesi
                 logger.info(f"✅ Paket servis aktif ({mode})")
                 
                 return True
@@ -246,6 +249,7 @@ class DeliveryManager:
             except Exception as e:
                 logger.critical(f"❌ Tarayıcı başlatma hatası: {e}")
                 self.status = ServiceStatus.ERROR
+                self.is_selenium_active = False  # [FIX] Hata durumunda false
                 self.metrics.errors_encountered += 1
                 return False
     
@@ -337,6 +341,7 @@ class DeliveryManager:
                 finally:
                     self.driver = None
                     self.status = ServiceStatus.INACTIVE
+                    self.is_selenium_active = False  # [FIX] Durum sıfırlama
     
     # ───────────────────────────────────────────────────────────
     # ORDER CHECKING
@@ -351,7 +356,8 @@ class DeliveryManager:
         """
         alerts = []
         
-        if self.status != ServiceStatus.ACTIVE or not self.driver:
+        # Eğer aktif değilse boş dön
+        if self.status != ServiceStatus.ACTIVE or not self.driver or not self.is_selenium_active:
             return alerts
         
         with self.lock:
@@ -568,6 +574,7 @@ class DeliveryManager:
         """
         return {
             "status": self.status.value,
+            "is_selenium_active": self.is_selenium_active,  # [FIX] Metriklere eklendi
             "alerts_generated": self.metrics.alerts_generated,
             "screenshots_taken": self.metrics.screenshots_taken,
             "tab_recoveries": self.metrics.tab_recoveries,
