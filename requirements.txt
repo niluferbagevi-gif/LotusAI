@@ -1,0 +1,199 @@
+# ═══════════════════════════════════════════════════════════════
+# LotusAI Requirements
+# Version: 2.5.3
+# Python: 3.11+
+# ═══════════════════════════════════════════════════════════════
+# 
+# Installation:
+#   pip install -r requirements.txt
+#
+# Note: Some packages require system dependencies
+# See README.md for full installation guide
+# ═══════════════════════════════════════════════════════════════
+
+# ─────────────────────────────────────────────────────────────
+# Core Python & Async
+# ─────────────────────────────────────────────────────────────
+python-dotenv==1.0.1
+aiohttp==3.9.3
+asyncio
+
+# ─────────────────────────────────────────────────────────────
+# System Monitoring & Hardware
+# ─────────────────────────────────────────────────────────────
+psutil==5.9.8
+pynvml==11.5.0
+keyboard==0.13.5
+pyserial==3.5
+colorama==0.4.6
+termcolor==2.3.0
+
+# ─────────────────────────────────────────────────────────────
+# GPU Acceleration (Optional - NVIDIA Only)
+# ─────────────────────────────────────────────────────────────
+# Install separately with:
+pip install --extra-index-url https://pypi.nvidia.com cudf-cu11
+cudf-cu11==23.12.0
+
+# ─────────────────────────────────────────────────────────────
+# Data Science Core
+# ─────────────────────────────────────────────────────────────
+# WARNING: Versions locked for TTS compatibility
+numpy==1.24.3
+pandas==1.5.3
+scikit-learn==1.3.2
+matplotlib==3.8.3
+
+# ─────────────────────────────────────────────────────────────
+# Audio Processing (STT & TTS)
+# ─────────────────────────────────────────────────────────────
+PyAudio==0.2.14
+SpeechRecognition==3.10.4
+edge-tts==6.1.10
+pygame==2.5.2
+tts==0.22.0
+pydub==0.25.1
+gTTS==2.4.0
+
+# ─────────────────────────────────────────────────────────────
+# Computer Vision
+# ─────────────────────────────────────────────────────────────
+opencv-python==4.9.0.80
+Pillow==10.2.0
+face-recognition==1.3.0
+mediapipe==0.10.11
+
+# Note: face-recognition requires dlib
+# Windows: pip install cmake dlib
+# Linux: sudo apt-get install cmake libboost-all-dev
+# macOS: brew install cmake boost
+
+# ─────────────────────────────────────────────────────────────
+# AI & NLP (LLM Stack)
+# ─────────────────────────────────────────────────────────────
+google-generativeai==0.4.1
+chromadb==0.4.24
+pydantic==2.6.4
+langchain==0.1.12
+langchain-community==0.0.29
+langchain-google-genai==1.0.1
+transformers==4.36.2
+sentence-transformers==2.2.2
+huggingface-hub==0.20.3
+accelerate==0.25.0
+safetensors==0.4.1
+bitsandbytes==0.41.3
+
+# Local LLM Support (Optional)
+llama-cpp-python==0.2.40
+ollama==0.1.6
+
+# ─────────────────────────────────────────────────────────────
+# Web Framework & API
+# ─────────────────────────────────────────────────────────────
+Flask==3.0.2
+flask-cors==4.0.0
+flask-socketio==5.3.6
+werkzeug==3.0.1
+gunicorn==21.2.0
+
+# ─────────────────────────────────────────────────────────────
+# Web Scraping & Social Media
+# ─────────────────────────────────────────────────────────────
+requests==2.31.0
+beautifulsoup4==4.12.3
+lxml==4.9.3
+lxml-html-clean==0.1.0
+googlesearch-python==1.2.3
+wikipedia==1.4.0
+instaloader==4.11
+facebook-scraper==0.2.59
+pytrends==4.9.2
+fake-useragent==1.4.0
+
+# ─────────────────────────────────────────────────────────────
+# Browser Automation
+# ─────────────────────────────────────────────────────────────
+selenium==4.18.1
+webdriver-manager==4.0.1
+
+# ─────────────────────────────────────────────────────────────
+# Finance & Trading
+# ─────────────────────────────────────────────────────────────
+ccxt==4.2.66
+ta==0.11.0
+mplfinance==0.12.10b0
+yfinance==0.2.33
+
+# ─────────────────────────────────────────────────────────────
+# Document Processing
+# ─────────────────────────────────────────────────────────────
+python-docx==1.1.0
+PyPDF2==3.0.1
+pypdf==3.17.4
+openpyxl==3.1.2
+PyYAML==6.0.1
+
+# ─────────────────────────────────────────────────────────────
+# Database & Storage
+# ─────────────────────────────────────────────────────────────
+sqlalchemy==2.0.25
+
+# ─────────────────────────────────────────────────────────────
+# Development Tools (Optional)
+# ─────────────────────────────────────────────────────────────
+pytest==7.4.4
+black==23.12.1
+flake8==7.0.0
+mypy==1.8.0
+
+# ═══════════════════════════════════════════════════════════════
+# PLATFORM-SPECIFIC NOTES
+# ═══════════════════════════════════════════════════════════════
+#
+# Windows:
+# - Install Visual C++ Build Tools
+# - Install CMake
+# - PyAudio: Download wheel from unofficial binaries
+#
+# Linux (Ubuntu/Debian):
+# sudo apt-get update
+# sudo apt-get install -y \
+#   python3-dev \
+#   portaudio19-dev \
+#   cmake \
+#   libboost-all-dev \
+#   ffmpeg
+#
+# macOS:
+# brew install portaudio cmake boost ffmpeg
+#
+# ═══════════════════════════════════════════════════════════════
+# TROUBLESHOOTING
+# ═══════════════════════════════════════════════════════════════
+#
+# PyAudio installation fails:
+# - Windows: Download from https://www.lfd.uci.edu/~gohlke/pythonlibs/
+# - Linux: sudo apt-get install portaudio19-dev
+# - macOS: brew install portaudio
+#
+# dlib/face_recognition fails:
+# - Install CMake and C++ compiler first
+# - Windows: Visual Studio Build Tools
+# - Linux: build-essential package
+# - macOS: Xcode Command Line Tools
+#
+# CUDA/GPU packages fail:
+# - Ensure NVIDIA drivers are installed
+# - Check CUDA version compatibility
+# - Use conda for better GPU support
+#
+# ChromaDB/Vector DB issues:
+# - Ensure numpy==1.24.3 (strict requirement)
+# - Clear .chroma_db folder if corrupted
+#
+# TTS/Audio issues:
+# - numpy and pandas versions are locked
+# - Do not upgrade without testing
+#
+# ═══════════════════════════════════════════════════════════════

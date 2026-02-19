@@ -1,0 +1,89 @@
+
+# LOTUS AI - ORTAM YAPILANDIRMASI (v2.5.2)
+# ==========================================
+
+# --- DONANIM VE PERFORMANS (YENİ) ---
+# Sistemi GPU (Ekran Kartı) ile hızlandırmak için True yapın.
+# Eğer False yaparsanız sistem otomatik olarak CPU moduna geçer.
+# NVIDIA GeForce RTX 3070 Ti gibi güçlü bir GPU için True önerilir.
+USE_GPU=True
+
+# Geliştirici modu (Detaylı loglar için True)
+DEBUG_MODE=True
+LOG_LEVEL=INFO
+
+# --- ANA API ANAHTARLARI (Google Gemini) ---
+# Tek bir anahtar kullanacaksanız GEMINI_API_KEY'i doldurun.
+# Çoklu ajan modu için ilgili ajanın anahtarını doldurun.
+GEMINI_API_KEY=""
+
+GEMINI_API_KEY_ATLAS=""
+GEMINI_API_KEY_SIDAR=""
+GEMINI_API_KEY_KURT=""
+GEMINI_API_KEY_POYRAZ=""
+GEMINI_API_KEY_KERBEROS=""
+GEMINI_API_KEY_GAYA=""
+
+# --- HUGGING FACE AYARLARI ---
+# Terminaldeki kimlik doğrulama uyarılarını kapatmak ve
+# NLP modellerini daha hızlı indirmek için bir Read Token girin.
+
+HF_TOKEN=""
+
+# --- AI SAĞLAYICI AYARLARI ---
+# Seçenekler: 'gemini' (Bulut) veya 'ollama' (Yerel)
+AI_PROVIDER="gemini"
+
+# Google Gemini Model Seçimi
+# Önerilen: gemini-1.5-flash veya gemini-1.5-pro
+GEMINI_MODEL=gemini-1.5-flash # gemini-2.5-flash-lite    # gemini-flash-lite-latest
+GEMINI_MODEL_PRO=gemini-1.5-pro
+
+# Yerel AI (Ollama) Modelleri
+TEXT_MODEL=llama3.1
+VISION_MODEL=llava
+OLLAMA_URL=http://localhost:11434/api/chat
+
+# --- GÜVENLİK VE KAMERA ---
+# Yüz Tanıma Modeli: 'cnn' (GPU gerektirir, daha hassas) veya 'hog' (CPU, daha hızlı)
+# USE_GPU=False ise bu ayar otomatik olarak 'hog' olur.
+FACE_REC_MODEL=cnn
+FACE_TOLERANCE=0.45
+PATRON_IMAGE_PATH=halil_sevim.jpg
+LIVE_VISUAL_CHECK=True
+CAMERA_INDEX=0
+
+# --- SES (TTS/STT) ---
+# True: Yerel (XTTS) veya EdgeTTS kullanır.
+USE_XTTS=True
+
+# --- SİSTEM ZAMANLAMALARI ---
+CONVERSATION_TIMEOUT=30
+SYSTEM_CHECK_INTERVAL=300
+WORK_DIR=.
+
+# --- META (FACEBOOK/WHATSAPP) API AYARLARI ---
+# App ID: 
+META_APP_ID=""
+META_ACCESS_TOKEN=""
+WHATSAPP_PHONE_ID=""
+INSTAGRAM_ACCOUNT_ID=""
+FACEBOOK_PAGE_ID=""
+WEBHOOK_VERIFY_TOKEN="" # Webhook kurulumunda kullanılacak şifre
+
+# --- FİNANS VE SERVİS MODÜLLERİ ---
+FINANCE_MODE=True
+DEFAULT_CURRENCY=TRY
+
+# Paket Servis Entegrasyonları (Opsiyonel)
+YEMEKSEPETI_URL=""
+YEMEKSEPETI_USER=""
+YEMEKSEPETI_PASS=""
+
+GETIR_URL=""
+GETIR_USER=""
+GETIR_PASS=""
+
+TRENDYOL_URL=""
+TRENDYOL_USER=""
+TRENDYOL_PASS=""

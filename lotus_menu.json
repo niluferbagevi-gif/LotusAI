@@ -1,0 +1,1702 @@
+{
+  "metadata": {
+    "version": "2.5.3",
+    "last_updated": "2026-02-10",
+    "restaurant": "Nilüfer Bağevi",
+    "location": "Nilüfer, Bursa, Türkiye",
+    "currency": "TRY",
+    "tax_rate": 0.10,
+    "service_hours": {
+      "breakfast": "08:00-13:00",
+      "lunch": "12:00-16:00",
+      "dinner": "18:00-23:00"
+    }
+  },
+  
+  "categories": {
+    "KAHVALTI": {
+      "name": "Kahvaltılar",
+      "emoji": "🍳",
+      "description": "Zengin kahvaltı seçenekleri",
+      "items": [
+        {
+          "id": "K001",
+          "name": "Serpme Kahvaltı (Kişi Başı)",
+          "price": 425.00,
+          "description": "4 çeşit peynir (eski kaşar, çeçil, beyaz peynir ve misket peyniri ceviz ve kuru kayısı parçaları ile..) taze peynirli karadut reçeli, 2 çeşit reçel, bal, kaymak, fındık parçalı çikolata, fıstık parçalı fıstık ezmesi, tereyağı, ev salçası, acuka, 2 çeşit zeytin, haydari, mütebbel, çeri domates, salatalık, soslu sosis, haşlanmış köy yumurtası, sigara böreği, keçi bacağı pişisi, 3 peynirli çörek, baharatlı elma dilim patates kızartması, simit, baget ekmek, form bisküvi, 1 demlik çay ve su.",
+          "image": "68b865bcb11de_kahvaltii-2.jpg",
+          "min_person": 1,
+          "vegetarian": false,
+          "spicy": false,
+          "popular": true
+        },
+        {
+          "id": "K002",
+          "name": "Kahvaltı Tabağı",
+          "price": 350.00,
+          "description": "4 çeşit peynir (eski kaşar, çeçil, misket peyniri ve beyaz peynir) çeri domates, salatalık, kaymak, bal, reçel, çikolata, ev salçası, tereyağı, haşlanmış yumurta, 2 çeşit zeytin, sosis, keçi bacağı pişisi, sigara böreği, elma dilim patates parçaları, form bisküvi, baget ekmek, 1 fincan çay ve su.",
+          "image": "68b865f15d0d1_mini-kahvalti.jpg",
+          "min_person": 1,
+          "vegetarian": false,
+          "spicy": false,
+          "popular": false
+        },
+        {
+          "id": "K003",
+          "name": "Simit Tabağı",
+          "price": 275.00,
+          "description": "1 adet simit,1 haşlanmış yumurta, beyaz peynir, siyah ve biberli yeşil zeytin, çeri domates, salatalık, yeşillik, 1 adet su ve 1 adet çay ile servis edilir.",
+          "image": "68b865d84d117_simit-tabagi.jpg",
+          "min_person": 1,
+          "vegetarian": true,
+          "spicy": false,
+          "popular": false
+        },
+        {
+          "id": "K004",
+          "name": "Menemen",
+          "price": 170.00,
+          "description": "Taze domates, yeşil biber ve yumurta ile hazırlanan geleneksel menemen.",
+          "image": "68b94c414e5e2_menemen.jpg",
+          "min_person": 1,
+          "vegetarian": true,
+          "spicy": false,
+          "popular": true
+        },
+        {
+          "id": "K005",
+          "name": "Kaşarlı Menemen",
+          "price": 180.00,
+          "description": "Bol kaşar peyniri eklenmiş enfes menemen.",
+          "image": "68b94c414e5e2_menemen.jpg",
+          "min_person": 1,
+          "vegetarian": true,
+          "spicy": false,
+          "popular": false
+        },
+        {
+          "id": "K006",
+          "name": "Kavurmalı Menemen",
+          "price": 250.00,
+          "description": "Tereyağında kavrulmuş kavurma ile hazırlanan lezzetli menemen.",
+          "image": "68b94c414e5e2_menemen.jpg",
+          "min_person": 1,
+          "vegetarian": false,
+          "spicy": false,
+          "popular": false
+        },
+        {
+          "id": "K007",
+          "name": "Sucuklu Menemen",
+          "price": 220.00,
+          "description": "Baharatlı sucuklarla hazırlanan menemen.",
+          "image": "68b94c414e5e2_menemen.jpg",
+          "min_person": 1,
+          "vegetarian": false,
+          "spicy": true,
+          "popular": false
+        },
+        {
+          "id": "K008",
+          "name": "Sucuklu Kaşarlı Menemen",
+          "price": 230.00,
+          "description": "Sucuk ve kaşarın buluştuğu nefis menemen.",
+          "image": "68b94c414e5e2_menemen.jpg",
+          "min_person": 1,
+          "vegetarian": false,
+          "spicy": true,
+          "popular": false
+        },
+        {
+          "id": "K009",
+          "name": "Kavurmalı Yumurta",
+          "price": 250.00,
+          "description": "Tereyağında kavurma ve yumurtanın eşsiz uyumu.",
+          "image": "68b94cbf7bf6a_kavurmali-yumurta.jpg",
+          "min_person": 1,
+          "vegetarian": false,
+          "spicy": false,
+          "popular": false
+        },
+        {
+          "id": "K010",
+          "name": "Sucuklu Yumurta",
+          "price": 250.00,
+          "description": "Tavada sucuk ve yumurtanın enfes birleşimi.",
+          "image": "68b94cdf04de8_sucuklu-yumurta.jpg",
+          "min_person": 1,
+          "vegetarian": false,
+          "spicy": true,
+          "popular": false
+        },
+        {
+          "id": "K011",
+          "name": "Pastırmalı Yumurta",
+          "price": 260.00,
+          "description": "Pastırma ile hazırlanan geleneksel sahanda yumurta",
+          "image": "68b94cf7958a1_pastirmali-yumurta.jpg",
+          "min_person": 1,
+          "vegetarian": false,
+          "spicy": false,
+          "popular": false
+        },
+        {
+          "id": "K012",
+          "name": "Sahanda Yumurta",
+          "price": 125.00,
+          "description": "Tereyağında klasik sahanda yumurta.",
+          "image": "68b94d1401caf_sahanda-yumurta-kasarli-yumurta.jpg",
+          "min_person": 1,
+          "vegetarian": true,
+          "spicy": false,
+          "popular": false
+        },
+        {
+          "id": "K013",
+          "name": "Kaşarlı Yumurta",
+          "price": 150.00,
+          "description": "Eritilmiş kaşar peyniriyle lezzetlendirilmiş sahanda yumurta.",
+          "image": "68b94d29e0f76_sahanda-yumurta-kasarli-yumurta.jpg",
+          "min_person": 1,
+          "vegetarian": true,
+          "spicy": false,
+          "popular": false
+        },
+        {
+          "id": "K014",
+          "name": "Sahanda Sucuk",
+          "price": 200.00,
+          "description": "Tereyağında kızarmış sucuk dilimleri ile servis edilen sahanda sucuk.",
+          "image": "68b94d45e2829_sahanda-sucuk.jpg",
+          "min_person": 1,
+          "vegetarian": false,
+          "spicy": true,
+          "popular": false
+        },
+        {
+          "id": "K015",
+          "name": "Sahanda Kavurma",
+          "price": 275.00,
+          "description": "Kızarmış kavurma parçaları ile hazırlanan sahanda yumurta.",
+          "image": "68b94d5d44143_sahanda-kavurma.jpg",
+          "min_person": 1,
+          "vegetarian": false,
+          "spicy": false,
+          "popular": false
+        },
+        {
+          "id": "K016",
+          "name": "Omlet",
+          "price": 150.00,
+          "description": "Klasik tereyağlı omlet.",
+          "image": "68b94d7da1cc8_omlet--ve-omlet-cesitleri.jpg",
+          "min_person": 1,
+          "vegetarian": true,
+          "spicy": false,
+          "popular": false
+        },
+        {
+          "id": "K017",
+          "name": "Kaşarlı Omlet",
+          "price": 170.00,
+          "description": "Bol kaşar peyniriyle hazırlanan nefis omlet.",
+          "image": "68b94d7da1cc8_omlet--ve-omlet-cesitleri.jpg",
+          "min_person": 1,
+          "vegetarian": true,
+          "spicy": false,
+          "popular": false
+        },
+        {
+          "id": "K018",
+          "name": "Karışık Omlet",
+          "price": 200.00,
+          "description": "Peynir, sucuk, mantar ve sebzelerle hazırlanan özel omlet.",
+          "image": "68b94d7da1cc8_omlet--ve-omlet-cesitleri.jpg",
+          "min_person": 1,
+          "vegetarian": false,
+          "spicy": false,
+          "popular": false
+        },
+        {
+          "id": "K019",
+          "name": "Kahvaltı Sıcak Tabağı (2 Kişilik)",
+          "price": 200.00,
+          "description": "Sigara böreği, keçi bacağı, üç peynirli börek ve baharatlı elma dilim patates ile iki kişilik sıcak kahvaltı tabağı.",
+          "image": "68b94de1d7c2a_kahvalti-sicak-tabagi.jpg",
+          "min_person": 2,
+          "vegetarian": true,
+          "spicy": false,
+          "popular": false
+        },
+        {
+          "id": "K020",
+          "name": "Kahvaltı Peynir Tabağı (2 Kişilik)",
+          "price": 175.00,
+          "description": "Beyaz peynir, eski kaşar, misket peynir, çeçil, ceviz, kuru kayısı ve yeşillik ile servis edilir.",
+          "image": "68b94df7dfbc4_kahvalti-peynir-tabagi-(2-kisilik).jpg",
+          "min_person": 2,
+          "vegetarian": true,
+          "spicy": false,
+          "popular": false
+        },
+        {
+          "id": "K021",
+          "name": "Keçi Bacağı",
+          "price": 100.00,
+          "description": "6 adet çıtır çıtır kızarmış keçi bacağı.",
+          "image": "68ca92b59f65d_keci-bacagi.jpg",
+          "min_person": 1,
+          "vegetarian": true,
+          "spicy": false,
+          "popular": true
+        },
+        {
+          "id": "K022",
+          "name": "Üç Peynirli Börek Tabağı",
+          "price": 150.00,
+          "description": "4 adet üç peynirli börek ile servis edilir.",
+          "image": "68b94e271d62e_uc-peynirli-borek-tabagi.jpg",
+          "min_person": 1,
+          "vegetarian": true,
+          "spicy": false,
+          "popular": false
+        },
+        {
+          "id": "K023",
+          "name": "Simit",
+          "price": 30.00,
+          "description": "Taze günlük simit.",
+          "image": "68ca926258ae1_simit.jpg",
+          "min_person": 1,
+          "vegetarian": true,
+          "spicy": false,
+          "popular": false
+        }
+      ]
+    },
+
+    "BASLANGIÇLAR": {
+      "name": "Başlangıçlar",
+      "emoji": "🍲",
+      "description": "Çorbalar",
+      "items": [
+        {
+          "id": "B001",
+          "name": "Günün Çorbası",
+          "price": 100.00,
+          "description": "Günün çorbasını personele sorunuz.",
+          "image": "68b865062768d_corba.jpg",
+          "min_person": 1,
+          "vegetarian": false,
+          "spicy": false,
+          "popular": false
+        }
+      ]
+    },
+
+    "APERATİFLER": {
+      "name": "Aperatifler",
+      "emoji": "🥪",
+      "description": "Sandviçler ve atıştırmalıklar",
+      "items": [
+        {
+          "id": "A001",
+          "name": "Türk Sandviç",
+          "price": 200.00,
+          "description": "Ciabatta ekmeği, acuka sosu, marul, domates, salatalık, beyaz peynir ve sarımsaklı mayonez.",
+          "image": "68ca8c7e3ce61_turk.jpg",
+          "min_person": 1,
+          "vegetarian": true,
+          "spicy": true,
+          "popular": false
+        },
+        {
+          "id": "A002",
+          "name": "İngiliz Sandviç",
+          "price": 250.00,
+          "description": "Ciabatta ekmeği, Cheddar peyniri, tavada kızarmış yumurta, türk pastırması, sarımsaklı mayonez, chipotle sos, domates dilimi ve tereyağı.",
+          "image": "68ca8b8ceac05_ingiliz-sandvic.jpg",
+          "min_person": 1,
+          "vegetarian": false,
+          "spicy": true,
+          "popular": false
+        },
+        {
+          "id": "A003",
+          "name": "German Sandviç",
+          "price": 250.00,
+          "description": "Ciabatta ekmeği, Kaşar peyniri, hindi füme jambon, roka, reilish sos, mayonez, domates dilim, turşu dilim.",
+          "image": "68ca8c1365b9d_german.jpg",
+          "min_person": 1,
+          "vegetarian": false,
+          "spicy": false,
+          "popular": false
+        },
+        {
+          "id": "A004",
+          "name": "İtaly Sandviç",
+          "price": 255.00,
+          "description": "Zeytinli Ciabatta rustik ekmeği, italyan salamı, hellim peyniri, roka, domates, pesto sos, mayonez.",
+          "image": "68ca8c951da95_italy.jpg",
+          "min_person": 1,
+          "vegetarian": false,
+          "spicy": false,
+          "popular": false
+        },
+        {
+          "id": "A005",
+          "name": "Kaşarlı Tost",
+          "price": 175.00,
+          "description": "Bol kaşar peyniriyle hazırlanan tost, yeşillik ve patates kızartması ile servis edilir.",
+          "image": "68b94e5cc7d6b_kasarli-tost.jpg",
+          "min_person": 1,
+          "vegetarian": true,
+          "spicy": false,
+          "popular": true
+        },
+        {
+          "id": "A006",
+          "name": "Sucuklu Tost",
+          "price": 200.00,
+          "description": "Baharatlı sucuklarla hazırlanan tost, yeşillik ve patates kızartması ile servis edilir.",
+          "image": "68b94e8f313b1_karisik-sucuklu-tost.jpg",
+          "min_person": 1,
+          "vegetarian": false,
+          "spicy": true,
+          "popular": false
+        },
+        {
+          "id": "A007",
+          "name": "Karışık Tost",
+          "price": 225.00,
+          "description": "Kaşar peyniri ve sucukla hazırlanan karışık tost, yeşillik ve patates kızartması ile servis edilir.",
+          "image": "68b94eaed5367_karisik-sucuklu-tost.jpg",
+          "min_person": 1,
+          "vegetarian": false,
+          "spicy": true,
+          "popular": true
+        },
+        {
+          "id": "A008",
+          "name": "Mix Tost",
+          "price": 225.00,
+          "description": "Kaşar ve sucuklu tost, patates ile.",
+          "image": "mix_tost.jpg",
+          "min_person": 1,
+          "vegetarian": false,
+          "spicy": true,
+          "popular": false
+        },
+        {
+          "id": "A009",
+          "name": "Mix Tabağı",
+          "price": 300.00,
+          "description": "5 parça hot çıtır tavuk, 2 parça çıtır hellim, 2 parça sigara böreği, 2 parça çıtır soğan halkası ve patates kızartması ile servis edilir.",
+          "image": "68b94ec56b3f4_mix-tabagi.jpg",
+          "min_person": 1,
+          "vegetarian": false,
+          "spicy": false,
+          "popular": true
+        },
+        {
+          "id": "A010",
+          "name": "Patates Kızartması",
+          "price": 150.00,
+          "description": "Kızarmış çıtır patatesler, sıcak ve lezzetli.",
+          "image": "68b86564d493d_patates-kizartmasi.jpg",
+          "min_person": 1,
+          "vegetarian": true,
+          "spicy": false,
+          "popular": true
+        },
+        {
+          "id": "A011",
+          "name": "Nugget Tabağı",
+          "price": 150.00,
+          "description": "6 parça tavuk nugget, patates kızartması ile servis edilir.",
+          "image": "",
+          "min_person": 1,
+          "vegetarian": false,
+          "spicy": false,
+          "popular": false
+        },
+        {
+          "id": "A012",
+          "name": "Pastırmalı Paçanga Böreği",
+          "price": 275.00,
+          "description": "Pastırmalı paçanga böreği, yeşillik, domates ve salatalık ile servis edilir.",
+          "image": "68b94f07d2be3_pastirmali-pacanga-boregi.jpg",
+          "min_person": 1,
+          "vegetarian": false,
+          "spicy": false,
+          "popular": false
+        },
+        {
+          "id": "A013",
+          "name": "Avcı Böreği",
+          "price": 250.00,
+          "description": "Avcı böreği, yeşillik, domates ve salatalık ile servis edilir.",
+          "image": "68b94f1b757c8_avci-boregi.jpg",
+          "min_person": 1,
+          "vegetarian": false,
+          "spicy": false,
+          "popular": false
+        },
+        {
+          "id": "A014",
+          "name": "Karışık Börek Tabağı",
+          "price": 300.00,
+          "description": "1 adet pastırmalı paçanga böreği, 1 adet avcı böreği, 2 adet sigara böreği, yeşillik, domates ve salatalık ile servis edilir.",
+          "image": "68b94f354817e_karisik-borek-tabagi.jpg",
+          "min_person": 1,
+          "vegetarian": false,
+          "spicy": false,
+          "popular": false
+        },
+        {
+          "id": "A015",
+          "name": "Sigara Böreği",
+          "price": 150.00,
+          "description": "4 adet çıtır börek.",
+          "image": "sigara_boregi.jpg",
+          "min_person": 1,
+          "vegetarian": true,
+          "spicy": false,
+          "popular": true
+        },
+        {
+          "id": "A016",
+          "name": "Yoğurt",
+          "price": 75.00,
+          "description": "Taze günlük yoğurt, sade ve doğal.",
+          "image": "68ca944e38743_yogurt.jpg",
+          "min_person": 1,
+          "vegetarian": true,
+          "spicy": false,
+          "popular": false
+        }
+      ]
+    },
+
+    "BURGER_WRAP": {
+      "name": "Burger & Wrap",
+      "emoji": "🍔",
+      "description": "Burgerler ve wrap'ler",
+      "items": [
+        {
+          "id": "BW001",
+          "name": "Etli Wrap",
+          "price": 475.00,
+          "description": "Biftek parçaları, kapya ve çarliston biber, domates, mozerella, cheddar, soya sosu, Chilipette sos, patates kızartması ve yeşillik ile servis edilir.",
+          "image": "68b94faaa92f3_etli-wrap.jpg",
+          "min_person": 1,
+          "vegetarian": false,
+          "spicy": true,
+          "popular": true
+        },
+        {
+          "id": "BW002",
+          "name": "Cheeseburger",
+          "price": 390.00,
+          "description": "140 gr köfte, cheddar peynir, fırın ekmek, relish sos, karamelize soğan, kornişon turşu, marul, domates ve hamburger sosu ile patates kızartması ve 2 adet çıtır halka soğan ile servis edilir.",
+          "image": "68b94fe686235_cheeseburger.jpg",
+          "min_person": 1,
+          "vegetarian": false,
+          "spicy": false,
+          "popular": true
+        },
+        {
+          "id": "BW003",
+          "name": "Hamburger",
+          "price": 375.00,
+          "description": "140 gr köfte, fırın ekmek, relish sos, karamelize soğan, kornişon turşu, marul, domates ve hamburger sosu ile patates kızartması ve 2 adet çıtır halka soğan ile servis edilir.",
+          "image": "68b94fd0d591c_hamburger.jpg",
+          "min_person": 1,
+          "vegetarian": false,
+          "spicy": false,
+          "popular": true
+        },
+        {
+          "id": "BW004",
+          "name": "Çocuk Hamburger Menü",
+          "price": 350.00,
+          "description": "Hamburger ve yanında küçük porsiyon patates kızartması ile servis edilir.",
+          "image": "",
+          "min_person": 1,
+          "vegetarian": false,
+          "spicy": false,
+          "popular": false
+        },
+        {
+          "id": "BW005",
+          "name": "Tavuklu Wrap",
+          "price": 325.00,
+          "description": "Piliç bonfile, kapya ve çarliston biber, soğan, mozerella, cheddar, Chilipette sos, patates kızartması ve yeşillik ile servis edilir.",
+          "image": "68b94fbd671c0_tavuklu-wrap.jpg",
+          "min_person": 1,
+          "vegetarian": false,
+          "spicy": true,
+          "popular": true
+        },
+        {
+          "id": "BW006",
+          "name": "Chicken Burger",
+          "price": 325.00,
+          "description": "110 gr piliç, cheddar peynir, fırın ekmek, relish sos, karamelize soğan, kornişon turşu, marul, domates ve hamburger sosu ile patates kızartması ve 2 adet çıtır halka soğan ile servis edilir.",
+          "image": "68b94ffe5db20_chicken-burger.jpg",
+          "min_person": 1,
+          "vegetarian": false,
+          "spicy": false,
+          "popular": false
+        }
+      ]
+    },
+
+    "TAVUKLU_MENULER": {
+      "name": "Tavuklu Menüler",
+      "emoji": "🍗",
+      "description": "Tavuk yemekleri",
+      "items": [
+        {
+          "id": "T001",
+          "name": "Bağevi Special Beyaz",
+          "price": 425.00,
+          "description": "Tavuk bonfile parçaları, kapya ve çarliston biber, köz patlıcan, soğan, soya sosu, tereyağı, patates ve baharatlarla güveçte kaşarlı servis edilir.",
+          "image": "68c935fc0fe2f_bagevi-special-beyaz.jpg",
+          "min_person": 1,
+          "vegetarian": false,
+          "spicy": false,
+          "popular": true
+        },
+        {
+          "id": "T002",
+          "name": "Güveçte Kremalı Mantarlı Tavuk",
+          "price": 325.00,
+          "description": "Krema, soya sosu, mantar, muskat ve tavuk bonfile güveçte servis edilir.",
+          "image": "68b94f4aec470_guvecte-kremali-mantarli-tavuk.jpg",
+          "min_person": 1,
+          "vegetarian": false,
+          "spicy": false,
+          "popular": true
+        },
+        {
+          "id": "T003",
+          "name": "Köri Soslu Tavuk",
+          "price": 350.00,
+          "description": "Tavuk bonfile parçaları, kremalı köri sosu, patates püresi, pilav ve yeşil salata ile servis edilir.",
+          "image": "68c937abbe0a1_kori-soslu-tavuk.jpg",
+          "min_person": 1,
+          "vegetarian": false,
+          "spicy": true,
+          "popular": false
+        },
+        {
+          "id": "T004",
+          "name": "Soya Soslu Tavuk",
+          "price": 350.00,
+          "description": "Soya sosu ile pişirilmiş tavuk bonfile parçaları, arabiata makarna ve yeşil salata ile servis edilir.",
+          "image": "68c939468fda9_soya-soslu-tavuk.jpg",
+          "min_person": 1,
+          "vegetarian": false,
+          "spicy": false,
+          "popular": false
+        },
+        {
+          "id": "T005",
+          "name": "Acılı Tavuk",
+          "price": 350.00,
+          "description": "Çok acı hot sos ile pişirilmiş tavuk bonfile parçaları, kremalı makarna ve yeşil salata ile servis edilir.",
+          "image": "68c93b163a81f_acili-tavuk.jpg",
+          "min_person": 1,
+          "vegetarian": false,
+          "spicy": true,
+          "popular": false
+        }
+      ]
+    },
+
+    "ET_YEMEKLERI": {
+      "name": "Et Yemekleri (Premium)",
+      "emoji": "🥩",
+      "description": "Premium et yemekleri",
+      "items": [
+        {
+          "id": "ET001",
+          "name": "Bağevi Special (Et)",
+          "price": 800.00,
+          "description": "180 Gram marine edilmiş bonfile parçaları ile patlıcan, çarliston biber, kapya biber, beyaz soğan, soya sosu, domatesin vokta sotelenmesi ile yapılan enfes yemeğimiz. Kibrit patates ve mozarella peyniri ile servis edilir.",
+          "image": "68ecc93a97338_special.jpg",
+          "min_person": 1,
+          "vegetarian": false,
+          "spicy": false,
+          "popular": true
+        },
+        {
+          "id": "ET002",
+          "name": "Çökertme Kebabı",
+          "price": 800.00,
+          "description": "Kibrit patates üzerinde tava yoğurdu, domates sos ve 180 gram marine edilmiş bonfile parçaları. Tereyağı ile servis edilir.",
+          "image": "68ecc948215b9_cokertme.jpg",
+          "min_person": 1,
+          "vegetarian": false,
+          "spicy": false,
+          "popular": true
+        }
+      ]
+    },
+
+    "PIDE_PIZZA": {
+      "name": "Pide & Pizza",
+      "emoji": "🍕",
+      "description": "Pide ve pizza çeşitleri",
+      "items": [
+        {
+          "id": "PP001",
+          "name": "Bağevi Pide (Spesiyal)",
+          "price": 430.00,
+          "description": "Kuşbaşı, kavurma, pastırma, kaşar, yeşillik ve jalapeno turşusu ile servis edilir.",
+          "image": "68b950d6630fa_bagevi-pide.jpg",
+          "min_person": 1,
+          "vegetarian": false,
+          "spicy": true,
+          "popular": true
+        },
+        {
+          "id": "PP002",
+          "name": "Karışık Pide",
+          "price": 400.00,
+          "description": "Kıyma, kuşbaşı, kaşar, sucuk, yeşillik ve jalapeno turşusu ile servis edilir.",
+          "image": "68b951495c23d_karisik-pide.jpg",
+          "min_person": 1,
+          "vegetarian": false,
+          "spicy": true,
+          "popular": true
+        },
+        {
+          "id": "PP003",
+          "name": "Kavurmalı Pide",
+          "price": 390.00,
+          "description": "Yeşillik ve jalapeno turşusu ile servis edilir.",
+          "image": "68e79315da6da_donerli-pide.jpg",
+          "min_person": 1,
+          "vegetarian": false,
+          "spicy": true,
+          "popular": false
+        },
+        {
+          "id": "PP004",
+          "name": "Taş Fırın Pizza",
+          "price": 385.00,
+          "description": "Pizza sosu, dana salam, dana sosis, sucuk, mantar, zeytin, mısır, domates ve mozerella peyniri ile servis edilir.",
+          "image": "68b951b57e255_tas-firin-pizza.jpg",
+          "min_person": 1,
+          "vegetarian": false,
+          "spicy": false,
+          "popular": true
+        },
+        {
+          "id": "PP005",
+          "name": "Dönerli Pide",
+          "price": 380.00,
+          "description": "Yaprak döner ve döner sosu ile hazırlanmış kapalı pide, yeşillik ve jalapeno turşusu ile servis edilir.",
+          "image": "68b950e622153_donerli-pide.jpg",
+          "min_person": 1,
+          "vegetarian": false,
+          "spicy": true,
+          "popular": true
+        },
+        {
+          "id": "PP006",
+          "name": "Sucuklu Kaşarlı Pide",
+          "price": 350.00,
+          "description": "Yeşillik ve jalapeno turşusu ile servis edilir.",
+          "image": "68b9516c992a2_sucuklu-kasarli-pide.jpg",
+          "min_person": 1,
+          "vegetarian": false,
+          "spicy": true,
+          "popular": false
+        },
+        {
+          "id": "PP007",
+          "name": "Kuşbaşılı Kaşarlı Pide",
+          "price": 345.00,
+          "description": "Yeşillik ve jalapeno turşusu ile servis edilir.",
+          "image": "68b95132a4a43_kusbasili-kasarli-pide.jpg",
+          "min_person": 1,
+          "vegetarian": false,
+          "spicy": true,
+          "popular": false
+        },
+        {
+          "id": "PP008",
+          "name": "Kuşbaşılı Pide",
+          "price": 335.00,
+          "description": "Yeşillik ve jalapeno turşusu ile servis edilir.",
+          "image": "68b95120c0c55_kusbasili-pide.jpg",
+          "min_person": 1,
+          "vegetarian": false,
+          "spicy": true,
+          "popular": false
+        },
+        {
+          "id": "PP009",
+          "name": "Kıymalı Kaşarlı Pide",
+          "price": 335.00,
+          "description": "Yeşillik ve jalapeno turşusu ile servis edilir.",
+          "image": "68b95159500b9_kiymali-kasarli-pide.jpg",
+          "min_person": 1,
+          "vegetarian": false,
+          "spicy": true,
+          "popular": false
+        },
+        {
+          "id": "PP010",
+          "name": "Kıymalı Pide",
+          "price": 325.00,
+          "description": "Yeşillik ve jalapeno turşusu ile servis edilir.",
+          "image": "68b950f938623_kiymali-pide.jpg",
+          "min_person": 1,
+          "vegetarian": false,
+          "spicy": true,
+          "popular": false
+        },
+        {
+          "id": "PP011",
+          "name": "Kaşarlı Pide",
+          "price": 300.00,
+          "description": "Yeşillik ve jalapeno turşusu ile servis edilir.",
+          "image": "68b9510d439fa_kasarli-pide.jpg",
+          "min_person": 1,
+          "vegetarian": true,
+          "spicy": true,
+          "popular": false
+        },
+        {
+          "id": "PP012",
+          "name": "Çocuk Pizza Menü",
+          "price": 350.00,
+          "description": "Pizza sosu, dana salam, dana sosis, sucuk, mantar, zeytin, mısır, domates, mozerella ve içecek ile servis edilir.",
+          "image": "",
+          "min_person": 1,
+          "vegetarian": false,
+          "spicy": false,
+          "popular": false
+        }
+      ]
+    },
+
+    "IZGARALAR": {
+      "name": "Izgaralar",
+      "emoji": "🔥",
+      "description": "Izgara yemekleri",
+      "items": [
+        {
+          "id": "IZ001",
+          "name": "Karışık Izgara",
+          "price": 525.00,
+          "description": "2 adet köfte, 2 parça tavuk but ızgara, 1 parça sucuk, patates kızartması, pilav, domates ve biber ile servis edilir.",
+          "image": "68b950bc22fe9_karisik-izgara.jpg",
+          "min_person": 1,
+          "vegetarian": false,
+          "spicy": false,
+          "popular": true
+        },
+        {
+          "id": "IZ002",
+          "name": "Pastırmalı Köfte",
+          "price": 495.00,
+          "description": "100 gr 2 adet pastırmalı köfte, pilav, patates kızartması ve közlenmiş domates ve biber ile servis edilir.",
+          "image": "68ecc91fdb8ee_pasyermali-kofte.jpg",
+          "min_person": 1,
+          "vegetarian": false,
+          "spicy": false,
+          "popular": false
+        },
+        {
+          "id": "IZ003",
+          "name": "Bağevi Sarma",
+          "price": 450.00,
+          "description": "Taş fırın lavasına sarılı 200 gr köfte, yoğurt, domates sos, tereyağı, közlenmiş biber ve domates dilimi ile servis edilir.",
+          "image": "68b9503854edf_bagevi-sarma.jpg",
+          "min_person": 1,
+          "vegetarian": false,
+          "spicy": false,
+          "popular": true
+        },
+        {
+          "id": "IZ004",
+          "name": "Pideli Köfte",
+          "price": 450.00,
+          "description": "8 parça toplamda 200 gr köfte, tırnak pide, yoğurt, domates sosu, tereyağı, köz biber ve domates dilimi ile servis edilir.",
+          "image": "68b9502ad2b54_pideli-kofte.jpg",
+          "min_person": 1,
+          "vegetarian": false,
+          "spicy": false,
+          "popular": true
+        },
+        {
+          "id": "IZ005",
+          "name": "Kaşarlı Köfte",
+          "price": 450.00,
+          "description": "100 gr 2 adet kaşarlı köfte, pilav, patates kızartması ve közlenmiş domates ve biber ile servis edilir.",
+          "image": "68ecc90966fc2_kasarli-kofte.jpg",
+          "min_person": 1,
+          "vegetarian": false,
+          "spicy": false,
+          "popular": false
+        },
+        {
+          "id": "IZ006",
+          "name": "Köfte (Kasap)",
+          "price": 425.00,
+          "description": "50 gr 4 adet kasap köfte, pilav, patates kızartması ve közlenmiş domates ve biber ile servis edilir.",
+          "image": "68b95016daddb_kofte.jpg",
+          "min_person": 1,
+          "vegetarian": false,
+          "spicy": false,
+          "popular": true
+        },
+        {
+          "id": "IZ007",
+          "name": "Piliç (Izgara But)",
+          "price": 400.00,
+          "description": "100 gr 2 adet kemiksiz piliç but, pilav, patates kızartması ve közlenmiş domates ve biber ile servis edilir.",
+          "image": "68b950985340d_pilic.jpg",
+          "min_person": 1,
+          "vegetarian": false,
+          "spicy": false,
+          "popular": false
+        },
+        {
+          "id": "IZ008",
+          "name": "Izgara Sucuk",
+          "price": 400.00,
+          "description": "50 gr 4 parça sucuk, patates kızartması ve közlenmiş domates ve biber ile servis edilir.",
+          "image": "",
+          "min_person": 1,
+          "vegetarian": false,
+          "spicy": true,
+          "popular": false
+        },
+        {
+          "id": "IZ009",
+          "name": "Güveç Köfte",
+          "price": 385.00,
+          "description": "8 parça 200 gr köfte, tereyağında pişmiş domates, kapya ve çarliston biberli sos ve kaşar ile servis edilir.",
+          "image": "68b9504946e1b_guvec-kofte-.jpg",
+          "min_person": 1,
+          "vegetarian": false,
+          "spicy": false,
+          "popular": false
+        }
+      ]
+    },
+
+    "MAKARNALAR": {
+      "name": "Makarnalar",
+      "emoji": "🍝",
+      "description": "Makarna çeşitleri",
+      "items": [
+        {
+          "id": "M001",
+          "name": "Etli Arabiata",
+          "price": 400.00,
+          "description": "Baharatlı domates sosu ve enfes bonfile parçacıklarının mükemmel uyumu. Etli Arabiata, İtalyan lezzetini doyasıya yaşamak isteyenler için kaçırılmayacak bir seçenek. Acılıdır.",
+          "image": "68ca90a019260_etli-arabiata.jpg",
+          "min_person": 1,
+          "vegetarian": false,
+          "spicy": true,
+          "popular": true
+        },
+        {
+          "id": "M002",
+          "name": "Tagliatelle",
+          "price": 320.00,
+          "description": "Taze tagliatelle makarnamız, kremalı mantar sosu, baharatlar ve piliç bonfile ile buluştu parmesan peyniri ile lezzetlendirildi.",
+          "image": "68ca90fae016c_tagliatelle.jpg",
+          "min_person": 1,
+          "vegetarian": false,
+          "spicy": false,
+          "popular": true
+        },
+        {
+          "id": "M003",
+          "name": "Mantı",
+          "price": 300.00,
+          "description": "Üzerine sarımsaklı yoğurt ve tereyağlı klasik sosumuz gezdirilerek hazırlanan mantı.",
+          "image": "68ca9b1d0dcdf_manti.jpg",
+          "min_person": 1,
+          "vegetarian": false,
+          "spicy": false,
+          "popular": true
+        },
+        {
+          "id": "M004",
+          "name": "Pesto Soslu Makarna",
+          "price": 270.00,
+          "description": "Pesto sosu ve krema ile yapılan penne makarnamız parmesan ile lezzetlendirildi.",
+          "image": "68ca90cebb7ca_pesto-soslu.jpg",
+          "min_person": 1,
+          "vegetarian": true,
+          "spicy": false,
+          "popular": false
+        }
+      ]
+    },
+
+    "SALATALAR": {
+      "name": "Salatalar",
+      "emoji": "🥗",
+      "description": "Taze salatalar",
+      "items": [
+        {
+          "id": "S001",
+          "name": "Hellim Peynirli Salata",
+          "price": 250.00,
+          "description": "Mevsim yeşillikleri üstünde kızarmış hellim dilimleri.",
+          "image": "68c94dc366e85_hellim-peynirli-bagevi-salata.jpg",
+          "min_person": 1,
+          "vegetarian": true,
+          "spicy": false,
+          "popular": true
+        },
+        {
+          "id": "S002",
+          "name": "Tavuklu Sezar Salata",
+          "price": 250.00,
+          "description": "Izgara tavuk but, mevsim yeşillikleri, kroton parçaları, çeri domates ve Sezar sos ile servis edilir.",
+          "image": "68c93ed8d1efc_tavuklu-sezar-salata.jpg",
+          "min_person": 1,
+          "vegetarian": false,
+          "spicy": false,
+          "popular": true
+        },
+        {
+          "id": "S003",
+          "name": "Ton Balıklı Salata",
+          "price": 250.00,
+          "description": "Ton balığı, mevsim yeşillikleri, çeri domates, salatalık, kroton parçaları ve zeytinyağı ile servis edilir.",
+          "image": "",
+          "min_person": 1,
+          "vegetarian": false,
+          "spicy": false,
+          "popular": false
+        },
+        {
+          "id": "S004",
+          "name": "Tulum Peynirli Bağevi",
+          "price": 220.00,
+          "description": "Balzamıklı zeytinyağı, mevsim yeşillik, çeri domates, salatalık, kroton parçaları, İzmir tulum peyniri ile servis edilir.",
+          "image": "68c94d8102f9c_tulum-peynirli-bagevi-salataa.jpg",
+          "min_person": 1,
+          "vegetarian": true,
+          "spicy": false,
+          "popular": false
+        },
+        {
+          "id": "S005",
+          "name": "Diyet Kuru Meyveli",
+          "price": 220.00,
+          "description": "Balzamıklı zeytinyağı, kuru incir, dut, kayısı, ceviz, badem, kroton, çeri domates ve salatalık ile servis edilir.",
+          "image": "68c9402a946a3_diyet-kuru-meyveli-salata.jpg",
+          "min_person": 1,
+          "vegetarian": true,
+          "spicy": false,
+          "popular": false
+        },
+        {
+          "id": "S006",
+          "name": "Mevsim Salata",
+          "price": 150.00,
+          "description": "Mevsim yeşillikleri, domates, salatalık ile servis edilir.",
+          "image": "68c940cf3a720_mevsim-salata.jpg",
+          "min_person": 1,
+          "vegetarian": true,
+          "spicy": false,
+          "popular": false
+        },
+        {
+          "id": "S007",
+          "name": "Çoban Salata",
+          "price": 150.00,
+          "description": "Çiftlik domates, salatalık, çarliston biber, beyaz soğan ve zeytinyağı ile servis edilir.",
+          "image": "",
+          "min_person": 1,
+          "vegetarian": true,
+          "spicy": false,
+          "popular": false
+        }
+      ]
+    },
+
+    "TATLILAR": {
+      "name": "Tatlılar",
+      "emoji": "🍰",
+      "description": "Ev yapımı tatlılar",
+      "items": [
+        {
+          "id": "TT001",
+          "name": "Fıstık Rüyası",
+          "price": 250.00,
+          "description": "Fıstık parçacıklı pasta.",
+          "image": "68b9520588ad8_fistik-ruyasi.jpg",
+          "min_person": 1,
+          "vegetarian": true,
+          "spicy": false,
+          "popular": false
+        },
+        {
+          "id": "TT002",
+          "name": "Frambuazlı Cheesecake",
+          "price": 235.00,
+          "description": "Frambuaz aromalı cheesecake.",
+          "image": "68b951cccc0e7_frambuazli-cheesecake.jpg",
+          "min_person": 1,
+          "vegetarian": true,
+          "spicy": false,
+          "popular": true
+        },
+        {
+          "id": "TT003",
+          "name": "Limonlu Cheesecake",
+          "price": 235.00,
+          "description": "Kremalı limonlu cheesecake.",
+          "image": "68b951dd59267_limonlu-cheesecake.jpg",
+          "min_person": 1,
+          "vegetarian": true,
+          "spicy": false,
+          "popular": true
+        },
+        {
+          "id": "TT004",
+          "name": "Profiterol Pasta",
+          "price": 225.00,
+          "description": "Çikolatalı ve kremalı profiterol tabak.",
+          "image": "68ca7fd796b6a_profiterol-pasta.jpg",
+          "min_person": 1,
+          "vegetarian": true,
+          "spicy": false,
+          "popular": true
+        },
+        {
+          "id": "TT005",
+          "name": "Devil's Cake",
+          "price": 215.00,
+          "description": "Çikolatalı ve yoğun lezzetli pasta.",
+          "image": "68e793a9c4eec_adsiz.jpg",
+          "min_person": 1,
+          "vegetarian": true,
+          "spicy": false,
+          "popular": false
+        },
+        {
+          "id": "TT006",
+          "name": "Tiramisu",
+          "price": 190.00,
+          "description": "Klasik İtalyan tatlısı.",
+          "image": "68b95214ca434_tiramisu.jpg",
+          "min_person": 1,
+          "vegetarian": true,
+          "spicy": false,
+          "popular": true
+        },
+        {
+          "id": "TT007",
+          "name": "Mozaik Pasta",
+          "price": 175.00,
+          "description": "Çikolata ve bisküvinin eşsiz uyumuyla hazırlanan Mozaik Pasta, her diliminde nostaljik bir lezzet şöleni sunuyor.",
+          "image": "68b952a13d9a6_mozaik-pasta.jpg",
+          "min_person": 1,
+          "vegetarian": true,
+          "spicy": false,
+          "popular": false
+        },
+        {
+          "id": "TT008",
+          "name": "Fırın Sütlaç",
+          "price": 175.00,
+          "description": "Fındık tozu ile servis edilir.",
+          "image": "68b95225754c1_firin-sutlac.jpg",
+          "min_person": 1,
+          "vegetarian": true,
+          "spicy": false,
+          "popular": true
+        },
+        {
+          "id": "TT009",
+          "name": "Biscoff Cocoa-Mazing",
+          "price": 80.00,
+          "description": "İçerisinde Lotus Biscoff kreması, üzerinde sütlü kakao kaplaması ve karamelize bisküvi parçaları.",
+          "image": "68ca82c7d8c3b_biscoff-cocoa-mazing.jpg",
+          "min_person": 1,
+          "vegetarian": true,
+          "spicy": false,
+          "popular": false
+        },
+        {
+          "id": "TT010",
+          "name": "Nutzilla",
+          "price": 80.00,
+          "description": "Sütlü kakao kaplama, fındık kreması dolgu ve fındık çıtırları.",
+          "image": "68ca83449476a_nutzilla.jpg",
+          "min_person": 1,
+          "vegetarian": true,
+          "spicy": false,
+          "popular": false
+        },
+        {
+          "id": "TT011",
+          "name": "Strawjelly Jam",
+          "price": 80.00,
+          "description": "Üzerinde beyaz çikolata kaplaması ve kurutulmuş çilek parçaları, içinde çilek sos dolgusu.",
+          "image": "68ca83b8c31b4_strawjelly-jam.jpg",
+          "min_person": 1,
+          "vegetarian": true,
+          "spicy": false,
+          "popular": false
+        },
+        {
+          "id": "TT012",
+          "name": "Queen V",
+          "price": 80.00,
+          "description": "Vanilya aromalı ve pasta kreması dolgulu, çizgili bitter çikolata süslemeli.",
+          "image": "68ca842dd06c1_queen-v.jpg",
+          "min_person": 1,
+          "vegetarian": true,
+          "spicy": false,
+          "popular": false
+        },
+        {
+          "id": "TT013",
+          "name": "Willamon Tell",
+          "price": 80.00,
+          "description": "İçerisinde elmalı tarçınlı dolgu, üzerinde tarçın ve şeker kaplaması.",
+          "image": "68ca847807099_willamon-tell.jpg",
+          "min_person": 1,
+          "vegetarian": true,
+          "spicy": false,
+          "popular": false
+        },
+        {
+          "id": "TT014",
+          "name": "Choc Almighty",
+          "price": 80.00,
+          "description": "Bitter kakaolu kaplama üzerinde gerçek sütlü Belçika çikolata parçaları.",
+          "image": "68ca84c6bbeb4_choc-almighty.jpg",
+          "min_person": 1,
+          "vegetarian": true,
+          "spicy": false,
+          "popular": false
+        }
+      ]
+    },
+
+    "SOGUK_ICECEKLER": {
+      "name": "Soğuk İçecekler",
+      "emoji": "🥤",
+      "description": "Ferahlatıcı içecekler",
+      "items": [
+        {
+          "id": "SI001",
+          "name": "Cold Brew Macchiato",
+          "price": 160.00,
+          "description": "Özel soğuk demleme kahvemizin yoğun lezzeti, yumuşacık süt köpüğü ve tatlı karamel dokunuşuyla buluşuyor.",
+          "image": "68ca891d06c0c_cold-brew-macchiato.jpg",
+          "min_person": 1,
+          "vegetarian": true,
+          "spicy": false,
+          "popular": true
+        },
+        {
+          "id": "SI002",
+          "name": "Cold Brew",
+          "price": 140.00,
+          "description": "Uzun demlenme süreciyle elde edilen Cold Brew'umuz, benzersiz yumuşaklığı ve yoğun aromasıyla sizi ferahlatacak.",
+          "image": "68ca88adc43ec_cold-brew.jpg",
+          "min_person": 1,
+          "vegetarian": true,
+          "spicy": false,
+          "popular": true
+        },
+        {
+          "id": "SI003",
+          "name": "Portakal Suyu",
+          "price": 135.00,
+          "description": "Taze sıkılmış portakal suyu.",
+          "image": "68c9471024a71_portakal-suyu.jpg",
+          "min_person": 1,
+          "vegetarian": true,
+          "spicy": false,
+          "popular": false
+        },
+        {
+          "id": "SI004",
+          "name": "Soğuk Nescafe",
+          "price": 130.00,
+          "description": "Soğuk kahve içeceği.",
+          "image": "68ca8738228a9_soguk-nescafe.jpg",
+          "min_person": 1,
+          "vegetarian": true,
+          "spicy": false,
+          "popular": false
+        },
+        {
+          "id": "SI005",
+          "name": "Churchill",
+          "price": 120.00,
+          "description": "Soğuk kahve bazlı içecek.",
+          "image": "68ca962fe68d7_chircill.jpg",
+          "min_person": 1,
+          "vegetarian": true,
+          "spicy": false,
+          "popular": false
+        },
+        {
+          "id": "SI006",
+          "name": "Şişe İçecekler",
+          "price": 95.00,
+          "description": "Çeşitli şişe içecekler.",
+          "image": "68c948a1ba99f_frutti-extra.jpg",
+          "min_person": 1,
+          "vegetarian": true,
+          "spicy": false,
+          "popular": false
+        },
+        {
+          "id": "SI007",
+          "name": "Ice Tea",
+          "price": 90.00,
+          "description": "Lipton Ice Tea.",
+          "image": "68c944b4d298f_ice-tea.jpg",
+          "min_person": 1,
+          "vegetarian": true,
+          "spicy": false,
+          "popular": false
+        },
+        {
+          "id": "SI008",
+          "name": "Kutu İçecek",
+          "price": 90.00,
+          "description": "Pepsi Cola, Yedigün, 7-up, Tropicana",
+          "image": "68c9443ce16d9_kola.jpg",
+          "min_person": 1,
+          "vegetarian": true,
+          "spicy": false,
+          "popular": false
+        },
+        {
+          "id": "SI009",
+          "name": "Uludağ Gazoz",
+          "price": 85.00,
+          "description": "Gazlı içecek.",
+          "image": "68c94690cd8d0_gazoz.jpg",
+          "min_person": 1,
+          "vegetarian": true,
+          "spicy": false,
+          "popular": false
+        },
+        {
+          "id": "SI010",
+          "name": "Şıra",
+          "price": 85.00,
+          "description": "Meyve parçacıklı kuru üzüm şırası.",
+          "image": "68c947bda5340_sira.jpg",
+          "min_person": 1,
+          "vegetarian": true,
+          "spicy": false,
+          "popular": false
+        },
+        {
+          "id": "SI011",
+          "name": "Limonata",
+          "price": 75.00,
+          "description": "Pınar Limonata.",
+          "image": "68c945dd542c2_limonata.jpg",
+          "min_person": 1,
+          "vegetarian": true,
+          "spicy": false,
+          "popular": false
+        },
+        {
+          "id": "SI012",
+          "name": "Şalgam",
+          "price": 75.00,
+          "description": "Acılı ve ferahlatıcı şalgam suyu.",
+          "image": "68c94754c3660_salgam.jpg",
+          "min_person": 1,
+          "vegetarian": true,
+          "spicy": true,
+          "popular": false
+        },
+        {
+          "id": "SI013",
+          "name": "Ayran",
+          "price": 70.00,
+          "description": "Eker ayran.",
+          "image": "68c9457581fd4_ayran.jpg",
+          "min_person": 1,
+          "vegetarian": true,
+          "spicy": false,
+          "popular": true
+        },
+        {
+          "id": "SI014",
+          "name": "Meyveli Soda",
+          "price": 65.00,
+          "description": "Karışık meyveli gazlı içecek.",
+          "image": "68c9453549b2b_maden-suyu.jpg",
+          "min_person": 1,
+          "vegetarian": true,
+          "spicy": false,
+          "popular": false
+        },
+        {
+          "id": "SI015",
+          "name": "Sade Soda",
+          "price": 60.00,
+          "description": "Doğal maden suyu.",
+          "image": "sade_soda.jpg",
+          "min_person": 1,
+          "vegetarian": true,
+          "spicy": false,
+          "popular": false
+        },
+        {
+          "id": "SI016",
+          "name": "Su (1,5 LT)",
+          "price": 50.00,
+          "description": "1,5 litre su.",
+          "image": "68ca96b830883_6326f5ca-6ea8-4889-b034-bbc9a72599e0.jpg",
+          "min_person": 1,
+          "vegetarian": true,
+          "spicy": false,
+          "popular": false
+        },
+        {
+          "id": "SI017",
+          "name": "Su (0,5 LT)",
+          "price": 20.00,
+          "description": "0,5 litre su.",
+          "image": "68b866eef1686_cam-su.jpg",
+          "min_person": 1,
+          "vegetarian": true,
+          "spicy": false,
+          "popular": false
+        }
+      ]
+    },
+
+    "SICAK_ICECEKLER": {
+      "name": "Sıcak İçecekler",
+      "emoji": "☕",
+      "description": "Sıcak kahve ve çay çeşitleri",
+      "items": [
+        {
+          "id": "SC001",
+          "name": "Demlik Çay (Büyük)",
+          "price": 500.00,
+          "description": "Ortalama 20 bardak çay.",
+          "image": "68ee6907167ff_buyuk-demlik.jpg",
+          "min_person": 10,
+          "vegetarian": true,
+          "spicy": false,
+          "popular": false
+        },
+        {
+          "id": "SC002",
+          "name": "Demlik Çay (Küçük)",
+          "price": 350.00,
+          "description": "Ortalama 10-13 bardak çay.",
+          "image": "68ee68fcb8a5e_kucuk-demlik.jpg",
+          "min_person": 5,
+          "vegetarian": true,
+          "spicy": false,
+          "popular": false
+        },
+        {
+          "id": "SC003",
+          "name": "Flat White",
+          "price": 160.00,
+          "description": "Sütlü kahve.",
+          "image": "68ca8e11d832c_flat-white.jpg",
+          "min_person": 1,
+          "vegetarian": true,
+          "spicy": false,
+          "popular": false
+        },
+        {
+          "id": "SC004",
+          "name": "Cortado",
+          "price": 160.00,
+          "description": "Yoğun aromalı espresso ve süt karışımı.",
+          "image": "68ca8db1deb00_cortado.jpg",
+          "min_person": 1,
+          "vegetarian": true,
+          "spicy": false,
+          "popular": false
+        },
+        {
+          "id": "SC005",
+          "name": "Espresso Macchiato",
+          "price": 160.00,
+          "description": "Kısa espresso üzerine süt.",
+          "image": "68ca97e350a5c_latte-macchiato.jpg",
+          "min_person": 1,
+          "vegetarian": true,
+          "spicy": false,
+          "popular": false
+        },
+        {
+          "id": "SC006",
+          "name": "Chai Tea Latte",
+          "price": 150.00,
+          "description": "Baharatlı sütlü çay kahve.",
+          "image": "",
+          "min_person": 1,
+          "vegetarian": true,
+          "spicy": true,
+          "popular": false
+        },
+        {
+          "id": "SC007",
+          "name": "Cappuccino",
+          "price": 150.00,
+          "description": "Sütlü köpüklü kahve.",
+          "image": "68b8641ebdba1_cappucino.jpg",
+          "min_person": 1,
+          "vegetarian": true,
+          "spicy": false,
+          "popular": true
+        },
+        {
+          "id": "SC008",
+          "name": "Latte Macchiato",
+          "price": 150.00,
+          "description": "Katman katman lezzet: Yoğun espresso, sıcak süt ve hafif süt köpüğünün mükemmel uyumu.",
+          "image": "68ca989b8e0ce_latte-macchiato.jpg",
+          "min_person": 1,
+          "vegetarian": true,
+          "spicy": false,
+          "popular": true
+        },
+        {
+          "id": "SC009",
+          "name": "Double Espresso",
+          "price": 150.00,
+          "description": "Çift espresso.",
+          "image": "68ca8d9b41e13_esspersso.jpg",
+          "min_person": 1,
+          "vegetarian": true,
+          "spicy": false,
+          "popular": false
+        },
+        {
+          "id": "SC010",
+          "name": "Double Sütlü Türk Kahvesi",
+          "price": 140.00,
+          "description": "Çift porsiyon sütlü Türk kahvesi.",
+          "image": "",
+          "min_person": 1,
+          "vegetarian": true,
+          "spicy": false,
+          "popular": false
+        },
+        {
+          "id": "SC011",
+          "name": "Americano",
+          "price": 135.00,
+          "description": "Sade espresso kahve.",
+          "image": "68ca8da55f1fa_americano.jpg",
+          "min_person": 1,
+          "vegetarian": true,
+          "spicy": false,
+          "popular": false
+        },
+        {
+          "id": "SC012",
+          "name": "Filtre Kahve",
+          "price": 125.00,
+          "description": "Filtre kahve.",
+          "image": "68b8640d749c4_filtre-kahve.jpg",
+          "min_person": 1,
+          "vegetarian": true,
+          "spicy": false,
+          "popular": false
+        },
+        {
+          "id": "SC013",
+          "name": "Kış Çayı",
+          "price": 125.00,
+          "description": "Kış aromalı bitkisel çay.",
+          "image": "68b863f4ea7e9_kis-cayi.jpg",
+          "min_person": 1,
+          "vegetarian": true,
+          "spicy": true,
+          "popular": false
+        },
+        {
+          "id": "SC014",
+          "name": "Double Türk Kahvesi",
+          "price": 120.00,
+          "description": "Çift porsiyon Türk kahvesi.",
+          "image": "",
+          "min_person": 1,
+          "vegetarian": true,
+          "spicy": false,
+          "popular": false
+        },
+        {
+          "id": "SC015",
+          "name": "Yeşil Çay",
+          "price": 120.00,
+          "description": "Yeşil çay.",
+          "image": "68b863d743fac_limonlu-yesil-cay.jpg",
+          "min_person": 1,
+          "vegetarian": true,
+          "spicy": false,
+          "popular": false
+        },
+        {
+          "id": "SC016",
+          "name": "Ada Çayı",
+          "price": 120.00,
+          "description": "Ada çayı bitkisel karışımı.",
+          "image": "68b863edb86ab_ada-cayi.jpg",
+          "min_person": 1,
+          "vegetarian": true,
+          "spicy": false,
+          "popular": false
+        },
+        {
+          "id": "SC017",
+          "name": "Espresso",
+          "price": 120.00,
+          "description": "Klasik espresso.",
+          "image": "68ca8d9b41e13_esspersso.jpg",
+          "min_person": 1,
+          "vegetarian": true,
+          "spicy": false,
+          "popular": true
+        },
+        {
+          "id": "SC018",
+          "name": "Kuşburnu Çayı",
+          "price": 110.00,
+          "description": "Kuşburnu aromalı sıcak çay.",
+          "image": "68ca8dece665e_kusbrnu.jpg",
+          "min_person": 1,
+          "vegetarian": true,
+          "spicy": false,
+          "popular": false
+        },
+        {
+          "id": "SC019",
+          "name": "Damla Sakızlı Türk Kahvesi",
+          "price": 95.00,
+          "description": "Damla sakızı aromalı Türk kahvesi.",
+          "image": "68c94bac4b132_damla-kahve.jpg",
+          "min_person": 1,
+          "vegetarian": true,
+          "spicy": false,
+          "popular": false
+        },
+        {
+          "id": "SC020",
+          "name": "Sütlü Türk Kahvesi",
+          "price": 90.00,
+          "description": "Süt ile hazırlanmış Türk kahvesi.",
+          "image": "68c94b2612eee_sutlu-turk.jpg",
+          "min_person": 1,
+          "vegetarian": true,
+          "spicy": false,
+          "popular": false
+        },
+        {
+          "id": "SC021",
+          "name": "Nescafe",
+          "price": 90.00,
+          "description": "Hazır Nescafe.",
+          "image": "68ca959c0068b_nescafe.jpg",
+          "min_person": 1,
+          "vegetarian": true,
+          "spicy": false,
+          "popular": false
+        },
+        {
+          "id": "SC022",
+          "name": "Türk Kahvesi",
+          "price": 80.00,
+          "description": "Klasik Türk kahvesi.",
+          "image": "68c94aa090313_turk-kahvesi.jpg",
+          "min_person": 1,
+          "vegetarian": true,
+          "spicy": false,
+          "popular": true
+        },
+        {
+          "id": "SC023",
+          "name": "Fincan Çay",
+          "price": 60.00,
+          "description": "Fincan ile servis edilen çay.",
+          "image": "68b863899b322_63d3ac7e8dac7_fincan-cay.jpg",
+          "min_person": 1,
+          "vegetarian": true,
+          "spicy": false,
+          "popular": false
+        },
+        {
+          "id": "SC024",
+          "name": "Çay",
+          "price": 40.00,
+          "description": "Sıcak çay.",
+          "image": "68c94a8fe3027_cay.jpg",
+          "min_person": 1,
+          "vegetarian": true,
+          "spicy": false,
+          "popular": true
+        },
+        {
+          "id": "SC025",
+          "name": "Cafe Creme",
+          "price": 0.00,
+          "description": "Cafe Creme",
+          "image": "68ca881a7acfb_cafe-creme.jpg",
+          "min_person": 1,
+          "vegetarian": true,
+          "spicy": false,
+          "popular": false
+        }
+      ]
+    }
+  },
+
+  "special_offers": [
+    {
+      "id": "OFFER001",
+      "name": "Hafta İçi Öğle Menüsü",
+      "description": "Ana yemek + İçecek + Tatlı",
+      "discount": 15,
+      "valid_days": ["Pazartesi", "Salı", "Çarşamba", "Perşembe", "Cuma"],
+      "valid_hours": "12:00-16:00",
+      "active": true
+    },
+    {
+      "id": "OFFER002",
+      "name": "Hafta Sonu Kahvaltı",
+      "description": "Serpme Kahvaltı %10 İndirimli",
+      "discount": 10,
+      "valid_days": ["Cumartesi", "Pazar"],
+      "valid_hours": "08:00-13:00",
+      "active": true
+    }
+  ],
+
+  "allergen_info": {
+    "gluten": "Buğday, arpa, çavdar içeren ürünler",
+    "dairy": "Süt ve süt ürünleri",
+    "eggs": "Yumurta içeren ürünler",
+    "nuts": "Fındık, fıstık, ceviz içeren ürünler",
+    "shellfish": "Kabuklu deniz ürünleri",
+    "soy": "Soya içeren ürünler"
+  }
+}

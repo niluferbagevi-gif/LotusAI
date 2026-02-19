@@ -1,0 +1,61 @@
+{
+  "name": "Lotus AI Asistan",
+  "short_name": "LotusAI",
+  "description": "Lotus Bağevi Akıllı Yönetim Sistemi - Çok ajanlı yapay zeka asistanı",
+  "version": "2.5.3",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0b141a",
+  "theme_color": "#202c33",
+  "orientation": "portrait-primary",
+  "scope": "/",
+  "lang": "tr-TR",
+  "dir": "ltr",
+  "categories": [
+    "productivity",
+    "business",
+    "utilities"
+  ],
+  "icons": [
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/4712/4712035.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/4712/4712035.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Atlas'a Sor",
+      "short_name": "Atlas",
+      "description": "Lider agent ile konuş",
+      "url": "/?agent=ATLAS",
+      "icons": [
+        {
+          "src": "https://cdn-icons-png.flaticon.com/512/4712/4712035.png",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "Gaya ile Konuş",
+      "short_name": "Gaya",
+      "description": "Yaratıcı sosyal medya uzmanı",
+      "url": "/?agent=GAYA",
+      "icons": [
+        {
+          "src": "https://cdn-icons-png.flaticon.com/512/4712/4712035.png",
+          "sizes": "192x192"
+        }
+      ]
+    }
+  ],
+  "related_applications": [],
+  "prefer_related_applications": false
+}
