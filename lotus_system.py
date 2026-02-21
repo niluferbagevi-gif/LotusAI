@@ -1,6 +1,6 @@
 """
 LotusAI Ana Sistem Motoru
-Sürüm: 2.5.6 (Fix: Microphone Error Handling)
+Sürüm: 2.5.6 (Fix: Microphone Error Handling & ALSA Suppression)
 Açıklama: Multi-agent AI sistemi, ses tanıma, güvenlik ve otomasyon
 """
 
@@ -324,7 +324,7 @@ class LotusSystem:
         """
         Mikrofonu yapılandır (Hata Korumalı)
         
-        GÜNCELLEME: 'generator didn't stop' hatasını önlemek için basitleştirildi.
+        GÜNCELLEME: ALSA hatalarını gizlemek için tekrar ignore_stderr içine alındı.
         
         Returns:
             Başarılı ise True
@@ -332,21 +332,20 @@ class LotusSystem:
         self.recognizer = sr.Recognizer()
         
         try:
-            # ignore_stderr kullanımı kaldırıldı veya try-except içine alındı
-            # Çünkü bazı sistemlerde (ALSA/Jack) hata fırlatıp çökebiliyor.
-            try:
-                self.microphone = sr.Microphone()
-            except OSError:
-                logger.warning("⚠️ Sistemde mikrofon bulunamadı (Input Device Error)")
-                RuntimeContext.set_voice_mode(False)
-                return False
+            with ignore_stderr():
+                try:
+                    self.microphone = sr.Microphone()
+                except OSError:
+                    logger.warning("⚠️ Sistemde mikrofon bulunamadı (Input Device Error)")
+                    RuntimeContext.set_voice_mode(False)
+                    return False
 
-            with self.microphone as source:
-                print(f"{Colors.YELLOW}🎤 Ortam sesi kalibre ediliyor...{Colors.ENDC}")
-                self.recognizer.adjust_for_ambient_noise(
-                    source,
-                    duration=SystemConfig.AMBIENT_NOISE_DURATION
-                )
+                with self.microphone as source:
+                    print(f"{Colors.YELLOW}🎤 Ortam sesi kalibre ediliyor...{Colors.ENDC}")
+                    self.recognizer.adjust_for_ambient_noise(
+                        source,
+                        duration=SystemConfig.AMBIENT_NOISE_DURATION
+                    )
             
             logger.info("✅ Mikrofon kalibre edildi")
             RuntimeContext.set_voice_mode(True)
@@ -559,11 +558,11 @@ class LotusSystem:
             
             # Sistem hazır
             print(f"\n{Colors.GREEN}{'═' * 70}{Colors.ENDC}")
-            print(f"{Colors.GREEN}{Colors.BOLD}  ✅ {Config.PROJECT_NAME.upper()} TÜM SİSTEMLER AKTİF{Colors.ENDC}")
+            print(f"{Colors.GREEN}{Colors.BOLD}  ✅ {Config.PROJECT_NAME.upper()} TÜM SİSTEMLER AKTİF{Colors.ENDC}")
             print(f"{Colors.GREEN}{'═' * 70}{Colors.ENDC}\n")
             
             if not mic_ready:
-                print(f"{Colors.YELLOW}  ⚠️  Mikrofon devre dışı - Sadece dashboard aktif{Colors.ENDC}\n")
+                print(f"{Colors.YELLOW}  ⚠️  Mikrofon devre dışı - Sadece dashboard aktif{Colors.ENDC}\n")
             
             # Debug: RuntimeContext durumu
             if Config.DEBUG_MODE:

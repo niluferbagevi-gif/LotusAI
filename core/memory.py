@@ -101,7 +101,6 @@ class OllamaEmbeddingFunction:
             f"Model: {self.model} | Endpoint: {self.endpoint}"
         )
 
-<<<<<<< HEAD
     def name(self) -> str:
         """
         ChromaDB'nin güncel sürümleri, özel (custom) embedding fonksiyonlarının
@@ -109,8 +108,6 @@ class OllamaEmbeddingFunction:
         """
         return f"OllamaEmbeddingFunction-{self.model}"
 
-=======
->>>>>>> 36ab00e567ed314bed4c8614344399275000636e
     def __call__(self, input: List[str]) -> List[List[float]]:
         """
         ChromaDB'nin beklediği arayüz.
@@ -244,11 +241,7 @@ class MemoryManager:
     
     Mimari:
     ┌─────────────────────────────────────────────┐
-<<<<<<< HEAD
     │          Memory Manager                     │
-=======
-    │         Memory Manager                      │
->>>>>>> 36ab00e567ed314bed4c8614344399275000636e
     ├─────────────────┬───────────────────────────┤
     │   SQLite        │   ChromaDB (Vector DB)    │
     │   (Fast Access) │   (Semantic Search)       │

@@ -1,10 +1,6 @@
 """
 LotusAI Merkezi Yapılandırma Modülü
-<<<<<<< HEAD
 Sürüm: 2.5.5 (Feature: Binance API & Instagram Config)
-=======
-Sürüm: 2.5.4
->>>>>>> 36ab00e567ed314bed4c8614344399275000636e
 Açıklama: Sistem ayarları, API anahtarları, donanım tespiti ve dizin yönetimi
 """
 
@@ -148,32 +144,21 @@ class Config:
     """
     LotusAI Merkezi Yapılandırma Sınıfı
 
-<<<<<<< HEAD
     Sürüm: 2.5.5
-=======
-    Sürüm: 2.5.4
->>>>>>> 36ab00e567ed314bed4c8614344399275000636e
     Özellikler:
     - Çoklu API anahtarı yönetimi
     - Ajan bazlı konfigürasyon
     - Otomatik donanım tespiti
     - Dizin yönetimi
     - CODING_MODEL desteği (Sidar özel)
-<<<<<<< HEAD
     - Binance ve Instagram API entegrasyonu
-=======
->>>>>>> 36ab00e567ed314bed4c8614344399275000636e
     """
 
     # ───────────────────────────────────────────────────────────
     # GENEL SİSTEM BİLGİLERİ
     # ───────────────────────────────────────────────────────────
     PROJECT_NAME: str = "LotusAI"
-<<<<<<< HEAD
     VERSION: str = "2.5.5"
-=======
-    VERSION: str = "2.5.4"
->>>>>>> 36ab00e567ed314bed4c8614344399275000636e
     DEBUG_MODE: bool = get_bool_env("DEBUG_MODE", False)
     WORK_DIR: Path = Path(os.getenv("WORK_DIR", BASE_DIR))
 
@@ -309,7 +294,6 @@ class Config:
         "SUPPORTED_CURRENCIES",
         ["TRY", "USD", "EUR", "GBP"]
     )
-<<<<<<< HEAD
     
     # Binance API Ayarları
     BINANCE_API_KEY: Optional[str] = os.getenv("BINANCE_API_KEY")
@@ -317,8 +301,6 @@ class Config:
 
     # Instagram Hedef Hesap
     INSTAGRAM_USERNAME: str = os.getenv("INSTAGRAM_USERNAME", "lotusbagevi")
-=======
->>>>>>> 36ab00e567ed314bed4c8614344399275000636e
 
     # Ses ayarları
     USE_XTTS: bool = get_bool_env("USE_XTTS", False)

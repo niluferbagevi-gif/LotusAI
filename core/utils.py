@@ -1,6 +1,6 @@
 """
 LotusAI Utility Functions
-Sürüm: 2.5.3
+Sürüm: 2.5.4 (ALSA Log Silencer Eklendi)
 Açıklama: Yardımcı fonksiyonlar, logging setup ve sistem konfigürasyonu
 
 Özellikler:
@@ -68,8 +68,9 @@ def setup_logging(
         # Daha kritik seviyede bastırılacaklar
         logging.getLogger("huggingface_hub").setLevel(logging.ERROR)
     
-    # OpenCV loglarını kapat
+    # OpenCV ve ALSA loglarını kapat
     _suppress_opencv_logs()
+    _suppress_alsa_logs()
     
     logger.debug("✅ Logging yapılandırması tamamlandı")
 
@@ -81,6 +82,29 @@ def _suppress_opencv_logs() -> None:
     
     # Ek OpenCV environment variables
     os.environ["OPENCV_FFMPEG_CAPTURE_OPTIONS"] = "rtsp_transport;udp"
+
+def _suppress_alsa_logs() -> None:
+    """ALSA (Linux Ses Çekirdeği) C-seviyesi loglarını kökünden susturur"""
+    try:
+        from ctypes import CFUNCTYPE, c_char_p, c_int, cdll
+        
+        # C hata yakalayıcı fonksiyon şablonu
+        ERROR_HANDLER_FUNC = CFUNCTYPE(None, c_char_p, c_int, c_char_p, c_int, c_char_p)
+        
+        # Boş (hiçbir şey yapmayan) Python fonksiyonu
+        def py_error_handler(filename, line, function, err, fmt):
+            pass
+            
+        c_error_handler = ERROR_HANDLER_FUNC(py_error_handler)
+        
+        # ALSA kütüphanesini bul ve hata yöneticimizi ata
+        asound = cdll.LoadLibrary('libasound.so.2')
+        asound.snd_lib_error_set_handler(c_error_handler)
+        
+        # Garbage collection'ı önlemek için fonksiyona bağla
+        _suppress_alsa_logs.c_error_handler = c_error_handler
+    except Exception as e:
+        logger.debug(f"ALSA log susturucu başlatılamadı (normaldir): {e}")
 
 
 # ═══════════════════════════════════════════════════════════════
@@ -640,5 +664,6 @@ def sanitize_string(text: str) -> str:
 # Otomatik environment setup (import sırasında)
 try:
     _suppress_opencv_logs()
+    _suppress_alsa_logs()
 except Exception as e:
-    logger.debug(f"OpenCV log suppression hatası: {e}")
+    logger.debug(f"Log suppression hatası: {e}")

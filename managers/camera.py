@@ -1,6 +1,5 @@
 """
 LotusAI Camera Manager
-<<<<<<< HEAD
 Sürüm: 2.5.5
 Açıklama: Kamera görüntü yönetimi (WSL/Linux + IR Sensör Uyumlu)
 
@@ -8,14 +7,6 @@ Açıklama: Kamera görüntü yönetimi (WSL/Linux + IR Sensör Uyumlu)
 - CUDA destekli görüntü işleme
 - Dinamik kamera portu tarama (V4L2 + MJPG Desteği)
 - IR / Boş Frame bypass
-=======
-Sürüm: 2.5.3
-Açıklama: Kamera görüntü yönetimi
-
-Özellikler:
-- CUDA destekli görüntü işleme
-- Dinamik kamera portu tarama
->>>>>>> 36ab00e567ed314bed4c8614344399275000636e
 - Snapshot kaydetme
 - Base64 dönüştürme
 - Görüntü ön işleme
@@ -26,10 +17,7 @@ import cv2
 import logging
 import threading
 import base64
-<<<<<<< HEAD
 import sys
-=======
->>>>>>> 36ab00e567ed314bed4c8614344399275000636e
 import numpy as np
 from pathlib import Path
 from datetime import datetime
@@ -108,31 +96,20 @@ class CameraManager:
     # Camera settings
     DEFAULT_RESOLUTION = (640, 480)
     DEFAULT_FPS = 30
-<<<<<<< HEAD
     WARMUP_FRAMES = 5  # WSL ve IR kameralar için ısınma süresi artırıldı
     JPEG_QUALITY = 80
     
     # Port scanning (WSL'de kamera video2 vb. olabildiği için genişletildi)
     MAX_PORT_SCAN = 10 
-=======
-    WARMUP_FRAMES = 2
-    JPEG_QUALITY = 80
-    
-    # Port scanning
-    MAX_PORT_SCAN = 5
->>>>>>> 36ab00e567ed314bed4c8614344399275000636e
     
     def __init__(self):
         """Camera manager başlatıcı"""
         # Thread safety
         self.lock = threading.RLock()
         
-<<<<<<< HEAD
         # WSL/Linux Uyumlu Backend Seçimi
         self.backend = cv2.CAP_V4L2 if sys.platform.startswith('linux') else cv2.CAP_ANY
 
-=======
->>>>>>> 36ab00e567ed314bed4c8614344399275000636e
         # Status
         self.status = CameraStatus.IDLE
         self._active_cap: Optional[cv2.VideoCapture] = None
@@ -200,22 +177,13 @@ class CameraManager:
             # Test default port
             if self._test_hardware(self.camera_index):
                 self._update_camera_info()
-<<<<<<< HEAD
                 logger.info(f"✅ Kamera hazır (Port: {self.camera_index}, Backend: {self.backend})")
-=======
-                logger.info(f"✅ Kamera hazır (Port: {self.camera_index})")
->>>>>>> 36ab00e567ed314bed4c8614344399275000636e
                 return True
             
             # Scan for active cameras
             logger.warning(
-<<<<<<< HEAD
                 f"⚠️ Kamera {self.camera_index} erişilemiyor veya boş/IR verisi dönüyor. "
                 "Diğer aktif portlar taranıyor..."
-=======
-                f"⚠️ Kamera {self.camera_index} erişilemiyor, "
-                "aktif portlar taranıyor..."
->>>>>>> 36ab00e567ed314bed4c8614344399275000636e
             )
             
             active_ports = self.list_cameras()
@@ -223,27 +191,16 @@ class CameraManager:
             if active_ports:
                 self.camera_index = active_ports[0]
                 self._update_camera_info()
-<<<<<<< HEAD
                 logger.info(f"✅ Gerçek Kamera bulundu (Port: {self.camera_index})")
                 return True
             
             logger.error("❌ Erişilebilir kamera bulunamadı! (Lütfen 'sudo chmod 777 /dev/video*' komutunu çalıştırdığınızdan emin olun)")
-=======
-                logger.info(f"✅ Kamera bulundu (Port: {self.camera_index})")
-                return True
-            
-            logger.error("❌ Erişilebilir kamera bulunamadı!")
->>>>>>> 36ab00e567ed314bed4c8614344399275000636e
             self.status = CameraStatus.DISCONNECTED
             return False
     
     def _test_hardware(self, index: int) -> bool:
         """
-<<<<<<< HEAD
         Kamera portu testi (IR ve boş çerçeve bypass)
-=======
-        Kamera portu testi
->>>>>>> 36ab00e567ed314bed4c8614344399275000636e
         
         Args:
             index: Kamera port index'i
@@ -252,16 +209,11 @@ class CameraManager:
             Çalışıyorsa True
         """
         try:
-<<<<<<< HEAD
             cap = cv2.VideoCapture(index, self.backend)
-=======
-            cap = cv2.VideoCapture(index, cv2.CAP_ANY)
->>>>>>> 36ab00e567ed314bed4c8614344399275000636e
             
             if not cap.isOpened():
                 return False
             
-<<<<<<< HEAD
             # WSL için MJPG formatını zorla
             cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*'MJPG'))
             cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
@@ -270,18 +222,12 @@ class CameraManager:
             for _ in range(self.WARMUP_FRAMES):
                 cap.grab()
             
-=======
->>>>>>> 36ab00e567ed314bed4c8614344399275000636e
             # Görüntü test
             ret, frame = cap.read()
             cap.release()
             
-<<<<<<< HEAD
             # Görüntü başarıyla alındıysa ve piksel matrisi içeriyorsa (IR metadata portlarını elemek için)
             return ret and frame is not None and frame.size > 0
-=======
-            return ret and frame is not None
->>>>>>> 36ab00e567ed314bed4c8614344399275000636e
         
         except Exception:
             return False
@@ -289,11 +235,7 @@ class CameraManager:
     def _update_camera_info(self) -> None:
         """Kamera bilgilerini güncelle"""
         try:
-<<<<<<< HEAD
             cap = cv2.VideoCapture(self.camera_index, self.backend)
-=======
-            cap = cv2.VideoCapture(self.camera_index)
->>>>>>> 36ab00e567ed314bed4c8614344399275000636e
             
             if cap.isOpened():
                 self.camera_info = CameraInfo(
@@ -319,25 +261,9 @@ class CameraManager:
         active_ports = []
         
         for i in range(self.MAX_PORT_SCAN):
-<<<<<<< HEAD
             if self._test_hardware(i):
                 active_ports.append(i)
                 
-=======
-            try:
-                cap = cv2.VideoCapture(i, cv2.CAP_ANY)
-                
-                if cap.isOpened():
-                    ret, frame = cap.read()
-                    if ret and frame is not None:
-                        active_ports.append(i)
-                
-                cap.release()
-            
-            except Exception:
-                continue
-        
->>>>>>> 36ab00e567ed314bed4c8614344399275000636e
         return active_ports
     
     # ───────────────────────────────────────────────────────────
@@ -368,23 +294,15 @@ class CameraManager:
             cap = None
             
             try:
-<<<<<<< HEAD
                 cap = cv2.VideoCapture(self.camera_index, self.backend)
-=======
-                cap = cv2.VideoCapture(self.camera_index)
->>>>>>> 36ab00e567ed314bed4c8614344399275000636e
                 
                 if not cap.isOpened():
                     logger.error(f"❌ Kamera bağlantısı koptu! ({self.camera_index})")
                     self.status = CameraStatus.ERROR
                     return None
                 
-<<<<<<< HEAD
                 # Settings & MJPG format for WSL
                 cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*'MJPG'))
-=======
-                # Settings
->>>>>>> 36ab00e567ed314bed4c8614344399275000636e
                 cap.set(cv2.CAP_PROP_FRAME_WIDTH, self.resolution[0])
                 cap.set(cv2.CAP_PROP_FRAME_HEIGHT, self.resolution[1])
                 cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
@@ -396,13 +314,8 @@ class CameraManager:
                 # Capture
                 ret, frame = cap.read()
                 
-<<<<<<< HEAD
                 if not ret or frame is None or frame.size == 0:
                     logger.warning("🚫 Boş görüntü veya zaman aşımı")
-=======
-                if not ret or frame is None:
-                    logger.warning("🚫 Boş görüntü")
->>>>>>> 36ab00e567ed314bed4c8614344399275000636e
                     frame = None
                 else:
                     # Flip horizontal
@@ -587,7 +500,6 @@ class CameraManager:
                 self._active_cap = None
             
             self.status = CameraStatus.IDLE
-<<<<<<< HEAD
             logger.info("🔌 Kamera servisi durduruldu")
 
 
@@ -1104,6 +1016,3 @@ class CameraManager:
 
 
 
-=======
-            logger.info("🔌 Kamera servisi durduruldu")
->>>>>>> 36ab00e567ed314bed4c8614344399275000636e

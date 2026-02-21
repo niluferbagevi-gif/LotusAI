@@ -649,7 +649,6 @@ class FinanceManager:
         with self.lock:
             self._cache.clear()
             self._cache_time.clear()
-<<<<<<< HEAD
             logger.debug("Market cache temizlendi")
 
 
@@ -1713,6 +1712,3 @@ class FinanceManager:
 #             logger.warning("⚠️ Binance bağlantısı hâlâ kurulamıyor, CoinGecko devrede")
 
 #         return self._binance_available
-=======
-            logger.debug("Market cache temizlendi")
->>>>>>> 36ab00e567ed314bed4c8614344399275000636e
