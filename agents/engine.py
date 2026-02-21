@@ -94,6 +94,11 @@ class EngineConfig:
         "refactor", "test", "fix", "bug", "exception", "import"
     ]
 
+    # Deterministik zaman/tarih sorgu anahtarları
+    TIME_QUERY_KEYWORDS = ["saat kaç", "saat", "time"]
+    DATE_QUERY_KEYWORDS = ["tarih", "bugün", "date"]
+    DAY_QUERY_KEYWORDS = ["hangi gün", "gün", "weekday"]
+
 
 # ═══════════════════════════════════════════════════════════════
 # YARDIMCI SINIFLAR
@@ -476,6 +481,45 @@ class AgentEngine:
             logger.error(f"JSON extraction hatası: {e}")
             return None
 
+    def _build_time_date_response(self, clean_input: str) -> Optional[str]:
+        """Saat/tarih/gün soruları için LLM'siz deterministik yanıt üret."""
+        normalized = clean_input.strip().lower()
+        if not normalized:
+            return None
+
+        is_time = any(k in normalized for k in EngineConfig.TIME_QUERY_KEYWORDS)
+        is_date = any(k in normalized for k in EngineConfig.DATE_QUERY_KEYWORDS)
+        is_day = any(k in normalized for k in EngineConfig.DAY_QUERY_KEYWORDS)
+
+        if not any([is_time, is_date, is_day]):
+            return None
+
+        now = datetime.now()
+        day_map = {
+            "Monday": "Pazartesi",
+            "Tuesday": "Salı",
+            "Wednesday": "Çarşamba",
+            "Thursday": "Perşembe",
+            "Friday": "Cuma",
+            "Saturday": "Cumartesi",
+            "Sunday": "Pazar",
+        }
+        day_name = day_map.get(now.strftime("%A"), now.strftime("%A"))
+
+        if is_time and not (is_date or is_day):
+            return f"Sistem saati şu anda {now.strftime('%H:%M')}."
+
+        if is_date and is_day:
+            return f"Bugün {now.strftime('%d.%m.%Y')}, {day_name}."
+
+        if is_date:
+            return f"Bugünün tarihi {now.strftime('%d.%m.%Y')}."
+
+        if is_day:
+            return f"Bugün günlerden {day_name}."
+
+        return None
+
     def _build_core_prompt(
         self,
         agent_name: str,
@@ -702,6 +746,14 @@ class AgentEngine:
                         f"destekli sistemleriyle aktif. Size nasıl yardımcı olabilirim?"
                     )
                 }
+
+        # 2.5 SAAT/TARİH SORGULARI (hafıza + LLM bypass)
+        time_date_response = self._build_time_date_response(clean_input)
+        if time_date_response:
+            return {
+                "agent": agent_name,
+                "content": time_date_response
+            }
 
         # 3. GÖRSEL/DOSYA İŞLEME
         gemini_file_part, op_result = await self._handle_visual_tasks(
