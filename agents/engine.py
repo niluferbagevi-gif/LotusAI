@@ -94,10 +94,22 @@ class EngineConfig:
         "refactor", "test", "fix", "bug", "exception", "import"
     ]
 
-    # Deterministik zaman/tarih sorgu anahtarları
-    TIME_QUERY_KEYWORDS = ["saat kaç", "saat", "time"]
-    DATE_QUERY_KEYWORDS = ["tarih", "bugün", "date"]
-    DAY_QUERY_KEYWORDS = ["hangi gün", "gün", "weekday"]
+    # Deterministik zaman/tarih intent regex kalıpları
+    # Not: Çok genel kelimeler ("gün", "saat", "bugün") tek başına tetikleyici değildir.
+    TIME_QUERY_PATTERNS = [
+        r"^(şu an )?saat( kaç| nedir)?\??$",
+        r"^time\??$"
+    ]
+    DATE_QUERY_PATTERNS = [
+        r"^(bugünün )?tarih(i)?( ne| nedir)?\??$",
+        r"^bugün tarih (ne|nedir)\??$",
+        r"^date\??$"
+    ]
+    DAY_QUERY_PATTERNS = [
+        r"^(bugün )?(günlerden )?hangi gün\??$",
+        r"^bugün günlerden ne\??$",
+        r"^weekday\??$"
+    ]
 
 
 # ═══════════════════════════════════════════════════════════════
@@ -487,9 +499,20 @@ class AgentEngine:
         if not normalized:
             return None
 
-        is_time = any(k in normalized for k in EngineConfig.TIME_QUERY_KEYWORDS)
-        is_date = any(k in normalized for k in EngineConfig.DATE_QUERY_KEYWORDS)
-        is_day = any(k in normalized for k in EngineConfig.DAY_QUERY_KEYWORDS)
+        # False positive azaltmak için pattern tabanlı intent tespiti
+        is_time = any(re.match(p, normalized) for p in EngineConfig.TIME_QUERY_PATTERNS)
+        is_date = any(re.match(p, normalized) for p in EngineConfig.DATE_QUERY_PATTERNS)
+        is_day = any(re.match(p, normalized) for p in EngineConfig.DAY_QUERY_PATTERNS)
+
+        # Kombin yanıt: "tarih ve gün" / "tarih gün"
+        is_date_day_combo = bool(
+            re.match(r"^(tarih( ve)? gün|tarih ve gün)\??$", normalized)
+            or re.match(r"^bugün tarih ve gün (ne|nedir)\??$", normalized)
+        )
+
+        if is_date_day_combo:
+            is_date = True
+            is_day = True
 
         if not any([is_time, is_date, is_day]):
             return None
