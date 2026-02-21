@@ -195,6 +195,15 @@ class MemoryConfig:
     MAX_HISTORY_RESULTS = 3
     MAX_DOCUMENT_RESULTS = 4
     MIN_MESSAGE_LENGTH_FOR_VECTOR = 15
+    MIN_QUERY_LENGTH_FOR_DEEP_SEARCH = 8
+
+    # Basit/deterministik sorgularda (örn. saat/tarih) gereksiz RAG aramalarını atla
+    FAST_PATH_QUERY_PATTERNS = [
+        r"^(şu an )?saat( kaç| nedir)?\??$",
+        r"^(bugünün )?tarih(i)?( ne| nedir)?\??$",
+        r"^(bugün )?(günlerden )?hangi gün\??$",
+        r"^(tarih( ve)? gün|tarih ve gün)\??$"
+    ]
     
     # Ingestion
     SUPPORTED_EXTENSIONS = ['.txt', '.pdf', '.md', '.docx']
@@ -774,11 +783,33 @@ class MemoryManager:
             except Exception as e:
                 logger.debug(f"Vektör kayıt hatası: {e}")
     
+    def _should_run_deep_search(self, query: str) -> bool:
+        """
+        Semantic history + document aramasının gerekli olup olmadığını belirle.
+
+        Amaç:
+        - Çok kısa veya deterministik sorgularda gereksiz RAG aramasını azaltmak.
+        """
+        normalized = (query or "").strip().lower()
+        if not normalized:
+            return False
+
+        if len(normalized) < MemoryConfig.MIN_QUERY_LENGTH_FOR_DEEP_SEARCH:
+            return False
+
+        for pattern in MemoryConfig.FAST_PATH_QUERY_PATTERNS:
+            if re.match(pattern, normalized):
+                return False
+
+        return True
+
     def load_context(
         self,
         agent: str,
         query: str,
-        max_items: Optional[int] = None
+        max_items: Optional[int] = None,
+        include_semantic: bool = True,
+        include_documents: bool = True
     ) -> Tuple[List[Dict[str, str]], str, str]:
         """
         Agent için bağlam yükle
@@ -787,21 +818,31 @@ class MemoryManager:
             agent: Agent adı
             query: Sorgu metni
             max_items: Maksimum mesaj sayısı
+            include_semantic: Uzun dönem semantik aramayı zorla aç/kapat
+            include_documents: Doküman aramasını zorla aç/kapat
         
         Returns:
             Tuple[son mesajlar, uzun dönem hafıza, ilgili dokümanlar]
         """
         max_items = max_items or MemoryConfig.MAX_RECENT_MESSAGES
-        
+
         # 1. Son mesajlar (SQLite)
         recent_messages = self._get_recent_messages(agent, max_items)
-        
+
+        deep_search_enabled = self._should_run_deep_search(query)
+
         # 2. Uzun dönem hafıza (ChromaDB - semantic search)
-        long_term_history = self._search_history(agent, query)
-        
+        if include_semantic and deep_search_enabled:
+            long_term_history = self._search_history(agent, query)
+        else:
+            long_term_history = ""
+
         # 3. İlgili dokümanlar (RAG)
-        relevant_docs = self._search_documents(query)
-        
+        if include_documents and deep_search_enabled:
+            relevant_docs = self._search_documents(query)
+        else:
+            relevant_docs = ""
+
         return recent_messages, long_term_history, relevant_docs
     
     def _get_recent_messages(
