@@ -155,21 +155,29 @@ class OllamaEmbeddingFunction:
 
         return embeddings
 
-    def embed_query(self, input: str) -> List[float]:
+    def embed_query(self, input) -> List[List[float]]:
         """
-        ChromaDB 0.4.x'in query işlemleri için tekli metin embedding.
-        collection.query(query_texts=[...]) çağrıldığında ChromaDB bu
-        metodu 'input' keyword arg ile arar; mevcut __call__ arayüzüne devreder.
-        """
-        return self([input])[0]
+        ChromaDB 0.4.x embed_query — __call__ arayüzüne devreder.
 
-    def embed_documents(self, input: List[str]) -> List[List[float]]:
+        ChromaDB bu metodu 'input' keyword arg ile çağırır; input bir str
+        ya da List[str] olabilir. List[List[float]] döndürür (embedding matrisi).
+        Yanlış sarmalama yapılmadan doğrudan __call__'a iletilir;
+        böylece Ollama'ya yanlış formatta istek gönderilmesi önlenir.
         """
-        ChromaDB 0.4.x'in document işlemleri için çoklu metin embedding.
-        collection.add(documents=[...]) çağrıldığında ChromaDB bu
-        metodu 'input' keyword arg ile arar; mevcut __call__ arayüzüne devreder.
+        if isinstance(input, list):
+            return self(input)
+        return self([input])
+
+    def embed_documents(self, input) -> List[List[float]]:
         """
-        return self(input)
+        ChromaDB 0.4.x embed_documents — __call__ arayüzüne devreder.
+
+        ChromaDB bu metodu 'input' keyword arg ile çağırır; input bir str
+        ya da List[str] olabilir. List[List[float]] döndürür (embedding matrisi).
+        """
+        if isinstance(input, list):
+            return self(input)
+        return self([input])
 
 
 # ═══════════════════════════════════════════════════════════════
