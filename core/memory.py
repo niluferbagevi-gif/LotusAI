@@ -2,7 +2,6 @@
 LotusAI Memory Management System
 Sürüm: 2.5.4
 Açıklama: Hybrid hafıza sistemi (SQLite + ChromaDB) ve RAG implementasyonu
-
 Özellikler:
 - Kısa süreli hafıza: SQLite (hızlı erişim)
 - Uzun süreli hafıza: ChromaDB (anlamsal arama)
@@ -11,7 +10,6 @@ Açıklama: Hybrid hafıza sistemi (SQLite + ChromaDB) ve RAG implementasyonu
 - Thread-safe operasyonlar
 - Ollama embedding desteği (nomic-embed-text) — AI_PROVIDER='ollama' için
 """
-
 import sqlite3
 import logging
 import threading
@@ -154,6 +152,28 @@ class OllamaEmbeddingFunction:
                 embeddings.append([0.0] * 768)
 
         return embeddings
+
+    # YENİ — DOĞRU
+    def embed_query(self, input) -> List[List[float]]:
+        """
+        ChromaDB 0.4.x'in query işlemleri için tekli metin embedding.
+        collection.query(query_texts=[...]) çağrıldığında ChromaDB bu
+        metodu arar; mevcut __call__ arayüzüne devreder.
+        """
+        if isinstance(input, list):
+            return self(input)
+        return self([input])
+
+    def embed_documents(self, input) -> List[List[float]]:
+        """
+        ChromaDB 0.4.x'in document işlemleri için çoklu metin embedding.
+        collection.add(documents=[...]) çağrıldığında ChromaDB bu
+        metodu arar; mevcut __call__ arayüzüne devreder.
+        """
+        if isinstance(input, list):
+            return self(input)
+        return self([input])
+
 
 
 # ═══════════════════════════════════════════════════════════════
@@ -1061,6 +1081,7 @@ class MemoryManager:
                 logger.warning(f"ChromaDB kapatma uyarısı: {e}")
         
         logger.info("✅ Memory Manager kapatıldı")
+
 
 # """
 # LotusAI Memory Management System

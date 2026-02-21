@@ -83,7 +83,7 @@ def main():
     success, remotes = run_command("git remote -v", show_output=False)
     if "origin" not in remotes:
         print(f"{Colors.WARNING}GitHub depo (repository) bağlantısı bulunamadı.{Colors.ENDC}")
-        repo_url = input(f"{Colors.OKBLUE}Lütfen GitHub Depo URL'sini girin\n(Örn: https://github.com/kullanici_adiniz/LotusAI.git): {Colors.ENDC}").strip()
+        repo_url = input(f"{Colors.OKBLUE}Lütfen GitHub Depo URL'sini girin\n(Örn: https://github.com/niluferbagevi-gif/LotusAI.git): {Colors.ENDC}").strip()
         
         if not repo_url:
             print(f"{Colors.FAIL}URL girilmedi, işlem iptal edildi.{Colors.ENDC}")
