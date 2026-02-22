@@ -227,32 +227,41 @@ class LauncherApp:
         """Donanım bilgi panelini oluştur"""
         frame = tk.Frame(self.root, bg=Theme.BG_MEDIUM, bd=1, relief="flat")
         frame.pack(fill="x", padx=40, pady=10)
-        
+
         # GPU durumu
         gpu_status = "AKTİF" if Config.USE_GPU else "PASİF"
         gpu_color = Theme.SUCCESS if Config.USE_GPU else Theme.WARNING
-        
+
         tk.Label(
             frame,
             text=f"Donanım Hızlandırma: {gpu_status}",
             font=("Segoe UI", 10, "bold"),
             bg=Theme.BG_MEDIUM,
             fg=gpu_color
-        ).pack(pady=10)
-        
+        ).pack(pady=(10, 2))
+
         # GPU detayı
         if Config.USE_GPU:
             gpu_text = Config.GPU_INFO
             if len(gpu_text) > 45:
                 gpu_text = gpu_text[:42] + "..."
-            
+
             tk.Label(
                 frame,
                 text=f"GPU: {gpu_text}",
                 font=("Segoe UI", 8, "italic"),
                 bg=Theme.BG_MEDIUM,
                 fg=Theme.TEXT_MUTED
-            ).pack(pady=(0, 10))
+            ).pack(pady=(0, 4))
+
+        # Heartbeat & Skill sistemi göstergesi
+        tk.Label(
+            frame,
+            text="💓 Proaktif Heartbeat + Skill Sistemi: AKTİF",
+            font=("Segoe UI", 9, "bold"),
+            bg=Theme.BG_MEDIUM,
+            fg=Theme.SUCCESS
+        ).pack(pady=(2, 6))
     
     def _create_mode_buttons(self) -> None:
         """Mod seçim butonlarını oluştur"""
@@ -400,15 +409,16 @@ class LauncherApp:
     def _print_banner(self, mode: str) -> None:
         """Terminal başlangıç banner'ı"""
         os.system('cls' if os.name == 'nt' else 'clear')
-        
+
         gpu_info = Config.GPU_INFO if Config.USE_GPU else "CPU (Standart)"
-        
+
         print(f"\n{Colors.OKGREEN}{'═' * 60}{Colors.ENDC}")
         print(f"{Colors.BOLD} 🚀 {Config.PROJECT_NAME} SİSTEMİ BAŞLATILIYOR{Colors.ENDC}")
         print(f"{Colors.OKGREEN}{'═' * 60}{Colors.ENDC}")
         print(f"{Colors.CYAN} 🛠  Sürüm    :{Colors.ENDC} {Config.VERSION}")
         print(f"{Colors.CYAN} 🧠 Mod      :{Colors.ENDC} {mode.upper()}")
         print(f"{Colors.CYAN} 💻 Donanım  :{Colors.ENDC} {gpu_info}")
+        print(f"{Colors.CYAN} 💓 Heartbeat:{Colors.ENDC} Proaktif Skill Motoru AKTİF")
         print(f"{Colors.OKGREEN}{'═' * 60}{Colors.ENDC}\n")
     
     def _on_closing(self) -> None:
