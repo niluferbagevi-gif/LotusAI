@@ -505,7 +505,9 @@ class AgentEngine:
         if status_code in ["ONAYLI", "SES_ONAYLI"]:
             bio_content = self._read_user_bio(user_obj)
 
-        time_str = datetime.now().strftime("%d.%m.%Y %H:%M")
+        _now = datetime.now()
+        _days_tr = ["Pazartesi", "Salı", "Çarşamba", "Perşembe", "Cuma", "Cumartesi", "Pazar"]
+        time_str = f"{_now.strftime('%d.%m.%Y %H:%M')} {_days_tr[_now.weekday()]}"
 
         team_list = [name for name in self.agents.keys() if name != agent_name]
         team_str = ", ".join(team_list) if team_list else "Yalnız"
@@ -726,7 +728,8 @@ class AgentEngine:
             history, _, _ = self.memory.load_context(
                 agent_name,
                 clean_input,
-                max_items=EngineConfig.CONTEXT_MAX_ITEMS
+                max_items=EngineConfig.CONTEXT_MAX_ITEMS,
+                include_semantic=False  # Semantik sonuçlar bu akışta kullanılmıyor
             )
         except Exception as e:
             logger.warning(f"Memory yükleme hatası: {e}")

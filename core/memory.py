@@ -782,30 +782,37 @@ class MemoryManager:
         self,
         agent: str,
         query: str,
-        max_items: Optional[int] = None
+        max_items: Optional[int] = None,
+        include_semantic: bool = True
     ) -> Tuple[List[Dict[str, str]], str, str]:
         """
         Agent için bağlam yükle
-        
+
         Args:
             agent: Agent adı
             query: Sorgu metni
             max_items: Maksimum mesaj sayısı
-        
+            include_semantic: ChromaDB semantik araması yapılsın mı (varsayılan True).
+                              Sadece son mesajlar gerekiyorsa False geçilerek
+                              gereksiz vektör araması atlanır.
+
         Returns:
             Tuple[son mesajlar, uzun dönem hafıza, ilgili dokümanlar]
         """
         max_items = max_items or MemoryConfig.MAX_RECENT_MESSAGES
-        
-        # 1. Son mesajlar (SQLite)
+
+        # 1. Son mesajlar (SQLite — her zaman)
         recent_messages = self._get_recent_messages(agent, max_items)
-        
+
+        if not include_semantic:
+            return recent_messages, "", ""
+
         # 2. Uzun dönem hafıza (ChromaDB - semantic search)
         long_term_history = self._search_history(agent, query)
-        
+
         # 3. İlgili dokümanlar (RAG)
         relevant_docs = self._search_documents(query)
-        
+
         return recent_messages, long_term_history, relevant_docs
     
     def _get_recent_messages(

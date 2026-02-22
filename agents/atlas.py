@@ -396,7 +396,9 @@ class AtlasAgent:
         overview = self.get_system_overview()
         
         # Format
-        now = datetime.now().strftime('%d.%m.%Y %H:%M')
+        _now_dt = datetime.now()
+        _days_tr = ["Pazartesi", "Salı", "Çarşamba", "Perşembe", "Cuma", "Cumartesi", "Pazar"]
+        now = f"{_now_dt.strftime('%d.%m.%Y %H:%M')} {_days_tr[_now_dt.weekday()]}"
         
         context_parts = [
             f"### {Config.PROJECT_NAME} LİDER RAPORU ###",
