@@ -122,14 +122,14 @@ class AccessLevel:
 
     # Radio buton etiketleri (sabit genişlik için boşluk hizalaması)
     OPTIONS = [
-        (READONLY, "Kisitli      (Sadece Bilgi Alma)"),
-        (SANDBOX,  "Sandbox      (Guvenli Dosya Yazma)"),
-        (FULL,     "Tam Erisim   (Terminal & Komut)"),
+        (READONLY, "Kısıtlı      (Sadece Bilgi Alma)"),
+        (SANDBOX,  "Sandbox      (Güvenli Dosya Yazma)"),
+        (FULL,     "Tam Erişim   (Terminal & Komut)"),
     ]
 
     # Terminal banner'ında gösterilecek açıklamalar
     DESCRIPTIONS = {
-        READONLY: "Ajanlar yalnizca okuma yapabilir",
+        READONLY: "Ajanlar yalnızca okuma yapabilir",
         SANDBOX:  "Ajanlar sandbox dizinine yazabilir",
         FULL:     "Ajanlar tam terminal yetkisine sahip",
     }
@@ -162,15 +162,47 @@ class Theme:
     TEXT_DIM   = "#3a5068"
     TEXT_WARN  = "#ddaa00"
 
-    # Fontlar
-    F_TITLE  = ("Courier New", 22, "bold")
-    F_SUB    = ("Courier New",  9)
-    F_LABEL  = ("Courier New", 10, "bold")
-    F_RADIO  = ("Courier New",  9)
-    F_BUTTON = ("Courier New", 10, "bold")
-    F_STATUS = ("Courier New",  8)
-    F_GPU    = ("Courier New",  9, "bold")
-    F_SMALL  = ("Courier New",  8)
+    # Font — başlangıç değerleri, apply_fonts() ile güncellenir
+    F_TITLE  = ("DejaVu Sans Mono", 22, "bold")
+    F_SUB    = ("DejaVu Sans Mono",  9)
+    F_LABEL  = ("DejaVu Sans Mono", 10, "bold")
+    F_RADIO  = ("DejaVu Sans Mono",  9)
+    F_BUTTON = ("DejaVu Sans Mono", 10, "bold")
+    F_STATUS = ("DejaVu Sans Mono",  8)
+    F_GPU    = ("DejaVu Sans Mono",  9, "bold")
+    F_SMALL  = ("DejaVu Sans Mono",  8)
+
+    @classmethod
+    def apply_fonts(cls) -> None:
+        """
+        Tk başlatıldıktan sonra Türkçe Unicode desteği olan
+        monospace fontu otomatik seç ve tüm font tanımlarını güncelle.
+        """
+        import tkinter.font as tkfont
+        available = set(tkfont.families())
+
+        # Türkçe (ı ş ğ ç ö ü) destekleyen monospace fontlar — öncelik sırası
+        candidates = [
+            "DejaVu Sans Mono",   # Ubuntu / Debian (varsayılan)
+            "Liberation Mono",    # RHEL / Fedora
+            "Noto Mono",          # Geniş Unicode desteği
+            "Ubuntu Mono",        # Ubuntu
+            "Consolas",           # Windows (iyi Unicode desteği)
+            "Courier New",        # Windows / macOS fallback
+            "Menlo",              # macOS
+            "Courier",            # Son çare
+        ]
+        mono = next((f for f in candidates if f in available), "TkFixedFont")
+
+        cls.F_TITLE  = (mono, 22, "bold")
+        cls.F_SUB    = (mono,  9)
+        cls.F_LABEL  = (mono, 10, "bold")
+        cls.F_RADIO  = (mono,  9)
+        cls.F_BUTTON = (mono, 10, "bold")
+        cls.F_STATUS = (mono,  8)
+        cls.F_GPU    = (mono,  9, "bold")
+        cls.F_SMALL  = (mono,  8)
+        logger.debug(f"Launcher fontu: {mono}")
 
 
 # ═══════════════════════════════════════════════════════════════
@@ -199,6 +231,7 @@ class LauncherApp:
 
     def __init__(self, root: tk.Tk) -> None:
         self.root = root
+        Theme.apply_fonts()   # Tk başladıktan sonra Türkçe uyumlu font seç
         self._access_var = tk.StringVar(value=AccessLevel.READONLY)
         self._setup_window()
         self._setup_ui()
@@ -241,7 +274,7 @@ class LauncherApp:
 
         tk.Label(
             self.root,
-            text="Multi-Agent AI Operating System",
+            text="Çok Ajanlı Yapay Zeka İşletim Sistemi",
             font=Theme.F_SUB,
             bg=Theme.BG_MAIN,
             fg=Theme.TEXT_GRAY,
@@ -259,7 +292,7 @@ class LauncherApp:
         # Frame başlığı
         tk.Label(
             inner,
-            text=" Sistem Erisim Seviyesi (OpenClaw) ",
+            text=" Sistem Erişim Seviyesi (OpenClaw) ",
             font=Theme.F_LABEL,
             bg=Theme.BG_FRAME,
             fg=Theme.TEXT_GRAY,
@@ -301,8 +334,8 @@ class LauncherApp:
 
         gpu_ok    = Config.USE_GPU
         hw_color  = Theme.TEXT_GREEN if gpu_ok else Theme.TEXT_WARN
-        hw_status = "AKTIF" if gpu_ok else "PASIF"
-        hw_text   = f"Donanim Hizlandirma ({hw_status}) : {'AKTiF' if gpu_ok else 'PASiF'}"
+        hw_status = "AKTİF" if gpu_ok else "PASİF"
+        hw_text   = f"Donanım Hızlandırma ({hw_status}) : {'AKTİF' if gpu_ok else 'PASİF'}"
 
         tk.Label(
             panel,
@@ -325,7 +358,7 @@ class LauncherApp:
         # Heartbeat göstergesi
         tk.Label(
             panel,
-            text="[+] Heartbeat & Skill Motoru : AKTiF",
+            text="[+] Heartbeat & Skill Motoru : AKTİF",
             font=Theme.F_SMALL,
             bg=Theme.BG_PANEL,
             fg=Theme.GREEN_DIM,
@@ -335,15 +368,15 @@ class LauncherApp:
     def _create_mode_section(self) -> None:
         tk.Label(
             self.root,
-            text="Calisma Modu Seciniz",
+            text="Çalışma Modu Seçiniz",
             font=Theme.F_LABEL,
             bg=Theme.BG_MAIN,
             fg=Theme.TEXT_GRAY,
         ).pack(pady=(2, 8))
 
         modes = [
-            ("► ONLINE MOD  (Gemini 1.5)", "online"),
-            ("► LOCAL MOD   (Ollama Llama3)", "ollama"),
+            ("►  ONLINE MOD  (Gemini 1.5)", "online"),
+            ("►  LOCAL MOD   (Ollama Llama3)", "ollama"),
         ]
         for text, mode in modes:
             self._create_mode_button(text, mode)
@@ -374,7 +407,7 @@ class LauncherApp:
     # ── 5. Durum Çubuğu ─────────────────────────────────────────
     def _create_status_bar(self) -> None:
         self.status_var = tk.StringVar(
-            value="Sistem hazir.  Lutfen erisim yetkisi secin."
+            value="Sistem hazır.  Lütfen erişim yetkisi seçin."
         )
         tk.Label(
             self.root,
@@ -445,15 +478,15 @@ class LauncherApp:
 
             if not self._check_ollama_service():
                 devam = messagebox.askyesno(
-                    "Servis Uyarisi",
-                    "Ollama servisi calismiyor!\n\n"
-                    "Local mod icin Ollama aktif olmalidir.\n"
+                    "Servis Uyarısı",
+                    "Ollama servisi çalışmıyor!\n\n"
+                    "Local mod için Ollama aktif olmalıdır.\n"
                     "Terminal'de: ollama serve\n\n"
                     "Yine de devam etmek istiyor musunuz?",
                     icon="warning",
                 )
                 if not devam:
-                    self.status_var.set("Baslatma iptal edildi.")
+                    self.status_var.set("Başlatma iptal edildi.")
                     logger.info("Kullanıcı başlatmayı iptal etti")
                     return
 
@@ -462,7 +495,7 @@ class LauncherApp:
     def _launch_system(self, mode: str, access: str) -> None:
         """Sistemi başlat"""
         self.status_var.set(
-            f"{mode.upper()} modu yukleniyor...  Yetki: {access.upper()}"
+            f"{mode.upper()} modu yükleniyor...  Yetki: {access.upper()}"
         )
         self.root.update()
 
@@ -493,13 +526,13 @@ class LauncherApp:
         access_desc = AccessLevel.DESCRIPTIONS.get(access, access)
 
         print(f"\n{Colors.OKGREEN}{'═' * 62}{Colors.ENDC}")
-        print(f"{Colors.BOLD}  LOTUSAI SISTEMI BASLATILIYOR{Colors.ENDC}")
+        print(f"{Colors.BOLD}  LotusAI SİSTEMİ BAŞLATILIYOR{Colors.ENDC}")
         print(f"{Colors.OKGREEN}{'═' * 62}{Colors.ENDC}")
-        print(f"{Colors.CYAN}  Surum     : {Colors.ENDC}{Config.VERSION}")
+        print(f"{Colors.CYAN}  Sürüm     : {Colors.ENDC}{Config.VERSION}")
         print(f"{Colors.CYAN}  Mod       : {Colors.ENDC}{mode.upper()}")
-        print(f"{Colors.CYAN}  Donanim   : {Colors.ENDC}{gpu_info}")
-        print(f"{Colors.CYAN}  Erisim    : {Colors.ENDC}{access.upper()}  ({access_desc})")
-        print(f"{Colors.CYAN}  Heartbeat : {Colors.ENDC}Proaktif Skill Motoru AKTiF")
+        print(f"{Colors.CYAN}  Donanım   : {Colors.ENDC}{gpu_info}")
+        print(f"{Colors.CYAN}  Erişim    : {Colors.ENDC}{access.upper()}  ({access_desc})")
+        print(f"{Colors.CYAN}  Heartbeat : {Colors.ENDC}Proaktif Skill Motoru AKTİF")
         print(f"{Colors.OKGREEN}{'═' * 62}{Colors.ENDC}\n")
 
     # ───────────────────────────────────────────────────────────
@@ -525,10 +558,10 @@ def main() -> None:
         print(f"{Colors.FAIL}{error_msg}{Colors.ENDC}")
 
         if start_lotus_system:
-            print(f"\n{Colors.WARNING}GUI hatasi! Terminal modunda baslatiliyor...{Colors.ENDC}")
+            print(f"\n{Colors.WARNING}GUI hatası! Terminal modunda başlatılıyor...{Colors.ENDC}")
             start_lotus_system("online")
         else:
-            print(f"\n{Colors.FAIL}Sistem baslatulamadi. {LOG_FILE} dosyasini kontrol edin.{Colors.ENDC}")
+            print(f"\n{Colors.FAIL}Sistem başlatılamadı. {LOG_FILE} dosyasını kontrol edin.{Colors.ENDC}")
             sys.exit(1)
 
 
