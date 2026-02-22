@@ -168,7 +168,8 @@ class AccountingManager:
         
         # Paths
         self.work_dir = Config.WORK_DIR
-        self.filename = self.work_dir / "lotus_kasa_defteri.csv"
+        self.lotus_dir = self.work_dir / "lotus"
+        self.filename = self.lotus_dir / "lotus_kasa_defteri.csv"
         self.backup_dir = self.work_dir / "backups" / "accounting"
         
         # Hardware
@@ -182,6 +183,7 @@ class AccountingManager:
         
         # Create directories
         try:
+            self.lotus_dir.mkdir(parents=True, exist_ok=True)
             self.backup_dir.mkdir(parents=True, exist_ok=True)
         except Exception as e:
             logger.error(f"Dizin oluşturma hatası: {e}")

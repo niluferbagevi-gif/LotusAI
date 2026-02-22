@@ -79,11 +79,13 @@ class OperationsManager:
         # Yollar
         default_work_dir = getattr(Config, "WORK_DIR", os.getcwd())
         self.work_dir = Path(default_work_dir)
-        self.db_file = self.work_dir / "lotus_operasyon.json"
+        self.lotus_dir = self.work_dir / "lotus"
+        self.db_file = self.lotus_dir / "lotus_operasyon.json"
         self.menu_file = self.work_dir / "lotus_menu.json"
         self.backup_dir = self.work_dir / "backups" / "operations"
-        
+
         try:
+            self.lotus_dir.mkdir(parents=True, exist_ok=True)
             self.backup_dir.mkdir(parents=True, exist_ok=True)
         except Exception as e:
             logger.error(f"Dizin oluşturma hatası: {e}")
