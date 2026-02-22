@@ -1,6 +1,6 @@
 """
 LotusAI Ana Sistem Motoru
-Sürüm: 2.5.7 (Eklendi: Erişim Seviyesi Desteği - OpenClaw uyumlu)
+Sürüm: 2.6.0 (Erişim seviyesi ve sürüm senkronu)
 Açıklama: Multi-agent AI sistemi, ses tanıma, güvenlik ve otomasyon
 """
 

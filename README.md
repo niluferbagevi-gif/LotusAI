@@ -242,7 +242,7 @@ LotusAI/
 
 #### 1. Depoyu Klonlayın
 ```bash
-git clone https://github.com/yourusername/LotusAI.git
+git clone https://github.com/niluferbagevi-gif/LotusAI.git
 cd LotusAI
 ```
 
@@ -544,17 +544,18 @@ Katkılarınızı bekliyoruz! Lütfen şu adımları izleyin:
 
 ### 📝 Changelog
 
-#### v2.5.3 (2026-02-10)
-- ✅ Full code refactoring
-- ✅ Type hints %100
-- ✅ Better error handling
-- ✅ Metrics tracking
-- ✅ Improved documentation
+#### v2.6.0 (2026-02-22)
+- ✅ Tekil sürüm kaynağına geçiş (Config.VERSION)
+- ✅ Launcher/Core/Server sürüm senkronizasyonu
+- ✅ Webhook doğrulamada `WEBHOOK_VERIFY_TOKEN` zorunlu hâle getirildi
+- ✅ README bağlantıları ve iletişim bilgileri güncellendi
 
-#### v2.5.2 (2026-01-15)
-- GPU acceleration improvements
-- New manager modules
-- Enhanced security
+#### v2.5.3 (2026-02-10)
+- Full code refactoring
+- Type hints %100
+- Better error handling
+- Metrics tracking
+- Improved documentation
 
 #### v2.0.0 (2025-12-01)
 - Multi-agent system
@@ -572,7 +573,7 @@ Bu proje [MIT License](LICENSE) altında lisanslanmıştır.
 ### 👨‍💻 Geliştirici
 
 **Halil Sevim**  
-📧 Email: your.email@example.com  
+📧 Email: halilsevim@hotmail.com  
 🌐 Website: https://yourwebsite.com  
 💼 LinkedIn: https://linkedin.com/in/yourprofile
 
@@ -595,7 +596,7 @@ Bu proje [MIT License](LICENSE) altında lisanslanmıştır.
 - 📧 Email: support@lotusai.com
 - 💬 Discord: [LotusAI Community](#)
 - 📖 Docs: [docs.lotusai.com](#)
-- 🐛 Issues: [GitHub Issues](https://github.com/yourusername/LotusAI/issues)
+- 🐛 Issues: [GitHub Issues](https://github.com/niluferbagevi-gif/LotusAI/issues)
 
 ---
 

@@ -1,6 +1,6 @@
 """
 LotusAI Merkezi Yapılandırma Modülü
-Sürüm: 2.5.6 (Eklendi: Erişim Seviyesi Desteği - OpenClaw uyumlu)
+Sürüm: 2.6.0 (Tekil sürüm kaynağına geçirildi)
 Açıklama: Sistem ayarları, API anahtarları, donanım tespiti, dizin yönetimi ve erişim seviyesi
 """
 
@@ -153,7 +153,7 @@ class Config:
     """
     LotusAI Merkezi Yapılandırma Sınıfı
 
-    Sürüm: 2.5.6
+    Sürüm: 2.6.0
     Özellikler:
     - Çoklu API anahtarı yönetimi
     - Ajan bazlı konfigürasyon
@@ -168,7 +168,7 @@ class Config:
     # GENEL SİSTEM BİLGİLERİ
     # ───────────────────────────────────────────────────────────
     PROJECT_NAME: str = "LotusAI"
-    VERSION: str = "2.5.6"
+    VERSION: str = "2.6.0"
     DEBUG_MODE: bool = get_bool_env("DEBUG_MODE", False)
     WORK_DIR: Path = Path(os.getenv("WORK_DIR", BASE_DIR))
 

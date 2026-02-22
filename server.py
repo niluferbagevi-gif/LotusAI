@@ -1,6 +1,6 @@
 """
 LotusAI Flask Server
-Sürüm: 2.5.4 (Eklendi: Erişim Seviyesi API)
+Sürüm: 2.6.0 (Erişim seviyesi API + güvenli webhook doğrulama)
 Açıklama: Web dashboard backend
 
 Endpoints:
@@ -248,10 +248,11 @@ def webhook_handler() -> Response:
 
 def _verify_webhook() -> Response:
     """Webhook verification"""
-    verify_token = os.getenv(
-        "WEBHOOK_VERIFY_TOKEN",
-        "lotus_ai_guvenlik_tokeni"
-    )
+    verify_token = os.getenv("WEBHOOK_VERIFY_TOKEN")
+
+    if not verify_token:
+        logger.error("❌ WEBHOOK_VERIFY_TOKEN tanımlı değil")
+        return "Server misconfigured: WEBHOOK_VERIFY_TOKEN missing", 500
     
     mode = request.args.get("hub.mode")
     token = request.args.get("hub.verify_token")

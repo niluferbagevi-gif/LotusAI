@@ -45,3 +45,7 @@ lotus_operasyon.json
 # Test & Geçici Dosyalar
 # ─────────────────────────────────────────────
 test/
+
+# Projeye özel
+chrome_user_data/
+requirements.txt
