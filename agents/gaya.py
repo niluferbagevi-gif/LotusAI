@@ -1,6 +1,6 @@
 """
 LotusAI Gaya Agent
-Sürüm: 2.5.3
+Sürüm: 2.5.4 (Eklendi: Erişim Seviyesi Desteği)
 Açıklama: Operasyon, finans ve iletişim uzmanı
 
 Sorumluluklar:
@@ -24,7 +24,7 @@ from decimal import Decimal, InvalidOperation
 # ═══════════════════════════════════════════════════════════════
 # CONFIG
 # ═══════════════════════════════════════════════════════════════
-from config import Config
+from config import Config, AccessLevel
 
 logger = logging.getLogger("LotusAI.Gaya")
 
@@ -165,7 +165,8 @@ class GayaAgent:
     def __init__(
         self,
         tools_dict: Dict[str, Any],
-        nlp_manager: Optional[Any] = None
+        nlp_manager: Optional[Any] = None,
+        access_level: str = "sandbox"
     ):
         """
         Gaya başlatıcı
@@ -173,9 +174,11 @@ class GayaAgent:
         Args:
             tools_dict: Engine'den gelen tool'lar
             nlp_manager: NLP yöneticisi (rezervasyon için)
+            access_level: Erişim seviyesi (restricted, sandbox, full)
         """
         self.tools = tools_dict
         self.nlp = nlp_manager
+        self.access_level = access_level
         self.agent_name = "GAYA"
         
         # Thread safety
@@ -192,7 +195,7 @@ class GayaAgent:
         
         logger.info(
             f"🌸 {self.agent_name} Operasyon modülü başlatıldı "
-            f"({self.device.upper()})"
+            f"({self.device.upper()}, Erişim: {self.access_level})"
         )
     
     def _optimize_subsystems(self) -> None:
@@ -244,6 +247,20 @@ class GayaAgent:
             available_tools = list(self.tools.keys())
             context_parts.append(
                 f"\n🔧 Mevcut Araçlar: {', '.join(available_tools)}"
+            )
+            
+            # Erişim seviyesi bilgisi
+            access_display = {
+                AccessLevel.RESTRICTED: "🔒 Kısıtlı (Sadece bilgi)",
+                AccessLevel.SANDBOX: "📦 Sandbox (Güvenli işlemler)",
+                AccessLevel.FULL: "⚡ Tam Erişim"
+            }.get(self.access_level, self.access_level)
+            
+            context_parts.append(
+                f"\n🔐 ERİŞİM SEVİYEN: {access_display}\n"
+                "Kısıtlı modda işlem yapamazsın; sadece bilgi verirsin.\n"
+                "Sandbox modunda güvenli işlemlere (örneğin, yeni rezervasyon) izin verilir.\n"
+                "Tam modda tüm yetkiler açıktır."
             )
         
         return "\n".join(context_parts)
@@ -309,6 +326,14 @@ class GayaAgent:
                 error="No data"
             )
         
+        # Erişim seviyesi kontrolü: Kısıtlı modda fatura işleme yapılamaz
+        if self.access_level == AccessLevel.RESTRICTED:
+            return ProcessingResult(
+                success=False,
+                message="🔒 Kısıtlı erişim modunda fatura işlenemez. Sadece bilgi alabilirsiniz.",
+                error="Access restricted"
+            )
+        
         with self.lock:
             try:
                 # Parse invoice
@@ -321,11 +346,16 @@ class GayaAgent:
                 
                 # 1. Stok güncelleme
                 if urunler and self._has_tool('operations'):
+                    # Stok güncelleme işlemi: sandbox veya full'de yapılabilir
+                    # (kısıtlı'da zaten yukarıda elendik)
                     stock_result = self._update_stock(urunler)
                     results.append(stock_result)
+                elif urunler:
+                    results.append("⚠️ Stok güncelleme yapılamadı (operations tool yok)")
                 
                 # 2. Muhasebe kaydı
                 if tutar > 0:
+                    # Muhasebe kaydı da sandbox/full'da yapılır
                     accounting_result = self._record_accounting(firma, tutar)
                     results.append(accounting_result)
                 else:
@@ -468,6 +498,14 @@ class GayaAgent:
         Returns:
             ProcessingResult veya None
         """
+        # Erişim seviyesi kontrolü: Kısıtlı modda rezervasyon yapılamaz
+        if self.access_level == AccessLevel.RESTRICTED:
+            return ProcessingResult(
+                success=False,
+                message="🔒 Kısıtlı erişim modunda rezervasyon işlemi yapılamaz. Sadece bilgi alabilirsiniz.",
+                error="Access restricted"
+            )
+        
         if not self.nlp:
             return ProcessingResult(
                 success=False,
@@ -611,6 +649,7 @@ class GayaAgent:
         return {
             "agent_name": self.agent_name,
             "device": self.device,
+            "access_level": self.access_level,
             "invoices_processed": self.metrics.invoices_processed,
             "reservations_handled": self.metrics.reservations_handled,
             "social_interactions": self.metrics.social_interactions,

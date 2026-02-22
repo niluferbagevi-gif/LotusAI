@@ -1,6 +1,6 @@
 """
 LotusAI Ses Sistemi (Audio System)
-Sürüm: 2.5.3
+Sürüm: 2.5.4 (Eklendi: Erişim Seviyesi Kontrolü)
 Açıklama: Text-to-Speech (TTS) ve ses çalma yönetimi
 """
 
@@ -19,7 +19,7 @@ from threading import Lock
 # ═══════════════════════════════════════════════════════════════
 # CORE IMPORTS
 # ═══════════════════════════════════════════════════════════════
-from config import Config
+from config import Config, AccessLevel
 from core.utils import ignore_stderr
 from core.system_state import SystemState
 from agents.definitions import AGENTS_CONFIG
@@ -108,6 +108,7 @@ class AudioSystem:
     - GPU desteği
     - Kesme tuşları (Space/Esc)
     - State management entegrasyonu
+    - Erişim seviyesi kontrolü (kısıtlı modda ses çalma devre dışı)
     """
     
     _instance: Optional['AudioSystem'] = None
@@ -387,6 +388,11 @@ class AudioSystem:
             agent_name: Konuşan agent
             state_manager: State manager (opsiyonel)
         """
+        # Erişim seviyesi kontrolü: Kısıtlı modda ses çalma devre dışı
+        if Config.ACCESS_LEVEL == AccessLevel.RESTRICTED:
+            logger.debug("Kısıtlı modda ses çalma atlandı")
+            return
+        
         if not text:
             return
         

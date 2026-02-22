@@ -1,6 +1,6 @@
 """
 LotusAI Poyraz Agent
-Sürüm: 2.5.3
+Sürüm: 2.5.4 (Eklendi: Erişim Seviyesi Desteği)
 Açıklama: Medya ve gündem uzmanı
 
 Sorumluluklar:
@@ -22,7 +22,7 @@ from datetime import datetime
 # ═══════════════════════════════════════════════════════════════
 # CONFIG
 # ═══════════════════════════════════════════════════════════════
-from config import Config
+from config import Config, AccessLevel
 
 logger = logging.getLogger("LotusAI.Poyraz")
 
@@ -161,7 +161,8 @@ class PoyrazAgent:
     def __init__(
         self,
         nlp_manager: Optional[Any] = None,
-        tools_dict: Optional[Dict[str, Any]] = None
+        tools_dict: Optional[Dict[str, Any]] = None,
+        access_level: str = "sandbox"
     ):
         """
         Poyraz başlatıcı
@@ -169,10 +170,12 @@ class PoyrazAgent:
         Args:
             nlp_manager: NLP yöneticisi (opsiyonel)
             tools_dict: Engine'den gelen tool'lar
+            access_level: Erişim seviyesi (restricted, sandbox, full)
         """
         self.nlp = nlp_manager
         self.tools = tools_dict or {}
         self.agent_name = "POYRAZ"
+        self.access_level = access_level
         
         # Thread safety
         self.lock = threading.RLock()
@@ -193,13 +196,13 @@ class PoyrazAgent:
         if self.gpu_active and HAS_TORCH and DEVICE_TYPE == "cuda":
             try:
                 gpu_name = torch.cuda.get_device_name(0)
-                logger.info(f"🌬️ {self.agent_name}: GPU aktif ({gpu_name})")
+                logger.info(f"🌬️ {self.agent_name}: GPU aktif ({gpu_name}, Erişim: {self.access_level})")
             except Exception:
-                logger.info(f"🌬️ {self.agent_name}: GPU aktif")
+                logger.info(f"🌬️ {self.agent_name}: GPU aktif, Erişim: {self.access_level}")
         elif self.gpu_active:
-            logger.info(f"🌬️ {self.agent_name}: {DEVICE_TYPE.upper()} aktif")
+            logger.info(f"🌬️ {self.agent_name}: {DEVICE_TYPE.upper()} aktif, Erişim: {self.access_level}")
         else:
-            logger.info(f"🌬️ {self.agent_name}: CPU modunda")
+            logger.info(f"🌬️ {self.agent_name}: CPU modunda, Erişim: {self.access_level}")
         
         logger.info(f"🌬️ {self.agent_name} Gündem takip modülü başlatıldı")
     
@@ -221,6 +224,14 @@ class PoyrazAgent:
             if 'media' not in self.tools:
                 context_parts.append("ℹ️ Medya modülü yüklü değil")
                 return "\n".join(context_parts)
+            
+            # Erişim seviyesi bilgisi
+            access_display = {
+                AccessLevel.RESTRICTED: "🔒 Kısıtlı",
+                AccessLevel.SANDBOX: "📦 Sandbox",
+                AccessLevel.FULL: "⚡ Tam Erişim"
+            }.get(self.access_level, self.access_level)
+            context_parts.append(f"🔐 ERİŞİM SEVİYESİ: {access_display}")
             
             media_tool = self.tools['media']
             
@@ -568,6 +579,12 @@ class PoyrazAgent:
         Returns:
             System prompt
         """
+        access_display = {
+            AccessLevel.RESTRICTED: "🔒 Kısıtlı (Sadece bilgi erişimi)",
+            AccessLevel.SANDBOX: "📦 Sandbox (Güvenli dosya işlemleri)",
+            AccessLevel.FULL: "⚡ Tam Erişim (Tüm yetkiler)"
+        }.get(self.access_level, self.access_level)
+        
         return (
             f"Sen {Config.PROJECT_NAME} sisteminin enerjik, meraklı ve "
             f"her şeyden haberdar olan Medya Uzmanı POYRAZ'sın.\n\n"
@@ -584,6 +601,12 @@ class PoyrazAgent:
             "- Sosyal medya trendlerini izle\n"
             "- Önemli haberleri Halil Bey'e bildir\n"
             "- Fırsatları tespit et\n\n"
+            
+            f"ERİŞİM SEVİYEN: {access_display}\n"
+            "Bu seviye, hangi işlemleri yapabileceğini belirler.\n"
+            "Kısıtlı modda sadece bilgi verebilir, içerik üretemezsin.\n"
+            "Sandbox modunda içerik üretebilir, ancak paylaşım yapamazsın.\n"
+            "Tam modda tüm yetkiler açıktır.\n\n"
             
             "GÖREV:\n"
             "- Sadece bilgi verme\n"
@@ -639,7 +662,7 @@ class PoyrazAgent:
             else "🔴 Kısıtlı (Medya Modülü Yok)"
         )
         
-        return f"Poyraz: {status} | Donanım: {gpu_status}"
+        return f"Poyraz: {status} | Donanım: {gpu_status} | Erişim: {self.access_level}"
     
     def get_metrics(self) -> Dict[str, Any]:
         """
@@ -651,6 +674,7 @@ class PoyrazAgent:
         return {
             "agent_name": self.agent_name,
             "device": self.device_type,
+            "access_level": self.access_level,
             "news_searches": self.metrics.news_searches,
             "sentiment_analyses": self.metrics.sentiment_analyses,
             "trend_checks": self.metrics.trend_checks,

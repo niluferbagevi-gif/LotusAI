@@ -1,6 +1,6 @@
 """
 LotusAI Flask Server
-Sürüm: 2.5.3
+Sürüm: 2.5.4 (Eklendi: Erişim Seviyesi API)
 Açıklama: Web dashboard backend
 
 Endpoints:
@@ -8,6 +8,7 @@ Endpoints:
 - /api/chat : Mesaj gönderme
 - /api/chat_history : Geçmiş sohbet
 - /api/toggle_voice : Ses modu
+- /api/config : Sistem yapılandırması (erişim seviyesi vb.)
 - /webhook : Meta webhook
 """
 
@@ -23,7 +24,7 @@ from werkzeug.utils import secure_filename
 # ═══════════════════════════════════════════════════════════════
 # IMPORTS
 # ═══════════════════════════════════════════════════════════════
-from config import Config
+from config import Config, AccessLevel
 from core.runtime import RuntimeContext
 from core.audio import play_voice
 from agents.definitions import AGENTS_CONFIG
@@ -61,6 +62,40 @@ def index() -> str:
 # ═══════════════════════════════════════════════════════════════
 # ROUTES - API
 # ═══════════════════════════════════════════════════════════════
+@app.route('/api/config', methods=['GET'])
+def get_config() -> Response:
+    """
+    Sistem yapılandırmasını döndürür (erişim seviyesi, proje adı, versiyon vb.)
+    
+    Returns:
+        JSON response
+    """
+    try:
+        # Erişim seviyesini anlamlı metne çevir
+        access_display = {
+            AccessLevel.RESTRICTED: "🔒 Kısıtlı",
+            AccessLevel.SANDBOX: "📦 Sandbox",
+            AccessLevel.FULL: "⚡ Tam Erişim"
+        }.get(Config.ACCESS_LEVEL, Config.ACCESS_LEVEL)
+        
+        return jsonify({
+            "status": "success",
+            "config": {
+                "project_name": Config.PROJECT_NAME,
+                "version": Config.VERSION,
+                "access_level": Config.ACCESS_LEVEL,
+                "access_display": access_display,
+                "ai_provider": Config.AI_PROVIDER.upper(),
+                "gpu_enabled": Config.USE_GPU,
+                "gpu_info": Config.GPU_INFO,
+                "debug_mode": Config.DEBUG_MODE
+            }
+        })
+    except Exception as e:
+        logger.error(f"Config API hatası: {e}")
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
 @app.route('/api/toggle_voice', methods=['POST'])
 def toggle_voice_api() -> Response:
     """

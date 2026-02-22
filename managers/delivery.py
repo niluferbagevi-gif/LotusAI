@@ -1,6 +1,6 @@
 """
 LotusAI Delivery Manager
-Sürüm: 2.5.4 (Hotfix: Selenium Flag Fix)
+Sürüm: 2.5.5 (Eklendi: Erişim Seviyesi Desteği)
 Açıklama: Paket servis entegrasyon yönetimi
 
 Özellikler:
@@ -11,6 +11,7 @@ Açıklama: Paket servis entegrasyon yönetimi
 - Akıllı filtreleme
 - Ekran görüntüsü
 - Thread-safe operasyonlar
+- Erişim seviyesi kontrolleri (restricted/sandbox/full)
 """
 
 import logging
@@ -25,7 +26,7 @@ from enum import Enum
 # ═══════════════════════════════════════════════════════════════
 # CONFIG
 # ═══════════════════════════════════════════════════════════════
-from config import Config
+from config import Config, AccessLevel
 
 logger = logging.getLogger("LotusAI.Delivery")
 
@@ -163,8 +164,15 @@ class DeliveryManager:
     # Check delay
     CHECK_DELAY = 0.3
     
-    def __init__(self):
-        """Delivery manager başlatıcı"""
+    def __init__(self, access_level: str = "sandbox"):
+        """
+        Delivery manager başlatıcı
+        
+        Args:
+            access_level: Erişim seviyesi (restricted, sandbox, full)
+        """
+        self.access_level = access_level
+        
         # Selenium
         self.driver: Optional[webdriver.Chrome] = None
         self.status = ServiceStatus.INACTIVE
@@ -190,6 +198,8 @@ class DeliveryManager:
         
         # Metrics
         self.metrics = DeliveryMetrics()
+        
+        logger.info(f"🛵 DeliveryManager başlatıldı (Erişim: {self.access_level})")
     
     # ───────────────────────────────────────────────────────────
     # SERVICE CONTROL
@@ -205,6 +215,11 @@ class DeliveryManager:
         Returns:
             Başarılı ise True
         """
+        # Erişim kontrolü: Kısıtlı modda servis başlatılamaz
+        if self.access_level == AccessLevel.RESTRICTED:
+            logger.warning("🚫 Kısıtlı modda Delivery servisi başlatılamaz")
+            return False
+        
         if not SELENIUM_AVAILABLE:
             logger.error("Selenium mevcut değil")
             return False
@@ -573,6 +588,7 @@ class DeliveryManager:
             Metrik dictionary
         """
         return {
+            "access_level": self.access_level,
             "status": self.status.value,
             "is_selenium_active": self.is_selenium_active,  # [FIX] Metriklere eklendi
             "alerts_generated": self.metrics.alerts_generated,

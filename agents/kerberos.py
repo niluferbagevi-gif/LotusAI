@@ -1,6 +1,6 @@
 """
 LotusAI Kerberos Agent
-Sürüm: 2.5.3
+Sürüm: 2.5.4 (Eklendi: Erişim Seviyesi Desteği)
 Açıklama: Güvenlik şefi ve mali denetçi
 
 Sorumluluklar:
@@ -23,7 +23,7 @@ from decimal import Decimal
 # ═══════════════════════════════════════════════════════════════
 # CONFIG
 # ═══════════════════════════════════════════════════════════════
-from config import Config
+from config import Config, AccessLevel
 
 logger = logging.getLogger("LotusAI.Kerberos")
 
@@ -174,14 +174,16 @@ class KerberosAgent:
     # Working hours
     WORKING_HOURS = (8, 22)  # 08:00 - 22:00
     
-    def __init__(self, tools_dict: Dict[str, Any]):
+    def __init__(self, tools_dict: Dict[str, Any], access_level: str = "sandbox"):
         """
         Kerberos başlatıcı
         
         Args:
             tools_dict: Engine'den gelen tool'lar
+            access_level: Erişim seviyesi (restricted, sandbox, full)
         """
         self.tools = tools_dict
+        self.access_level = access_level
         self.agent_name = "KERBEROS"
         
         # Thread safety
@@ -209,7 +211,7 @@ class KerberosAgent:
         
         logger.info(
             f"🛡️ {self.agent_name} Güvenlik modülü başlatıldı "
-            f"({self.device_type.upper()})"
+            f"({self.device_type.upper()}, Erişim: {self.access_level})"
         )
         
         if self.gpu_count > 0:
@@ -676,6 +678,7 @@ class KerberosAgent:
         return {
             "agent_name": self.agent_name,
             "device": self.device_type,
+            "access_level": self.access_level,
             "audits_performed": self.metrics.audits_performed,
             "audits_approved": self.metrics.audits_approved,
             "audits_rejected": self.metrics.audits_rejected,

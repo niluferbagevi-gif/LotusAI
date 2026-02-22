@@ -1,13 +1,13 @@
 """
 LotusAI Camera Manager
-Sürüm: 2.5.5
+Sürüm: 2.5.6 (Eklendi: Erişim Seviyesi Desteği)
 Açıklama: Kamera görüntü yönetimi (WSL/Linux + IR Sensör Uyumlu)
 
 Özellikler:
 - CUDA destekli görüntü işleme
 - Dinamik kamera portu tarama (V4L2 + MJPG Desteği)
 - IR / Boş Frame bypass
-- Snapshot kaydetme
+- Snapshot kaydetme (erişim seviyesine göre kısıtlı)
 - Base64 dönüştürme
 - Görüntü ön işleme
 - Thread-safe operasyonlar
@@ -28,7 +28,7 @@ from enum import Enum
 # ═══════════════════════════════════════════════════════════════
 # CONFIG
 # ═══════════════════════════════════════════════════════════════
-from config import Config
+from config import Config, AccessLevel
 
 logger = logging.getLogger("LotusAI.Camera")
 
@@ -85,10 +85,11 @@ class CameraManager:
     Yetenekler:
     - CUDA destekli görüntü işleme
     - Dinamik port tarama
-    - Snapshot kaydetme
+    - Snapshot kaydetme (sandbox ve full modda)
     - Base64 dönüştürme
     - Görüntü ön işleme (netleştirme)
     - Thread-safe operasyonlar
+    - Erişim seviyesi kontrolleri
     
     OpenCV CUDA kullanarak GPU üzerinde görüntü işleme yapabilir.
     """
@@ -102,8 +103,15 @@ class CameraManager:
     # Port scanning (WSL'de kamera video2 vb. olabildiği için genişletildi)
     MAX_PORT_SCAN = 10 
     
-    def __init__(self):
-        """Camera manager başlatıcı"""
+    def __init__(self, access_level: str = "sandbox"):
+        """
+        Camera manager başlatıcı
+        
+        Args:
+            access_level: Erişim seviyesi (restricted, sandbox, full)
+        """
+        self.access_level = access_level
+        
         # Thread safety
         self.lock = threading.RLock()
         
@@ -276,7 +284,7 @@ class CameraManager:
         preprocess: bool = False
     ) -> Optional[Union[np.ndarray, str]]:
         """
-        Kameradan frame yakala
+        Kameradan frame yakala (Tüm erişim seviyelerine açık)
         
         Args:
             raw: True ise numpy array, False ise base64
@@ -413,7 +421,7 @@ class CameraManager:
     
     def save_snapshot(self, prefix: str = "guvenlik") -> Optional[str]:
         """
-        Snapshot kaydet
+        Snapshot kaydet (Sandbox veya full modda)
         
         Args:
             prefix: Dosya adı öneki
@@ -421,6 +429,11 @@ class CameraManager:
         Returns:
             Dosya yolu veya None
         """
+        # İzin kontrolü
+        if self.access_level == AccessLevel.RESTRICTED:
+            logger.warning("🚫 Kısıtlı modda snapshot kaydedilemez")
+            return None
+        
         frame = self.get_frame(raw=True, preprocess=True)
         
         if frame is None:
@@ -471,12 +484,13 @@ class CameraManager:
             "cuda_operations": self.metrics.cuda_operations,
             "cuda_available": self.cuda_available,
             "status": self.status.value,
-            "camera_index": self.camera_index
+            "camera_index": self.camera_index,
+            "access_level": self.access_level
         }
     
     def set_resolution(self, width: int, height: int) -> bool:
         """
-        Çözünürlük ayarla
+        Çözünürlük ayarla (Tüm erişim seviyelerine açık)
         
         Args:
             width: Genişlik
@@ -493,7 +507,14 @@ class CameraManager:
             return False
     
     def stop(self) -> None:
-        """Kamera servisini durdur"""
+        """
+        Kamera servisini durdur (Sadece full modda)
+        """
+        # İzin kontrolü: Kamera durdurma sistem kaynağına müdahale, full mod gerekli
+        if self.access_level != AccessLevel.FULL:
+            logger.warning("🚫 Kamera durdurma için full erişim gerekli")
+            return
+        
         with self.lock:
             if self._active_cap:
                 self._active_cap.release()
@@ -504,25 +525,27 @@ class CameraManager:
 
 
 
-
 # """
 # LotusAI Camera Manager
-# Sürüm: 2.5.3
-# Açıklama: Kamera görüntü yönetimi
+# Sürüm: 2.5.6 (Eklendi: Erişim Seviyesi Desteği)
+# Açıklama: Kamera görüntü yönetimi (WSL/Linux + IR Sensör Uyumlu)
 
 # Özellikler:
 # - CUDA destekli görüntü işleme
-# - Dinamik kamera portu tarama
+# - Dinamik kamera portu tarama (V4L2 + MJPG Desteği)
+# - IR / Boş Frame bypass
 # - Snapshot kaydetme
 # - Base64 dönüştürme
 # - Görüntü ön işleme
 # - Thread-safe operasyonlar
+# - Erişim seviyesi kontrolleri
 # """
 
 # import cv2
 # import logging
 # import threading
 # import base64
+# import sys
 # import numpy as np
 # from pathlib import Path
 # from datetime import datetime
@@ -533,7 +556,7 @@ class CameraManager:
 # # ═══════════════════════════════════════════════════════════════
 # # CONFIG
 # # ═══════════════════════════════════════════════════════════════
-# from config import Config
+# from config import Config, AccessLevel
 
 # logger = logging.getLogger("LotusAI.Camera")
 
@@ -594,6 +617,7 @@ class CameraManager:
 #     - Base64 dönüştürme
 #     - Görüntü ön işleme (netleştirme)
 #     - Thread-safe operasyonlar
+#     - Erişim seviyesine göre kısıtlama
     
 #     OpenCV CUDA kullanarak GPU üzerinde görüntü işleme yapabilir.
 #     """
@@ -601,17 +625,27 @@ class CameraManager:
 #     # Camera settings
 #     DEFAULT_RESOLUTION = (640, 480)
 #     DEFAULT_FPS = 30
-#     WARMUP_FRAMES = 2
+#     WARMUP_FRAMES = 5  # WSL ve IR kameralar için ısınma süresi artırıldı
 #     JPEG_QUALITY = 80
     
-#     # Port scanning
-#     MAX_PORT_SCAN = 5
+#     # Port scanning (WSL'de kamera video2 vb. olabildiği için genişletildi)
+#     MAX_PORT_SCAN = 10 
     
-#     def __init__(self):
-#         """Camera manager başlatıcı"""
+#     def __init__(self, access_level: str = "sandbox"):
+#         """
+#         Camera manager başlatıcı
+        
+#         Args:
+#             access_level: Erişim seviyesi (restricted, sandbox, full)
+#         """
+#         self.access_level = access_level
+        
 #         # Thread safety
 #         self.lock = threading.RLock()
         
+#         # WSL/Linux Uyumlu Backend Seçimi
+#         self.backend = cv2.CAP_V4L2 if sys.platform.startswith('linux') else cv2.CAP_ANY
+
 #         # Status
 #         self.status = CameraStatus.IDLE
 #         self._active_cap: Optional[cv2.VideoCapture] = None
@@ -636,6 +670,9 @@ class CameraManager:
         
 #         # Info
 #         self.camera_info: Optional[CameraInfo] = None
+        
+#         # Erişim seviyesi logla
+#         logger.info(f"📷 Camera Manager başlatıldı (Erişim: {self.access_level})")
     
 #     def _detect_cuda(self) -> bool:
 #         """CUDA tespiti"""
@@ -679,13 +716,13 @@ class CameraManager:
 #             # Test default port
 #             if self._test_hardware(self.camera_index):
 #                 self._update_camera_info()
-#                 logger.info(f"✅ Kamera hazır (Port: {self.camera_index})")
+#                 logger.info(f"✅ Kamera hazır (Port: {self.camera_index}, Backend: {self.backend})")
 #                 return True
             
 #             # Scan for active cameras
 #             logger.warning(
-#                 f"⚠️ Kamera {self.camera_index} erişilemiyor, "
-#                 "aktif portlar taranıyor..."
+#                 f"⚠️ Kamera {self.camera_index} erişilemiyor veya boş/IR verisi dönüyor. "
+#                 "Diğer aktif portlar taranıyor..."
 #             )
             
 #             active_ports = self.list_cameras()
@@ -693,16 +730,16 @@ class CameraManager:
 #             if active_ports:
 #                 self.camera_index = active_ports[0]
 #                 self._update_camera_info()
-#                 logger.info(f"✅ Kamera bulundu (Port: {self.camera_index})")
+#                 logger.info(f"✅ Gerçek Kamera bulundu (Port: {self.camera_index})")
 #                 return True
             
-#             logger.error("❌ Erişilebilir kamera bulunamadı!")
+#             logger.error("❌ Erişilebilir kamera bulunamadı! (Lütfen 'sudo chmod 777 /dev/video*' komutunu çalıştırdığınızdan emin olun)")
 #             self.status = CameraStatus.DISCONNECTED
 #             return False
     
 #     def _test_hardware(self, index: int) -> bool:
 #         """
-#         Kamera portu testi
+#         Kamera portu testi (IR ve boş çerçeve bypass)
         
 #         Args:
 #             index: Kamera port index'i
@@ -711,16 +748,25 @@ class CameraManager:
 #             Çalışıyorsa True
 #         """
 #         try:
-#             cap = cv2.VideoCapture(index, cv2.CAP_ANY)
+#             cap = cv2.VideoCapture(index, self.backend)
             
 #             if not cap.isOpened():
 #                 return False
+            
+#             # WSL için MJPG formatını zorla
+#             cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*'MJPG'))
+#             cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
+
+#             # Isınma (Warmup): IR portları veya uykudaki kameralar ilk kareleri boş atar
+#             for _ in range(self.WARMUP_FRAMES):
+#                 cap.grab()
             
 #             # Görüntü test
 #             ret, frame = cap.read()
 #             cap.release()
             
-#             return ret and frame is not None
+#             # Görüntü başarıyla alındıysa ve piksel matrisi içeriyorsa (IR metadata portlarını elemek için)
+#             return ret and frame is not None and frame.size > 0
         
 #         except Exception:
 #             return False
@@ -728,7 +774,7 @@ class CameraManager:
 #     def _update_camera_info(self) -> None:
 #         """Kamera bilgilerini güncelle"""
 #         try:
-#             cap = cv2.VideoCapture(self.camera_index)
+#             cap = cv2.VideoCapture(self.camera_index, self.backend)
             
 #             if cap.isOpened():
 #                 self.camera_info = CameraInfo(
@@ -746,7 +792,7 @@ class CameraManager:
     
 #     def list_cameras(self) -> List[int]:
 #         """
-#         Aktif kamera portlarını listele
+#         Aktif kamera portlarını listele (Tüm kullanıcılara açık)
         
 #         Returns:
 #             Port index listesi
@@ -754,23 +800,13 @@ class CameraManager:
 #         active_ports = []
         
 #         for i in range(self.MAX_PORT_SCAN):
-#             try:
-#                 cap = cv2.VideoCapture(i, cv2.CAP_ANY)
+#             if self._test_hardware(i):
+#                 active_ports.append(i)
                 
-#                 if cap.isOpened():
-#                     ret, frame = cap.read()
-#                     if ret and frame is not None:
-#                         active_ports.append(i)
-                
-#                 cap.release()
-            
-#             except Exception:
-#                 continue
-        
 #         return active_ports
     
 #     # ───────────────────────────────────────────────────────────
-#     # FRAME CAPTURE
+#     # FRAME CAPTURE (Erişim kontrollü)
 #     # ───────────────────────────────────────────────────────────
     
 #     def get_frame(
@@ -779,7 +815,7 @@ class CameraManager:
 #         preprocess: bool = False
 #     ) -> Optional[Union[np.ndarray, str]]:
 #         """
-#         Kameradan frame yakala
+#         Kameradan frame yakala (Kısıtlı modda çalışmaz)
         
 #         Args:
 #             raw: True ise numpy array, False ise base64
@@ -788,6 +824,11 @@ class CameraManager:
 #         Returns:
 #             Frame (numpy veya base64) veya None
 #         """
+#         # Erişim kontrolü: Kısıtlı modda kamera kullanımı yasak
+#         if self.access_level == AccessLevel.RESTRICTED:
+#             logger.warning("🚫 Kısıtlı modda kamera kullanımı engellendi")
+#             return None
+        
 #         if self.status == CameraStatus.BUSY:
 #             return None
         
@@ -797,14 +838,15 @@ class CameraManager:
 #             cap = None
             
 #             try:
-#                 cap = cv2.VideoCapture(self.camera_index)
+#                 cap = cv2.VideoCapture(self.camera_index, self.backend)
                 
 #                 if not cap.isOpened():
 #                     logger.error(f"❌ Kamera bağlantısı koptu! ({self.camera_index})")
 #                     self.status = CameraStatus.ERROR
 #                     return None
                 
-#                 # Settings
+#                 # Settings & MJPG format for WSL
+#                 cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*'MJPG'))
 #                 cap.set(cv2.CAP_PROP_FRAME_WIDTH, self.resolution[0])
 #                 cap.set(cv2.CAP_PROP_FRAME_HEIGHT, self.resolution[1])
 #                 cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
@@ -816,8 +858,8 @@ class CameraManager:
 #                 # Capture
 #                 ret, frame = cap.read()
                 
-#                 if not ret or frame is None:
-#                     logger.warning("🚫 Boş görüntü")
+#                 if not ret or frame is None or frame.size == 0:
+#                     logger.warning("🚫 Boş görüntü veya zaman aşımı")
 #                     frame = None
 #                 else:
 #                     # Flip horizontal
@@ -910,12 +952,12 @@ class CameraManager:
 #             return None
     
 #     # ───────────────────────────────────────────────────────────
-#     # SNAPSHOT
+#     # SNAPSHOT (Erişim kontrollü)
 #     # ───────────────────────────────────────────────────────────
     
 #     def save_snapshot(self, prefix: str = "guvenlik") -> Optional[str]:
 #         """
-#         Snapshot kaydet
+#         Snapshot kaydet (Kısıtlı modda çalışmaz)
         
 #         Args:
 #             prefix: Dosya adı öneki
@@ -923,6 +965,11 @@ class CameraManager:
 #         Returns:
 #             Dosya yolu veya None
 #         """
+#         # Erişim kontrolü: Kısıtlı modda snapshot kaydedilemez
+#         if self.access_level == AccessLevel.RESTRICTED:
+#             logger.warning("🚫 Kısıtlı modda snapshot kaydetme engellendi")
+#             return None
+        
 #         frame = self.get_frame(raw=True, preprocess=True)
         
 #         if frame is None:
@@ -951,7 +998,7 @@ class CameraManager:
     
 #     def get_info(self) -> Optional[CameraInfo]:
 #         """
-#         Kamera bilgilerini getir
+#         Kamera bilgilerini getir (Tüm kullanıcılara açık)
         
 #         Returns:
 #             CameraInfo veya None
@@ -973,12 +1020,13 @@ class CameraManager:
 #             "cuda_operations": self.metrics.cuda_operations,
 #             "cuda_available": self.cuda_available,
 #             "status": self.status.value,
-#             "camera_index": self.camera_index
+#             "camera_index": self.camera_index,
+#             "access_level": self.access_level
 #         }
     
 #     def set_resolution(self, width: int, height: int) -> bool:
 #         """
-#         Çözünürlük ayarla
+#         Çözünürlük ayarla (Sadece sandbox ve full modda)
         
 #         Args:
 #             width: Genişlik
@@ -987,6 +1035,10 @@ class CameraManager:
 #         Returns:
 #             Başarılı ise True
 #         """
+#         if self.access_level == AccessLevel.RESTRICTED:
+#             logger.warning("🚫 Kısıtlı modda çözünürlük değiştirilemez")
+#             return False
+        
 #         try:
 #             self.resolution = (width, height)
 #             logger.info(f"📐 Çözünürlük: {width}x{height}")
@@ -1003,15 +1055,6 @@ class CameraManager:
             
 #             self.status = CameraStatus.IDLE
 #             logger.info("🔌 Kamera servisi durduruldu")
-
-
-
-
-
-
-# // *****************************
-
-
 
 
 

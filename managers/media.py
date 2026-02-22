@@ -1,6 +1,6 @@
 """
 LotusAI Media Manager
-Sürüm: 2.5.4 (Fix: Instagram Login & Trends 404 Handling)
+Sürüm: 2.5.5 (Eklendi: Erişim Seviyesi Desteği)
 Açıklama: Medya, içerik ve sosyal medya yönetimi
 
 Özellikler:
@@ -11,6 +11,7 @@ Açıklama: Medya, içerik ve sosyal medya yönetimi
 - Pazarlama takvimi
 - Web arama
 - GPU hızlandırma
+- Erişim seviyesi kontrolleri (restricted/sandbox/full)
 """
 
 import wikipedia
@@ -30,7 +31,7 @@ from enum import Enum
 # ═══════════════════════════════════════════════════════════════
 # CONFIG
 # ═══════════════════════════════════════════════════════════════
-from config import Config
+from config import Config, AccessLevel
 
 logger = logging.getLogger("LotusAI.Media")
 
@@ -169,6 +170,7 @@ class MediaManager:
     - Web arama: Google search entegrasyonu
     - Pazarlama takvimi: Türkiye özel günleri
     - GPU hızlandırma: PyTorch desteği
+    - Erişim seviyesi kontrolleri
     
     Sosyal medya ve dijital pazarlama için merkezi yönetim noktası.
     """
@@ -198,8 +200,15 @@ class MediaManager:
     MAX_RETRIES = 5
     RETRY_DELAYS = [1, 2, 4, 8, 16]
     
-    def __init__(self):
-        """Media manager başlatıcı"""
+    def __init__(self, access_level: str = "sandbox"):
+        """
+        Media manager başlatıcı
+        
+        Args:
+            access_level: Erişim seviyesi (restricted, sandbox, full)
+        """
+        self.access_level = access_level
+        
         # Thread safety
         self.lock = threading.RLock()
         
@@ -213,7 +222,6 @@ class MediaManager:
         self.device = DEVICE
         
         # Config
-        # Düzeltme: INSTAGRAM_ACCOUNT_ID (sayısal ID) yerine INSTAGRAM_USERNAME (kullanıcı adı) kullanıldı.
         self.target_insta = getattr(Config, 'INSTAGRAM_USERNAME', "lotusbagevi")
         self.target_fb = getattr(Config, 'FACEBOOK_PAGE_ID', "niluferbagevi")
         self.competitors = getattr(Config, 'COMPETITORS', [])
@@ -236,6 +244,8 @@ class MediaManager:
         
         if self.is_insta_active:
             self._init_instagram()
+        
+        logger.info(f"✅ MediaManager hazır (Erişim: {self.access_level})")
     
     def _setup_environment(self) -> None:
         """Dil ve yerel ayarları yapılandır"""
@@ -274,8 +284,7 @@ class MediaManager:
                 )
             })
 
-            # --- GÜNCELLEME: Otomatik Giriş ---
-            # Config.py'de tanımlı olmasa bile os.getenv ile .env'den okumayı dener
+            # Otomatik Giriş
             login_user = os.getenv('INSTAGRAM_LOGIN_USER')
             login_pass = os.getenv('INSTAGRAM_PASSWORD')
 
@@ -286,7 +295,6 @@ class MediaManager:
                     logger.info("✅ Instagram girişi başarılı (Limitler yükseltildi)")
                 except Exception as e:
                     logger.warning(f"⚠️ Instagram giriş hatası: {e}")
-                    # Eğer 429 hatası varsa modülü kapat, sistemi bekletme
                     if "429" in str(e) or "Too Many Requests" in str(e):
                         logger.error("🛑 Instagram geçici olarak bloklu (429). Modül devre dışı bırakılıyor.")
                         self.is_insta_active = False
@@ -304,7 +312,7 @@ class MediaManager:
     
     def ai_content_advisor(self, context_data: str) -> str:
         """
-        AI içerik önerisi (Gemini)
+        AI içerik önerisi (Gemini) - Tüm erişim seviyelerinde kullanılabilir.
         
         Args:
             context_data: Bağlam verisi
@@ -381,7 +389,7 @@ class MediaManager:
     
     def universal_search(self, query: str) -> str:
         """
-        Evrensel arama
+        Evrensel arama - Kısıtlı modda görsel oluşturma engellenir.
         
         Args:
             query: Arama sorgusu
@@ -408,15 +416,18 @@ class MediaManager:
             if any(k in query_lower for k in ["gündem", "trend", "popüler"]):
                 report.append(f"\n[TÜRKİYE GÜNDEMİ]:\n{self.get_turkey_trends()}")
             
-            # Image generation
+            # Image generation (sadece sandbox ve full modda)
             visual_triggers = ["çiz", "tasarla", "oluştur", "görsel", "resim"]
             if any(k in query_lower for k in visual_triggers):
-                prompt = query
-                for word in visual_triggers + ["bana", "bir", "tane"]:
-                    prompt = prompt.replace(word, "")
-                
-                img_res = self.generate_concept_image(prompt.strip())
-                report.append(f"\n[TASARIM]:\n{img_res}")
+                if self.access_level == AccessLevel.RESTRICTED:
+                    report.append("\n[TASARIM]: 🔒 Kısıtlı modda görsel oluşturulamaz.")
+                else:
+                    prompt = query
+                    for word in visual_triggers + ["bana", "bir", "tane"]:
+                        prompt = prompt.replace(word, "")
+                    
+                    img_res = self.generate_concept_image(prompt.strip())
+                    report.append(f"\n[TASARIM]:\n{img_res}")
             
             # Social media
             if "instagram" in query_lower or "sosyal medya" in query_lower:
@@ -452,9 +463,7 @@ class MediaManager:
     
     def get_turkey_trends(self) -> str:
         """
-        Türkiye trendleri
-        
-        GÜNCELLEME: Google 404 ve Timeout hatalarına karşı korumalı.
+        Türkiye trendleri - Tüm erişim seviyelerinde kullanılabilir.
         
         Returns:
             Trend listesi veya hata mesajı
@@ -463,7 +472,6 @@ class MediaManager:
             return "Trends modülü pasif"
         
         try:
-            # --- GÜNCELLEME: Hata Yakalama ---
             pytrends = TrendReq(hl='tr-TR', tz=180, timeout=(5, 10))
             
             try:
@@ -472,13 +480,11 @@ class MediaManager:
                 self.metrics.trends_checked += 1
                 return "🔥 " + ", ".join(top_5)
             except Exception as e:
-                # 404, Timeout ve diğer bağlantı hatalarını yut ve logla
                 if "404" in str(e):
                     logger.warning("Google Trends URL değişti (404 hatası).")
                 else:
                     logger.debug(f"Trends verisi alınamadı: {e}")
                 return "Gündem verisi anlık olarak alınamıyor (Google Servis Hatası)"
-            # --- GÜNCELLEME SONU ---
         
         except Exception as e:
             logger.error(f"Trends genel hatası: {e}")
@@ -486,12 +492,12 @@ class MediaManager:
             return "Gündem servisi bakımda"
     
     # ───────────────────────────────────────────────────────────
-    # IMAGE GENERATION
+    # IMAGE GENERATION (Erişim kontrollü)
     # ───────────────────────────────────────────────────────────
     
     def generate_concept_image(self, prompt: str) -> str:
         """
-        AI görsel oluştur
+        AI görsel oluştur - Sadece sandbox ve full modda çalışır.
         
         Args:
             prompt: Görsel tanımı
@@ -499,6 +505,9 @@ class MediaManager:
         Returns:
             Sonuç mesajı
         """
+        if self.access_level == AccessLevel.RESTRICTED:
+            return "🔒 Kısıtlı modda görsel oluşturulamaz."
+        
         try:
             # Enhance prompt
             styled_prompt = (
@@ -536,7 +545,7 @@ class MediaManager:
             return f"❌ Hata: {str(e)[:50]}"
     
     # ───────────────────────────────────────────────────────────
-    # SOCIAL MEDIA STATS
+    # SOCIAL MEDIA STATS (Tüm erişim seviyelerinde kullanılabilir)
     # ───────────────────────────────────────────────────────────
     
     def get_instagram_stats(self) -> str:
@@ -629,7 +638,7 @@ class MediaManager:
     
     def get_daily_context(self) -> str:
         """
-        Günlük brifing
+        Günlük brifing - Tüm erişim seviyelerinde kullanılabilir.
         
         Returns:
             Formatlanmış brifing
@@ -648,6 +657,9 @@ class MediaManager:
         else:
             briefing.append("⚡ DONANIM: CPU Modu")
         
+        # Erişim seviyesi
+        briefing.append(f"🔐 ERİŞİM: {self.access_level.upper()}")
+        
         # Special day
         special = self.MARKETING_CALENDAR.get(month_day)
         if special:
@@ -655,6 +667,7 @@ class MediaManager:
         
         # Trends
         trends = self.get_turkey_trends()
+        briefing.append(f"\n[TRENDLER]\n{trends}")
         
         # AI suggestion
         context_str = (
@@ -679,7 +692,7 @@ class MediaManager:
         Returns:
             Donanım dict
         """
-        info = {"device": self.device}
+        info = {"device": self.device, "access_level": self.access_level}
         
         if HAS_TORCH and torch.cuda.is_available():
             try:
@@ -707,6 +720,7 @@ class MediaManager:
             "social_stats_fetched": self.metrics.social_stats_fetched,
             "errors_encountered": self.metrics.errors_encountered,
             "device": self.device,
+            "access_level": self.access_level,
             "search_available": self.is_search_active,
             "instagram_available": self.is_insta_active,
             "facebook_available": self.is_fb_active,

@@ -1,6 +1,6 @@
 """
 LotusAI Kurt Agent
-Sürüm: 2.5.3
+Sürüm: 2.5.4 (Eklendi: Erişim Seviyesi Desteği)
 Açıklama: Finans ve borsa stratejisti
 
 Sorumluluklar:
@@ -24,7 +24,7 @@ from decimal import Decimal
 # ═══════════════════════════════════════════════════════════════
 # CONFIG
 # ═══════════════════════════════════════════════════════════════
-from config import Config
+from config import Config, AccessLevel
 
 logger = logging.getLogger("LotusAI.Kurt")
 
@@ -166,14 +166,16 @@ class KurtAgent:
         LiquidityLevel.EXCELLENT: 50000.0
     }
     
-    def __init__(self, tools_dict: Dict[str, Any]):
+    def __init__(self, tools_dict: Dict[str, Any], access_level: str = "sandbox"):
         """
         Kurt başlatıcı
         
         Args:
             tools_dict: Engine'den gelen tool'lar
+            access_level: Erişim seviyesi (restricted, sandbox, full)
         """
         self.tools = tools_dict
+        self.access_level = access_level
         self.agent_name = "KURT"
         
         # Thread safety
@@ -204,7 +206,7 @@ class KurtAgent:
         )
         
         logger.info(
-            f"🐺 {self.agent_name} başlatıldı ({status}). "
+            f"🐺 {self.agent_name} başlatıldı ({status}, Erişim: {self.access_level}). "
             "Piyasalar izleniyor..."
         )
     
@@ -637,6 +639,7 @@ class KurtAgent:
         return {
             "agent_name": self.agent_name,
             "device": self.device,
+            "access_level": self.access_level,
             "analyses_performed": self.metrics.analyses_performed,
             "market_checks": self.metrics.market_checks,
             "liquidity_alerts": self.metrics.liquidity_alerts,

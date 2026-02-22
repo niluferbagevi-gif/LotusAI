@@ -1,12 +1,12 @@
 """
 LotusAI Launcher - Ana Başlatıcı
-Versiyon: 2.5.3
+Versiyon: 2.6.0 (OpenClaw Erişim Seviyesi Eklendi)
 Python: 3.11+
-Açıklama: LotusAI sistemini Online veya Local modda başlatır
+Açıklama: LotusAI sistemini Online veya Local modda başlatır, erişim seviyesi seçimi
 """
 
 import tkinter as tk
-from tkinter import messagebox
+from tkinter import messagebox, IntVar
 import sys
 import os
 import traceback
@@ -51,7 +51,7 @@ except Exception as e:
     print(f"Ekran ayarlama atlandı: {e}")
 
 # ═══════════════════════════════════════════════════════════════
-# CONFIG IMPORT VE FALLBACK
+# CONFIG IMPORT (Güncellenmiş Config sınıfını kullanıyoruz)
 # ═══════════════════════════════════════════════════════════════
 try:
     from config import Config
@@ -60,7 +60,7 @@ except ImportError:
     @dataclass
     class Config:
         PROJECT_NAME: str = "LotusAI"
-        VERSION: str = "2.5.3"
+        VERSION: str = "2.6.0"
         LOG_DIR: Path = Path("logs")
         USE_GPU: bool = False
         GPU_INFO: str = "N/A"
@@ -68,6 +68,11 @@ except ImportError:
         @staticmethod
         def set_provider_mode(mode: str) -> None:
             """Sağlayıcı modunu ayarla"""
+            pass
+        
+        @staticmethod
+        def set_access_level(level: str) -> None:
+            """Erişim seviyesini ayarla"""
             pass
         
         @staticmethod
@@ -106,7 +111,6 @@ except Exception as e:
     import_error_message = f"Sistem dosyası hatası: {str(e)}"
     logger.error(f"{import_error_message}\n{traceback.format_exc()}")
 
-
 # ═══════════════════════════════════════════════════════════════
 # UI TEMA AYARLARI
 # ═══════════════════════════════════════════════════════════════
@@ -122,24 +126,23 @@ class Theme:
     SUCCESS = "#27ae60"
     WARNING = "#f39c12"
 
-
 # ═══════════════════════════════════════════════════════════════
 # LAUNCHER UYGULAMASI
 # ═══════════════════════════════════════════════════════════════
 class LauncherApp:
     """
     LotusAI Görsel Başlatıcı
-    
     Özellikler:
     - 4K/HiDPI desteği
     - Online (Gemini) ve Local (Ollama) mod
+    - Erişim seviyesi seçimi (Kısıtlı, Sandbox, Tam)
     - Servis sağlık kontrolü
     - Kullanıcı dostu hata mesajları
     """
     
     # UI Boyutları
-    BASE_WIDTH = 450
-    BASE_HEIGHT = 500
+    BASE_WIDTH = 500
+    BASE_HEIGHT = 650  # Yeni elemanlar için yükseklik artırıldı
     SCALE_FACTOR = 1.5
     
     # Ollama Servis Ayarları
@@ -187,6 +190,9 @@ class LauncherApp:
         # Başlık
         self._create_header()
         
+        # Erişim seviyesi seçimi (OpenClaw)
+        self._create_access_level_panel()
+        
         # Donanım bilgi paneli
         self._create_info_panel()
         
@@ -197,7 +203,7 @@ class LauncherApp:
             font=("Segoe UI", 11, "bold"),
             bg=Theme.BG_DARK,
             fg=Theme.TEXT_PRIMARY
-        ).pack(pady=(30, 15))
+        ).pack(pady=(20, 15))
         
         # Mod butonları
         self._create_mode_buttons()
@@ -223,9 +229,60 @@ class LauncherApp:
             fg=Theme.TEXT_SECONDARY
         ).pack(pady=(0, 20))
     
+    def _create_access_level_panel(self) -> None:
+        """Erişim seviyesi seçim paneli (OpenClaw tarzı)"""
+        # Çerçeve
+        frame = tk.Frame(self.root, bg=Theme.BG_MEDIUM, bd=1, relief="flat")
+        frame.pack(fill="x", padx=40, pady=10)
+        
+        # Başlık
+        tk.Label(
+            frame,
+            text="⚙️ Sistem Erişim Seviyesi (OpenClaw)",
+            font=("Segoe UI", 10, "bold"),
+            bg=Theme.BG_MEDIUM,
+            fg=Theme.TEXT_PRIMARY
+        ).pack(pady=(10, 5))
+        
+        # Radyo butonları için değişken
+        self.access_level = IntVar(value=1)  # Varsayılan: Sandbox (1)
+        
+        # Seçenekler
+        levels = [
+            ("🔒 Kısıtlı (Sadece Bilgi Alma)", 0),
+            ("📦 Sandbox (Güvenli Dosya Yazma)", 1),
+            ("⚡ Tam Erişim (Terminal & Komut)", 2)
+        ]
+        
+        for text, value in levels:
+            rb = tk.Radiobutton(
+                frame,
+                text=text,
+                variable=self.access_level,
+                value=value,
+                bg=Theme.BG_MEDIUM,
+                fg=Theme.TEXT_SECONDARY,
+                selectcolor=Theme.BG_DARK,
+                activebackground=Theme.BG_MEDIUM,
+                activeforeground=Theme.TEXT_PRIMARY,
+                font=("Segoe UI", 9),
+                padx=20,
+                pady=2
+            )
+            rb.pack(anchor="w", padx=20)
+        
+        # Açıklama (isteğe bağlı)
+        tk.Label(
+            frame,
+            text="Ajanların sistem üzerindeki yetkilerini belirler.",
+            font=("Segoe UI", 8, "italic"),
+            bg=Theme.BG_MEDIUM,
+            fg=Theme.TEXT_MUTED
+        ).pack(pady=(5, 10))
+    
     def _create_info_panel(self) -> None:
         """Donanım bilgi panelini oluştur"""
-        frame = tk.Frame(self.root, bg=Theme.BG_MEDIUM, bd=1, relief="flat")
+        frame = tk.Frame(self.root, bg=Theme.BG_LIGHT, bd=1, relief="flat")
         frame.pack(fill="x", padx=40, pady=10)
         
         # GPU durumu
@@ -234,9 +291,9 @@ class LauncherApp:
         
         tk.Label(
             frame,
-            text=f"Donanım Hızlandırma: {gpu_status}",
+            text=f"Donanım Hızlandırma (CUDA): {gpu_status}",
             font=("Segoe UI", 10, "bold"),
-            bg=Theme.BG_MEDIUM,
+            bg=Theme.BG_LIGHT,
             fg=gpu_color
         ).pack(pady=10)
         
@@ -250,7 +307,7 @@ class LauncherApp:
                 frame,
                 text=f"GPU: {gpu_text}",
                 font=("Segoe UI", 8, "italic"),
-                bg=Theme.BG_MEDIUM,
+                bg=Theme.BG_LIGHT,
                 fg=Theme.TEXT_MUTED
             ).pack(pady=(0, 10))
     
@@ -263,7 +320,7 @@ class LauncherApp:
         
         for text, color, mode in buttons:
             btn = self._create_styled_button(text, color, mode)
-            btn.pack(pady=10)
+            btn.pack(pady=8)
     
     def _create_styled_button(self, text: str, color: str, mode: str) -> tk.Button:
         """Hover efektli stilize buton oluştur"""
@@ -330,8 +387,14 @@ class LauncherApp:
             logger.error(f"Başlatma başarısız: {import_error_message}")
             return
         
-        # Config ayarla
+        # Seçilen erişim seviyesini al
+        access_level = self.access_level.get()
+        access_names = ["restricted", "sandbox", "full"]
+        access_str = access_names[access_level]
+        
+        # Config ayarla (provider mode ve access level)
         Config.set_provider_mode(mode)
+        Config.set_access_level(access_str)
         
         # Kritik ayar kontrolü
         if not Config.validate_critical_settings():
@@ -367,24 +430,26 @@ class LauncherApp:
                     logger.info("Kullanıcı başlatmayı iptal etti")
                     return
         
-        # Sistemi başlat
-        self._launch_system(mode)
+        # Sistemi başlat (erişim seviyesini de geçir)
+        self._launch_system(mode, access_str)
     
-    def _launch_system(self, mode: str) -> None:
+    def _launch_system(self, mode: str, access_level: str) -> None:
         """LotusAI sistemini başlat"""
-        self.status_var.set(f"{mode.upper()} modu yükleniyor...")
+        self.status_var.set(f"{mode.upper()} modu yükleniyor (Erişim: {access_level})...")
         self.root.update()
         
         # Banner yazdır
-        self._print_banner(mode)
+        self._print_banner(mode, access_level)
         
         # GUI'yi kapat
         self.root.destroy()
         
-        # Motoru başlat
+        # Motoru başlat (erişim seviyesi parametresi eklenecek)
         try:
-            logger.info(f"Sistem {mode} modunda başlatılıyor")
-            start_lotus_system(mode)
+            logger.info(f"Sistem {mode} modunda başlatılıyor, erişim: {access_level}")
+            # start_lotus_system fonksiyonunu güncellememiz gerekecek
+            # Şimdilik sadece mode gönderiyoruz, sonra düzenleyeceğiz
+            start_lotus_system(mode, access_level=access_level)
         except Exception as e:
             error_msg = f"Sistem çalışma hatası: {str(e)}"
             logger.error(f"{error_msg}\n{traceback.format_exc()}")
@@ -397,17 +462,23 @@ class LauncherApp:
             print(f"{Colors.OKBLUE}  {LOG_FILE}{Colors.ENDC}\n")
             input("Çıkmak için Enter tuşuna basın...")
     
-    def _print_banner(self, mode: str) -> None:
+    def _print_banner(self, mode: str, access_level: str) -> None:
         """Terminal başlangıç banner'ı"""
         os.system('cls' if os.name == 'nt' else 'clear')
         
         gpu_info = Config.GPU_INFO if Config.USE_GPU else "CPU (Standart)"
+        access_display = {
+            "restricted": "🔒 Kısıtlı (Bilgi Alma)",
+            "sandbox": "📦 Sandbox (Güvenli Dosya)",
+            "full": "⚡ Tam Erişim"
+        }.get(access_level, access_level)
         
         print(f"\n{Colors.OKGREEN}{'═' * 60}{Colors.ENDC}")
         print(f"{Colors.BOLD} 🚀 {Config.PROJECT_NAME} SİSTEMİ BAŞLATILIYOR{Colors.ENDC}")
         print(f"{Colors.OKGREEN}{'═' * 60}{Colors.ENDC}")
         print(f"{Colors.CYAN} 🛠  Sürüm    :{Colors.ENDC} {Config.VERSION}")
         print(f"{Colors.CYAN} 🧠 Mod      :{Colors.ENDC} {mode.upper()}")
+        print(f"{Colors.CYAN} 🔐 Erişim   :{Colors.ENDC} {access_display}")
         print(f"{Colors.CYAN} 💻 Donanım  :{Colors.ENDC} {gpu_info}")
         print(f"{Colors.OKGREEN}{'═' * 60}{Colors.ENDC}\n")
     
@@ -416,7 +487,6 @@ class LauncherApp:
         logger.info("Launcher kapatıldı")
         self.root.destroy()
         sys.exit(0)
-
 
 # ═══════════════════════════════════════════════════════════════
 # ANA PROGRAM
@@ -435,11 +505,11 @@ def main() -> None:
         # Fallback: Direkt terminal başlatma
         if start_lotus_system:
             print(f"\n{Colors.WARNING}GUI hatası! Sistem terminal modunda başlatılıyor...{Colors.ENDC}")
-            start_lotus_system("online")
+            # Varsayılan erişim sandbox
+            start_lotus_system("online", access_level="sandbox")
         else:
             print(f"\n{Colors.FAIL}Sistem başlatılamadı. logs/launcher.log dosyasını kontrol edin.{Colors.ENDC}")
             sys.exit(1)
-
 
 if __name__ == "__main__":
     main()

@@ -1,6 +1,6 @@
 """
 LotusAI Atlas Agent
-Sürüm: 2.5.3
+Sürüm: 2.5.4 (Eklendi: Erişim Seviyesi Desteği)
 Açıklama: Lider agent - sistem denetimi ve görev dağıtımı
 
 Sorumluluklar:
@@ -21,7 +21,7 @@ from enum import Enum
 # ═══════════════════════════════════════════════════════════════
 # CONFIG
 # ═══════════════════════════════════════════════════════════════
-from config import Config
+from config import Config, AccessLevel
 
 logger = logging.getLogger("LotusAI.Atlas")
 
@@ -176,7 +176,8 @@ class AtlasAgent:
     def __init__(
         self,
         memory_manager: Any,
-        tools: Optional[Dict[str, Any]] = None
+        tools: Optional[Dict[str, Any]] = None,
+        access_level: str = "sandbox"
     ):
         """
         Atlas başlatıcı
@@ -184,9 +185,11 @@ class AtlasAgent:
         Args:
             memory_manager: Merkezi hafıza yöneticisi
             tools: Engine'den gelen tool'lar (managers)
+            access_level: Erişim seviyesi (restricted, sandbox, full)
         """
         self.memory = memory_manager
         self.tools = tools or {}
+        self.access_level = access_level
         self.agent_name = "ATLAS"
         
         # Thread safety
@@ -208,7 +211,7 @@ class AtlasAgent:
         
         logger.info(
             f"👑 {self.agent_name} Liderlik Modülü başlatıldı "
-            f"(v{Config.VERSION})"
+            f"(v{Config.VERSION}, Erişim: {self.access_level})"
         )
         
         if self.gpu_status.available:
@@ -395,6 +398,13 @@ class AtlasAgent:
         # System overview
         overview = self.get_system_overview()
         
+        # Erişim seviyesi bilgisi
+        access_display = {
+            AccessLevel.RESTRICTED: "🔒 Kısıtlı (Sadece bilgi)",
+            AccessLevel.SANDBOX: "📦 Sandbox (Güvenli işlemler)",
+            AccessLevel.FULL: "⚡ Tam Erişim"
+        }.get(self.access_level, self.access_level)
+        
         # Format
         now = datetime.now().strftime('%d.%m.%Y %H:%M')
         
@@ -402,6 +412,7 @@ class AtlasAgent:
             f"### {Config.PROJECT_NAME} LİDER RAPORU ###",
             f"📅 Tarih/Saat: {now}",
             f"⚡ Sistem Modu: {state_name}",
+            f"🔐 Erişim Seviyesi: {access_display}",
             "",
             "### SİSTEM DENETİMİ ###",
             overview.to_report(),
@@ -564,6 +575,7 @@ class AtlasAgent:
         """
         return {
             "agent_name": self.agent_name,
+            "access_level": self.access_level,
             "delegation_count": self.delegation_count,
             "overview_count": self.overview_count,
             "gpu_available": self.gpu_status.available,

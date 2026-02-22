@@ -1,6 +1,6 @@
 """
 LotusAI System Health Manager
-Sürüm: 2.5.3
+Sürüm: 2.5.4 (Eklendi: Erişim Seviyesi Desteği)
 Açıklama: Sunucu ve donanım sağlık yönetimi
 
 Özellikler:
@@ -10,6 +10,7 @@ Açıklama: Sunucu ve donanım sağlık yönetimi
 - Process analysis
 - Uptime tracking
 - Critical alerts
+- Erişim seviyesi desteği
 """
 
 import os
@@ -24,7 +25,7 @@ from enum import Enum
 # ═══════════════════════════════════════════════════════════════
 # CONFIG
 # ═══════════════════════════════════════════════════════════════
-from config import Config
+from config import Config, AccessLevel
 
 logger = logging.getLogger("LotusAI.SystemHealth")
 
@@ -118,6 +119,7 @@ class SystemHealthManager:
     - Process analysis: Yoğun işlem tespiti
     - Uptime: Çalışma süresi takibi
     - Alerts: Kritik eşik uyarıları
+    - Erişim seviyesine duyarlı raporlama (opsiyonel)
     
     Sistemin tüm donanım kaynaklarını izler ve raporlar.
     """
@@ -129,13 +131,16 @@ class SystemHealthManager:
     RAM_WARNING = 75
     GPU_CRITICAL = 85
     
-    def __init__(self, system_state: Optional[Any] = None):
+    def __init__(self, system_state: Optional[Any] = None, access_level: str = "sandbox"):
         """
         System health manager başlatıcı
         
         Args:
             system_state: SystemState objesi (opsiyonel)
+            access_level: Erişim seviyesi (restricted, sandbox, full)
         """
+        self.access_level = access_level
+        
         # Thread safety
         self.lock = threading.RLock()
         
@@ -164,6 +169,8 @@ class SystemHealthManager:
                 logger.info("✅ Sistem sağlık takip servisi hazır")
             except Exception:
                 pass
+        
+        logger.info(f"✅ SystemHealthManager başlatıldı (Erişim: {self.access_level})")
     
     def _init_gpu(self) -> None:
         """GPU monitoring başlat"""
@@ -198,7 +205,7 @@ class SystemHealthManager:
     
     def get_status_summary(self) -> str:
         """
-        Durum özeti
+        Durum özeti - Tüm erişim seviyelerinde kullanılabilir.
         
         Returns:
             Tek satır özet
@@ -256,7 +263,8 @@ class SystemHealthManager:
     
     def get_detailed_report(self) -> str:
         """
-        Detaylı rapor
+        Detaylı rapor - Tüm erişim seviyelerinde kullanılabilir.
+        (İsteğe bağlı olarak kısıtlı modda bazı detaylar filtrelenebilir)
         
         Returns:
             Formatlanmış teknik rapor
@@ -281,6 +289,7 @@ class SystemHealthManager:
                 report_lines = [
                     f"🖥️ LOTUSAI SİSTEM SAĞLIK RAPORU {status.value}{warning}",
                     "═" * 40,
+                    f"🔐 Erişim: {self.access_level.upper()}",
                     f"⏱️ Uptime: {self._format_timedelta(system_metrics.uptime)}",
                     f"🤖 CUDA: {self.cuda_info}",
                     f"⚙️ CPU: %{system_metrics.cpu_percent}",
@@ -291,7 +300,7 @@ class SystemHealthManager:
                     f"📑 Processes: {len(psutil.pids())}"
                 ]
                 
-                # GPU info
+                # GPU info (her erişim seviyesinde gösterilebilir, ancak istenirse kısıtlanabilir)
                 if system_metrics.gpu_info:
                     report_lines.append("─" * 40)
                     report_lines.append("🎮 GPU DURUMU (NVIDIA):")
@@ -306,7 +315,8 @@ class SystemHealthManager:
                         if gpu.process_count > 0:
                             report_lines[-1] += f" | {gpu.process_count} İşlem"
                 
-                # Resource-heavy processes
+                # Resource-heavy processes (opsiyonel olarak kısıtlanabilir)
+                # Şimdilik herkese açık
                 if (system_metrics.cpu_percent > self.CPU_WARNING or
                     system_metrics.ram_percent > self.RAM_WARNING):
                     
@@ -555,7 +565,8 @@ class SystemHealthManager:
             "gpu_active": self.gpu_active,
             "gpu_count": self.gpu_count,
             "cuda_info": self.cuda_info,
-            "psutil_available": PSUTIL_AVAILABLE
+            "psutil_available": PSUTIL_AVAILABLE,
+            "access_level": self.access_level
         }
     
     def stop(self) -> None:

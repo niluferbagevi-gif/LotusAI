@@ -1,12 +1,12 @@
 """
 LotusAI Code Manager
-Sürüm: 2.5.3
+Sürüm: 2.5.4 (Eklendi: Erişim Seviyesi Desteği)
 Açıklama: Dosya, terminal ve geliştirme yönetimi
 
 Özellikler:
 - Sandbox güvenliği
-- Dosya operasyonları
-- Terminal komutu çalıştırma
+- Dosya operasyonları (erişim seviyesine göre kısıtlı)
+- Terminal komutu çalıştırma (erişim seviyesine göre whitelist)
 - GPU bilgisi
 - Otomatik yedekleme
 - Kod arama
@@ -31,7 +31,7 @@ from enum import Enum
 # ═══════════════════════════════════════════════════════════════
 # CONFIG
 # ═══════════════════════════════════════════════════════════════
-from config import Config
+from config import Config, AccessLevel
 
 logger = logging.getLogger("LotusAI.CodeManager")
 
@@ -106,7 +106,7 @@ class CodeManager:
     Yetenekler:
     - Dosya sistemi yönetimi (okuma, yazma, silme)
     - Sandbox güvenliği (proje dizini dışına çıkamaz)
-    - Terminal komutu çalıştırma (whitelist)
+    - Terminal komutu çalıştırma (whitelist + erişim seviyesi)
     - GPU bilgisi sorgulama
     - Otomatik yedekleme
     - Kod arama (regex destekli)
@@ -116,6 +116,7 @@ class CodeManager:
     - Sandbox: Sadece proje dizini içinde çalışır
     - Command whitelist: Sadece güvenli komutlar
     - Path validation: Sembolik link kontrolü
+    - Erişim seviyesi: restricted (sadece okuma), sandbox (okuma+yazma), full (tüm yetkiler)
     """
     
     # Allowed extensions
@@ -124,13 +125,22 @@ class CodeManager:
         '.yaml', '.yml', '.sql', '.sh', '.jsx', '.tsx', '.vue'
     }
     
-    # Allowed commands
-    ALLOWED_COMMANDS = {
+    # Allowed commands (full mod için geniş, sandbox için daha kısıtlı)
+    ALLOWED_COMMANDS_FULL = {
         "ls", "dir", "git", "python", "pip", "echo", "date",
         "whoami", "type", "cat", "mkdir", "cd", "touch",
         "where", "which", "pytest", "npm", "node", "tree",
-        "find", "grep", "nvidia-smi"
+        "find", "grep", "nvidia-smi", "ps", "top", "htop"
     }
+    
+    # Sandbox modunda sadece okuma amaçlı komutlar
+    ALLOWED_COMMANDS_SANDBOX = {
+        "ls", "dir", "echo", "date", "whoami", "type", "cat",
+        "where", "which", "tree", "find", "grep", "nvidia-smi"
+    }
+    
+    # Restricted modda komut çalıştırma yasak
+    ALLOWED_COMMANDS_RESTRICTED = set()
     
     # Exclude patterns
     EXCLUDE_DIRS = {
@@ -151,13 +161,16 @@ class CodeManager:
     # Illegal command characters
     ILLEGAL_CHARS = [";", "&&", "||", ">", ">>", "|", "`", "$"]
     
-    def __init__(self, work_dir: Optional[Union[str, Path]] = None):
+    def __init__(self, work_dir: Optional[Union[str, Path]] = None, access_level: str = "sandbox"):
         """
         Code manager başlatıcı
         
         Args:
             work_dir: Çalışma dizini (None ise Config.WORK_DIR)
+            access_level: Erişim seviyesi (restricted, sandbox, full)
         """
+        self.access_level = access_level
+        
         # Sandbox root
         if work_dir:
             self.root_dir = Path(work_dir).resolve()
@@ -178,7 +191,7 @@ class CodeManager:
         except Exception as e:
             logger.error(f"Dizin oluşturma hatası: {e}")
         
-        logger.info(f"✅ CodeManager aktif (Sandbox: {self.root_dir})")
+        logger.info(f"✅ CodeManager aktif (Sandbox: {self.root_dir}, Erişim: {self.access_level})")
     
     # ───────────────────────────────────────────────────────────
     # SECURITY
@@ -208,6 +221,45 @@ class CodeManager:
         """Dosya uzantısı izinli mi"""
         return path.suffix.lower() in self.ALLOWED_EXTENSIONS
     
+    def _check_write_permission(self, operation: str) -> bool:
+        """
+        Yazma izni kontrolü (sandbox veya full gerekir)
+        
+        Args:
+            operation: İşlem adı (log için)
+        
+        Returns:
+            İzin varsa True
+        """
+        if self.access_level == AccessLevel.RESTRICTED:
+            logger.warning(f"🚫 {operation}: Kısıtlı modda yazma izni yok")
+            return False
+        return True
+    
+    def _check_delete_permission(self, operation: str) -> bool:
+        """
+        Silme izni kontrolü (sadece full modda)
+        
+        Args:
+            operation: İşlem adı (log için)
+        
+        Returns:
+            İzin varsa True
+        """
+        if self.access_level != AccessLevel.FULL:
+            logger.warning(f"🚫 {operation}: Sadece full modda silme izni var")
+            return False
+        return True
+    
+    def _get_allowed_commands(self) -> set:
+        """Erişim seviyesine göre izinli komutları döndür"""
+        if self.access_level == AccessLevel.FULL:
+            return self.ALLOWED_COMMANDS_FULL
+        elif self.access_level == AccessLevel.SANDBOX:
+            return self.ALLOWED_COMMANDS_SANDBOX
+        else:  # restricted
+            return self.ALLOWED_COMMANDS_RESTRICTED
+    
     # ───────────────────────────────────────────────────────────
     # FILE OPERATIONS
     # ───────────────────────────────────────────────────────────
@@ -218,7 +270,7 @@ class CodeManager:
         recursive: bool = True
     ) -> str:
         """
-        Dosyaları listele
+        Dosyaları listele (Tüm erişim seviyelerine açık)
         
         Args:
             pattern: Glob pattern
@@ -259,7 +311,7 @@ class CodeManager:
     
     def read_file(self, filename: str) -> str:
         """
-        Dosya oku
+        Dosya oku (Tüm erişim seviyelerine açık)
         
         Args:
             filename: Dosya adı veya yolu
@@ -302,7 +354,7 @@ class CodeManager:
     
     def save_file(self, filename: str, content: str) -> str:
         """
-        Dosya kaydet (backup ile)
+        Dosya kaydet (sandbox ve full modda)
         
         Args:
             filename: Dosya adı veya yolu
@@ -311,6 +363,10 @@ class CodeManager:
         Returns:
             Sonuç mesajı
         """
+        # İzin kontrolü
+        if not self._check_write_permission("Dosya kaydetme"):
+            return "🚫 [GÜVENLİK]: Bu işlem için yetkiniz yok (sandbox veya full gerekli)"
+        
         with self.lock:
             try:
                 target_path = (self.root_dir / filename.strip()).resolve()
@@ -341,7 +397,7 @@ class CodeManager:
     
     def delete_file(self, filename: str) -> str:
         """
-        Dosya sil (backup ile)
+        Dosya sil (sadece full modda)
         
         Args:
             filename: Dosya adı veya yolu
@@ -349,6 +405,10 @@ class CodeManager:
         Returns:
             Sonuç mesajı
         """
+        # İzin kontrolü
+        if not self._check_delete_permission("Dosya silme"):
+            return "🚫 [GÜVENLİK]: Dosya silme için full erişim gerekli"
+        
         with self.lock:
             try:
                 target_path = (self.root_dir / filename.strip()).resolve()
@@ -392,7 +452,7 @@ class CodeManager:
     
     def get_file_info(self, filename: str) -> str:
         """
-        Dosya bilgisi
+        Dosya bilgisi (Tüm erişim seviyelerine açık)
         
         Args:
             filename: Dosya adı
@@ -448,7 +508,7 @@ class CodeManager:
         file_ext: str = "*.py"
     ) -> str:
         """
-        Kod arama
+        Kod arama (Tüm erişim seviyelerine açık)
         
         Args:
             query: Arama terimi
@@ -511,7 +571,7 @@ class CodeManager:
         timeout: int = DEFAULT_TIMEOUT
     ) -> str:
         """
-        Terminal komutu çalıştır
+        Terminal komutu çalıştır (erişim seviyesine göre whitelist)
         
         Args:
             command: Komut
@@ -537,9 +597,14 @@ class CodeManager:
                 if any(char in command for char in self.ILLEGAL_CHARS):
                     return "🚫 [GÜVENLİK]: Zincirleme komutlar yasak"
                 
-                # Security: Command whitelist
-                if base_cmd not in self.ALLOWED_COMMANDS:
-                    return f"🚫 [GÜVENLİK]: '{base_cmd}' komutu yasak"
+                # Security: Erişim seviyesine göre whitelist
+                allowed_commands = self._get_allowed_commands()
+                if base_cmd not in allowed_commands:
+                    return f"🚫 [GÜVENLİK]: '{base_cmd}' komutu {self.access_level} modunda yasak"
+                
+                # Restricted modda hiçbir komuta izin verilmez (whitelist zaten boş)
+                if self.access_level == AccessLevel.RESTRICTED:
+                    return "🚫 [GÜVENLİK]: Kısıtlı modda terminal komutu çalıştırılamaz"
                 
                 # Windows shell commands
                 use_shell = (
@@ -563,7 +628,7 @@ class CodeManager:
                     output += f"\n[STDERR]: {result.stderr}"
                 
                 self.metrics.commands_executed += 1
-                logger.info(f"💻 Terminal: {command[:50]}")
+                logger.info(f"💻 Terminal ({self.access_level}): {command[:50]}")
                 
                 return (
                     f"--- TERMİNAL ---\n{output.strip()}"
@@ -584,7 +649,7 @@ class CodeManager:
     
     def get_gpu_info(self) -> str:
         """
-        GPU bilgisi
+        GPU bilgisi (Tüm erişim seviyelerine açık)
         
         Returns:
             GPU durumu
@@ -632,7 +697,7 @@ class CodeManager:
     
     def get_system_info(self) -> str:
         """
-        Sistem bilgisi
+        Sistem bilgisi (Tüm erişim seviyelerine açık)
         
         Returns:
             Formatlanmış sistem bilgisi
@@ -644,7 +709,8 @@ class CodeManager:
             f"🐍 Python: {sys.version.split()[0]}",
             gpu_status,
             f"📁 Çalışma Dizini: {self.root_dir}",
-            f"🛡️  Sandbox: AKTİF"
+            f"🛡️  Sandbox: AKTİF",
+            f"🔐 Erişim Seviyesi: {self.access_level}"
         ])
     
     # ───────────────────────────────────────────────────────────
@@ -666,5 +732,6 @@ class CodeManager:
             "commands_executed": self.metrics.commands_executed,
             "searches_performed": self.metrics.searches_performed,
             "errors_encountered": self.metrics.errors_encountered,
-            "sandbox_root": str(self.root_dir)
+            "sandbox_root": str(self.root_dir),
+            "access_level": self.access_level
         }

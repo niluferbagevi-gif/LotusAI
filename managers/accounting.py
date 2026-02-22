@@ -1,6 +1,6 @@
 """
 LotusAI Accounting Manager
-Sürüm: 2.5.3
+Sürüm: 2.5.4 (Eklendi: Erişim Seviyesi Desteği)
 Açıklama: Muhasebe ve finans yönetimi
 
 Özellikler:
@@ -10,6 +10,7 @@ Açıklama: Muhasebe ve finans yönetimi
 - Otomatik yedekleme
 - Veri kurtarma
 - Thread-safe operations
+- Erişim seviyesi kontrolleri (restricted/sandbox/full)
 """
 
 import pandas as pd
@@ -26,7 +27,7 @@ from decimal import Decimal
 # ═══════════════════════════════════════════════════════════════
 # CONFIG
 # ═══════════════════════════════════════════════════════════════
-from config import Config
+from config import Config, AccessLevel
 
 logger = logging.getLogger("LotusAI.Accounting")
 
@@ -139,6 +140,7 @@ class AccountingManager:
     - Akıllı analiz: Kategori ve zaman bazlı finansal ölçümler
     - Veri güvenliği: Otomatik yedekleme ve hata kurtarma
     - Thread-safe: Çoklu agent desteği
+    - Erişim seviyesi kontrolleri
     
     Database schema:
     - Tarih: İşlem zamanı
@@ -155,8 +157,15 @@ class AccountingManager:
     # Backup settings
     MAX_BACKUPS = 15
     
-    def __init__(self):
-        """Accounting manager başlatıcı"""
+    def __init__(self, access_level: str = "sandbox"):
+        """
+        Accounting manager başlatıcı
+        
+        Args:
+            access_level: Erişim seviyesi (restricted, sandbox, full)
+        """
+        self.access_level = access_level
+        
         # Paths
         self.work_dir = Config.WORK_DIR
         self.filename = self.work_dir / "lotus_kasa_defteri.csv"
@@ -181,7 +190,7 @@ class AccountingManager:
         self._init_db()
         
         status = "GPU (cuDF)" if self.use_gpu else "CPU (Pandas)"
-        logger.info(f"✅ Muhasebe Yöneticisi aktif ({status})")
+        logger.info(f"✅ Muhasebe Yöneticisi aktif ({status}, Erişim: {self.access_level})")
     
     # ───────────────────────────────────────────────────────────
     # DATABASE INITIALIZATION
@@ -321,7 +330,7 @@ class AccountingManager:
             return 0.0
     
     # ───────────────────────────────────────────────────────────
-    # TRANSACTION OPERATIONS
+    # TRANSACTION OPERATIONS (Erişim kontrollü)
     # ───────────────────────────────────────────────────────────
     
     def add_entry(
@@ -333,7 +342,7 @@ class AccountingManager:
         user_id: str = "Sistem"
     ) -> bool:
         """
-        Yeni işlem ekle
+        Yeni işlem ekle (Sadece sandbox ve full modda)
         
         Args:
             tur: İşlem tipi (GELIR/GIDER)
@@ -345,6 +354,11 @@ class AccountingManager:
         Returns:
             Başarılı ise True
         """
+        # Erişim kontrolü: Kısıtlı modda işlem eklenemez
+        if self.access_level == AccessLevel.RESTRICTED:
+            logger.warning("🚫 Kısıtlı modda işlem ekleme engellendi")
+            return False
+        
         # Validate transaction type
         tur = str(tur).upper()
         if tur not in ["GELIR", "GIDER"]:
@@ -408,7 +422,7 @@ class AccountingManager:
     
     def delete_entry(self, index: int) -> bool:
         """
-        İşlem sil
+        İşlem sil (Sadece full modda)
         
         Args:
             index: Satır index'i
@@ -416,6 +430,11 @@ class AccountingManager:
         Returns:
             Başarılı ise True
         """
+        # Erişim kontrolü: Sadece full modda silme yapılabilir
+        if self.access_level != AccessLevel.FULL:
+            logger.warning(f"🚫 {self.access_level} modunda silme işlemi engellendi (sadece full)")
+            return False
+        
         with self.lock:
             try:
                 df = pd.read_csv(self.filename)
@@ -437,7 +456,7 @@ class AccountingManager:
                 return False
     
     # ───────────────────────────────────────────────────────────
-    # ANALYSIS & REPORTING
+    # ANALYSIS & REPORTING (Tüm erişim seviyelerine açık)
     # ───────────────────────────────────────────────────────────
     
     def _load_data_to_engine(self):
@@ -453,7 +472,7 @@ class AccountingManager:
     
     def get_balance(self) -> float:
         """
-        Net bakiye hesapla
+        Net bakiye hesapla (Tüm kullanıcılara açık)
         
         Returns:
             Bakiye (TL)
@@ -476,7 +495,7 @@ class AccountingManager:
     
     def get_summary(self) -> FinancialSummary:
         """
-        Finansal özet
+        Finansal özet (Tüm kullanıcılara açık)
         
         Returns:
             FinancialSummary objesi
@@ -538,7 +557,7 @@ class AccountingManager:
         user: Optional[str] = None
     ) -> pd.DataFrame:
         """
-        Filtrelenmiş veri
+        Filtrelenmiş veri (Tüm kullanıcılara açık)
         
         Args:
             start_date: Başlangıç tarihi (YYYY-MM-DD)
@@ -586,7 +605,7 @@ class AccountingManager:
     
     def get_category_summary(self) -> Dict[str, Dict[str, float]]:
         """
-        Kategori özeti
+        Kategori özeti (Tüm kullanıcılara açık)
         
         Returns:
             Kategori bazlı gelir/gider dict
@@ -613,7 +632,7 @@ class AccountingManager:
     
     def get_recent_transactions(self, limit: int = 5) -> str:
         """
-        Son işlemler
+        Son işlemler (Tüm kullanıcılara açık)
         
         Args:
             limit: Maksimum kayıt
@@ -649,7 +668,7 @@ class AccountingManager:
     
     def get_report(self) -> str:
         """
-        Detaylı finansal rapor
+        Detaylı finansal rapor (Tüm kullanıcılara açık)
         
         Returns:
             Formatlanmış rapor
@@ -685,7 +704,7 @@ class AccountingManager:
                 return f"❌ Rapor oluşturulamadı: {e}"
     
     # ───────────────────────────────────────────────────────────
-    # EXPORT
+    # EXPORT (Tüm kullanıcılara açık)
     # ───────────────────────────────────────────────────────────
     
     def export_to_excel(
@@ -693,7 +712,7 @@ class AccountingManager:
         target_path: Optional[Union[str, Path]] = None
     ) -> Optional[str]:
         """
-        Excel'e aktar
+        Excel'e aktar (Tüm kullanıcılara açık)
         
         Args:
             target_path: Hedef dosya yolu
@@ -735,5 +754,6 @@ class AccountingManager:
             "recoveries_performed": self.metrics.recoveries_performed,
             "errors_encountered": self.metrics.errors_encountered,
             "gpu_enabled": self.use_gpu,
-            "current_balance": self.get_balance()
+            "current_balance": self.get_balance(),
+            "access_level": self.access_level
         }

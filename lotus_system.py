@@ -1,6 +1,6 @@
 """
 LotusAI Ana Sistem Motoru
-Sürüm: 2.5.6 (Fix: Microphone Error Handling & ALSA Suppression)
+Sürüm: 2.5.7 (Eklendi: Erişim Seviyesi Desteği - OpenClaw uyumlu)
 Açıklama: Multi-agent AI sistemi, ses tanıma, güvenlik ve otomasyon
 """
 
@@ -29,11 +29,10 @@ except ImportError:
 # ═══════════════════════════════════════════════════════════════
 # CORE MODÜLLER
 # ═══════════════════════════════════════════════════════════════
-from config import Config
+from config import Config, AccessLevel
 from core.utils import setup_logging, patch_transformers, ignore_stderr
 from core.runtime import RuntimeContext
 from core.audio import init_audio_system, play_voice
-# DÜZELTME: Hem Enum'ı (SystemState) hem de Yönetici Sınıfını (SystemStateManager) import ediyoruz
 from core.system_state import SystemState, SystemStateManager
 from core.memory import MemoryManager
 from core.security import SecurityManager
@@ -125,20 +124,22 @@ class LotusSystem:
     - Ses tanıma döngüsü
     - Web dashboard
     - Sistem kapatma
+    - Erişim seviyesi kontrolü (OpenClaw stili)
     """
     
-    def __init__(self, mode: str = "online"):
+    def __init__(self, mode: str = "online", access_level: str = "sandbox"):
         """
         Sistem başlatıcı
         
         Args:
             mode: 'online' (gemini) veya 'local' (ollama)
+            access_level: 'restricted', 'sandbox', 'full'
         """
         self.mode = mode
+        self.access_level = access_level
         self.loop: Optional[asyncio.AbstractEventLoop] = None
         
         # Managerlar
-        # DÜZELTME: Type hint güncellendi
         self.state_manager: Optional[SystemStateManager] = None
         self.memory_manager: Optional[MemoryManager] = None
         self.camera_manager: Optional[CameraManager] = None
@@ -152,7 +153,7 @@ class LotusSystem:
         self.recognizer: Optional[sr.Recognizer] = None
         self.microphone: Optional[sr.Microphone] = None
         
-        logger.info(f"LotusSystem başlatılıyor - Mod: {mode}")
+        logger.info(f"LotusSystem başlatılıyor - Mod: {mode}, Erişim: {access_level}")
     
     def _setup_gpu(self) -> str:
         """
@@ -176,12 +177,19 @@ class LotusSystem:
     
     def _print_startup_banner(self, device: str) -> None:
         """Başlangıç banner'ını yazdır"""
+        access_display = {
+            AccessLevel.RESTRICTED: "🔒 Kısıtlı (Sadece Bilgi Alma)",
+            AccessLevel.SANDBOX: "📦 Sandbox (Güvenli Dosya Yazma)",
+            AccessLevel.FULL: "⚡ Tam Erişim (Terminal & Komut)"
+        }.get(self.access_level, self.access_level)
+        
         print(f"\n{Colors.HEADER}{'═' * 70}{Colors.ENDC}")
         print(f"{Colors.HEADER}{Colors.BOLD}  {Config.PROJECT_NAME.upper()} SİSTEMİ v{Config.VERSION}{Colors.ENDC}")
         print(f"{Colors.HEADER}{'═' * 70}{Colors.ENDC}")
         print(f"{Colors.CYAN}  ⚙️  Donanım     : {Config.GPU_INFO}{Colors.ENDC}")
         print(f"{Colors.CYAN}  🖥️  Cihaz       : {device.upper()}{Colors.ENDC}")
         print(f"{Colors.CYAN}  🧠 Sağlayıcı  : {Config.AI_PROVIDER.upper()}{Colors.ENDC}")
+        print(f"{Colors.CYAN}  🔐 Erişim      : {access_display}{Colors.ENDC}")
         print(f"{Colors.HEADER}{'═' * 70}{Colors.ENDC}\n")
     
     def _initialize_managers(self) -> Tuple[Dict[str, Any], Any]:
@@ -194,13 +202,12 @@ class LotusSystem:
         logger.info("📦 Managerlar başlatılıyor...")
         
         # Core managerlar
-        # DÜZELTME: SystemState (Enum) yerine SystemStateManager (Class) başlatılıyor
         self.state_manager = SystemStateManager()
         RuntimeContext.set_state_manager(self.state_manager)
         
         self.memory_manager = MemoryManager()
         
-        # Kamera
+        # Kamera (erişim seviyesine göre kısıtlanabilir, şimdilik her zaman açık)
         self.camera_manager = CameraManager()
         with ignore_stderr():
             self.camera_manager.start()
@@ -232,7 +239,7 @@ class LotusSystem:
         init_audio_system()
         logger.info("🔊 Ses sistemi aktif")
         
-        # Tools dictionary
+        # Tools dictionary - erişim seviyesine göre bazı managerlar filtrelenebilir
         tools = {
             "camera": self.camera_manager,
             "code": code_manager,
@@ -269,14 +276,14 @@ class LotusSystem:
         # Poyraz agent
         poyraz_agent = PoyrazAgent(nlp_manager, {})
         
-        # Sidar agent
+        # Sidar agent - erişim seviyesini de iletiyoruz (opsiyonel)
         sidar_tools = {
             'code': tools['code'],
             'system': tools['system'],
             'security': self.security_manager,
             'memory': self.memory_manager
         }
-        sidar_agent = SidarAgent(sidar_tools)
+        sidar_agent = SidarAgent(sidar_tools, access_level=self.access_level)
         
         # Agent'ları tools'a ekle
         tools['poyraz_special'] = poyraz_agent
@@ -285,8 +292,8 @@ class LotusSystem:
         # Poyraz'a tüm toolları ver
         poyraz_agent.update_tools(tools)
         
-        # Engine'i oluştur
-        self.engine = AgentEngine(self.memory_manager, tools)
+        # Engine'i oluştur - access_level'i de engine'e veriyoruz
+        self.engine = AgentEngine(self.memory_manager, tools, access_level=self.access_level)
         RuntimeContext.set_engine(self.engine)
         
         logger.info("✅ Agent engine hazır")
@@ -323,8 +330,6 @@ class LotusSystem:
     def _setup_microphone(self) -> bool:
         """
         Mikrofonu yapılandır (Hata Korumalı)
-        
-        GÜNCELLEME: ALSA hatalarını gizlemek için tekrar ignore_stderr içine alındı.
         
         Returns:
             Başarılı ise True
@@ -418,7 +423,7 @@ class LotusSystem:
         detected_agent = self.engine.determine_agent(user_input)
         current_agent = detected_agent if detected_agent else "ATLAS"
         
-        # Düşünme modu (SystemState Enum kullanımı doğru)
+        # Düşünme modu
         self.state_manager.set_state(SystemState.THINKING)
         
         # Yanıt al
@@ -431,7 +436,7 @@ class LotusSystem:
         # Yanıtı göster
         print(f"{Colors.GREEN}🤖 {resp_data['agent']}: {resp_data['content']}{Colors.ENDC}")
         
-        # Seslendirme
+        # Seslendirme (erişim seviyesine göre kısıtlama yok)
         RuntimeContext.submit_task(
             play_voice,
             resp_data['content'],
@@ -535,8 +540,10 @@ class LotusSystem:
             self.loop = asyncio.get_running_loop()
             RuntimeContext.set_loop(self.loop)
             
-            # Provider modunu ayarla
+            # Provider modunu ayarla (Config'e işle)
             Config.set_provider_mode(self.mode)
+            # Erişim seviyesini de Config'e set et (launcher'dan gelmişti, pekiştirme)
+            Config.set_access_level(self.access_level)
             
             # GPU'yu hazırla
             device = self._setup_gpu()
@@ -577,20 +584,21 @@ class LotusSystem:
 
 
 # ═══════════════════════════════════════════════════════════════
-# BAŞLATMA FONKSİYONU
+# BAŞLATMA FONKSİYONU (GÜNCELLENMİŞ)
 # ═══════════════════════════════════════════════════════════════
-def start_lotus_system(mode: str = "online") -> None:
+def start_lotus_system(mode: str = "online", access_level: str = "sandbox") -> None:
     """
     LotusAI sistemini başlatır
     
     Args:
         mode: 'online' (Gemini) veya 'local' (Ollama)
+        access_level: 'restricted', 'sandbox', 'full'
     """
     try:
         if sys.platform == 'win32':
             asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
         
-        system = LotusSystem(mode=mode)
+        system = LotusSystem(mode=mode, access_level=access_level)
         asyncio.run(system.run())
     
     except KeyboardInterrupt:
@@ -601,6 +609,10 @@ def start_lotus_system(mode: str = "online") -> None:
         print(f"\n{Colors.FAIL}❌ Sistem başlatılamadı: {e}{Colors.ENDC}")
         sys.exit(1)
 
+
 if __name__ == "__main__":
+    # Doğrudan çalıştırılırsa varsayılan değerler
     mode = os.getenv("AI_PROVIDER", "online")
-    start_lotus_system(mode)
+    # Erişim seviyesi .env'den okunabilir, yoksa sandbox
+    access = os.getenv("ACCESS_LEVEL", "sandbox")
+    start_lotus_system(mode, access)

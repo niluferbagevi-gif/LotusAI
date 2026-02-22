@@ -1,6 +1,6 @@
 """
 LotusAI User Management System
-Sürüm: 2.5.3
+Sürüm: 2.5.4 (Eklendi: Erişim Seviyesi Desteği - uyumluluk için)
 Açıklama: Kullanıcı yönetimi, yetkilendirme ve kimlik profilleri
 
 Özellikler:
@@ -10,6 +10,7 @@ Açıklama: Kullanıcı yönetimi, yetkilendirme ve kimlik profilleri
 - Thread-safe operations
 - GPU-aware identity management
 - Audit logging
+- Erişim seviyesi bilgisi (sistem modu için)
 """
 
 import json
@@ -27,7 +28,7 @@ from contextlib import contextmanager
 # ═══════════════════════════════════════════════════════════════
 # CONFIG
 # ═══════════════════════════════════════════════════════════════
-from config import Config
+from config import Config, AccessLevel
 
 logger = logging.getLogger("LotusAI.UserManager")
 
@@ -205,8 +206,15 @@ class UserManager:
         }
     }
     
-    def __init__(self):
-        """User manager başlatıcı"""
+    def __init__(self, access_level: str = "sandbox"):
+        """
+        User manager başlatıcı
+        
+        Args:
+            access_level: Erişim seviyesi (restricted, sandbox, full) - sadece bilgi amaçlı
+        """
+        self.access_level = access_level
+        
         # Paths
         self.work_dir = Config.WORK_DIR
         self.db_file = self.work_dir / "users_db.json"
@@ -228,7 +236,7 @@ class UserManager:
         # Audit log
         self.audit_entries: List[AuditLogEntry] = []
         
-        logger.info(f"✅ UserManager başlatıldı (Device: {self.device.upper()})")
+        logger.info(f"✅ UserManager başlatıldı (Device: {self.device.upper()}, Erişim: {self.access_level})")
     
     def _detect_hardware(self) -> str:
         """
@@ -788,7 +796,8 @@ class UserManager:
                 "status_distribution": status_distribution,
                 "faces_registered": faces_count,
                 "voices_registered": voices_count,
-                "device": self.device
+                "device": self.device,
+                "access_level": self.access_level
             }
     
     def get_hardware_status(self) -> Dict[str, Any]:

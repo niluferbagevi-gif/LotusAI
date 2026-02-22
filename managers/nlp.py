@@ -1,6 +1,6 @@
 """
 LotusAI NLP Manager
-Sürüm: 2.5.3
+Sürüm: 2.5.4 (Eklendi: Erişim Seviyesi Desteği)
 Açıklama: NLP ve duygu analizi yönetimi
 
 Özellikler:
@@ -11,6 +11,7 @@ Açıklama: NLP ve duygu analizi yönetimi
 - Rezervasyon ayıklama
 - Türkçe stop words
 - Intent detection
+- Erişim seviyesi kontrolleri
 """
 
 import re
@@ -24,7 +25,7 @@ from enum import Enum
 # ═══════════════════════════════════════════════════════════════
 # CONFIG
 # ═══════════════════════════════════════════════════════════════
-from config import Config
+from config import Config, AccessLevel
 
 logger = logging.getLogger("LotusAI.NLP")
 
@@ -141,7 +142,8 @@ class NLPManager:
     - Stop words: Türkçe dolgu kelime filtreleme
     
     Transformers kütüphanesi ile Türkçe BERT modelini kullanarak
-    yüksek doğrulukta duygu analizi yapar.
+    yüksek doğrulukta duygu analizi yapar. Erişim seviyesine göre
+    bazı işlemler kısıtlanabilir.
     """
     
     # Turkish stop words
@@ -174,8 +176,15 @@ class NLPManager:
     MAX_LENGTH = 512
     CONFIDENCE_THRESHOLD = 0.6
     
-    def __init__(self):
-        """NLP manager başlatıcı"""
+    def __init__(self, access_level: str = "sandbox"):
+        """
+        NLP manager başlatıcı
+        
+        Args:
+            access_level: Erişim seviyesi (restricted, sandbox, full)
+        """
+        self.access_level = access_level
+        
         # Thread safety
         self.lock = threading.RLock()
         
@@ -190,6 +199,8 @@ class NLPManager:
             self._init_model()
         else:
             logger.warning("⚠️ NLP modülleri eksik, duygu analizi pasif")
+        
+        logger.info(f"✅ NLPManager hazır (Erişim: {self.access_level})")
     
     def _init_model(self) -> None:
         """BERT modelini yükle"""
@@ -266,12 +277,12 @@ class NLPManager:
             return " ".join(clean.split())
     
     # ───────────────────────────────────────────────────────────
-    # SENTIMENT ANALYSIS
+    # SENTIMENT ANALYSIS (Erişim kontrollü)
     # ───────────────────────────────────────────────────────────
     
     def detect_emotion(self, text: str) -> SentimentResult:
         """
-        Duygu analizi
+        Duygu analizi - Kısıtlı modda sadece nötr döner.
         
         Args:
             text: Analiz edilecek metin
@@ -279,6 +290,14 @@ class NLPManager:
         Returns:
             SentimentResult objesi
         """
+        # Kısıtlı modda model kullanma
+        if self.access_level == AccessLevel.RESTRICTED:
+            return SentimentResult(
+                sentiment=Sentiment.NEUTRAL,
+                confidence=0.0,
+                text=text
+            )
+        
         if not self.sentiment_pipeline or not text:
             return SentimentResult(
                 sentiment=Sentiment.NEUTRAL,
@@ -326,7 +345,7 @@ class NLPManager:
     
     def analyze_batch(self, text_list: List[str]) -> BatchAnalysis:
         """
-        Toplu duygu analizi
+        Toplu duygu analizi - Kısıtlı modda boş sonuç döner.
         
         Args:
             text_list: Metin listesi
@@ -334,6 +353,18 @@ class NLPManager:
         Returns:
             BatchAnalysis objesi
         """
+        if self.access_level == AccessLevel.RESTRICTED:
+            return BatchAnalysis(
+                total_count=0,
+                positive=0,
+                negative=0,
+                neutral=0,
+                satisfaction_rate=0.0,
+                top_complaints=[],
+                popular_topics=[],
+                device_used="Disabled (Restricted Mode)"
+            )
+        
         if not text_list or not self.sentiment_pipeline:
             return BatchAnalysis(
                 total_count=0,
@@ -430,7 +461,7 @@ class NLPManager:
     
     def extract_keywords(self, text: str, top_n: int = 5) -> List[str]:
         """
-        Anahtar kelime çıkarma
+        Anahtar kelime çıkarma - Tüm erişim seviyelerinde kullanılabilir.
         
         Args:
             text: Metin
@@ -465,7 +496,7 @@ class NLPManager:
     
     def detect_intent(self, text: str) -> Intent:
         """
-        Niyet tespiti
+        Niyet tespiti - Tüm erişim seviyelerinde kullanılabilir.
         
         Args:
             text: Kullanıcı metni
@@ -488,7 +519,7 @@ class NLPManager:
     
     def get_behavior_prompt(self, text: str) -> str:
         """
-        LLM davranış talimatı
+        LLM davranış talimatı - Tüm erişim seviyelerinde kullanılabilir.
         
         Args:
             text: Kullanıcı metni
@@ -515,12 +546,12 @@ class NLPManager:
             )
     
     # ───────────────────────────────────────────────────────────
-    # RESERVATION EXTRACTION
+    # RESERVATION EXTRACTION (Erişim kontrollü)
     # ───────────────────────────────────────────────────────────
     
     def extract_reservation_details(self, text: str) -> ReservationData:
         """
-        Rezervasyon bilgisi ayıklama
+        Rezervasyon bilgisi ayıklama - Kısıtlı modda bilgi verilmez.
         
         Args:
             text: Rezervasyon metni
@@ -528,6 +559,14 @@ class NLPManager:
         Returns:
             ReservationData objesi
         """
+        if self.access_level == AccessLevel.RESTRICTED:
+            return ReservationData(
+                person_count="🔒 Gizli",
+                time="🔒 Gizli",
+                phone=None,
+                summary="Kısıtlı modda rezervasyon bilgisi gösterilmez."
+            )
+        
         text_lower = self.turkish_lower(text)
         
         with self.lock:
@@ -636,5 +675,6 @@ class NLPManager:
             "errors_encountered": self.metrics.errors_encountered,
             "model_loaded": self.sentiment_pipeline is not None,
             "gpu_available": HAS_GPU,
-            "device": "GPU (CUDA)" if HAS_GPU else "CPU"
+            "device": "GPU (CUDA)" if HAS_GPU else "CPU",
+            "access_level": self.access_level
         }

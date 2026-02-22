@@ -9,12 +9,16 @@ from typing import Dict, List, Any, Optional, Union
 
 # --- YAPILANDIRMA VE FALLBACK ---
 try:
-    from config import Config
+    from config import Config, AccessLevel
 except ImportError:
     class Config:
         WORK_DIR = os.getcwd()
         STATIC_DIR = Path("static")
         USE_GPU = False
+    class AccessLevel:
+        RESTRICTED = "restricted"
+        SANDBOX = "sandbox"
+        FULL = "full"
 
 # --- LOGLAMA ---
 logger = logging.getLogger("LotusAI.Operations")
@@ -60,9 +64,18 @@ class OperationsManager:
     - Akıllı Menü: GPU/AI destekli dinamik öneri sistemi.
     - Paket Servis: DeliveryManager üzerinden bot kontrolü ve durum takibi.
     - Veri Güvenliği: RLock ile eşzamanlılık ve otomatik yedekli çalışma.
+    - Erişim seviyesi kontrolleri (restricted/sandbox/full)
     """
     
-    def __init__(self):
+    def __init__(self, access_level: str = "sandbox"):
+        """
+        OperationsManager başlatıcı
+        
+        Args:
+            access_level: Erişim seviyesi (restricted, sandbox, full)
+        """
+        self.access_level = access_level
+        
         # Yollar
         default_work_dir = getattr(Config, "WORK_DIR", os.getcwd())
         self.work_dir = Path(default_work_dir)
@@ -91,13 +104,13 @@ class OperationsManager:
         self.menu_data = self._load_menu()
         
         gpu_status = f"GPU Aktif ({self.device})" if self.has_gpu else "CPU Modu"
-        logger.info(f"✅ Operasyon Yöneticisi aktif. Donanım: {gpu_status}")
+        logger.info(f"✅ Operasyon Yöneticisi aktif. Donanım: {gpu_status}, Erişim: {self.access_level}")
 
     def _init_delivery(self):
         """Paket servis modülünü başlatır."""
         if DeliveryManager:
             try:
-                self.delivery_manager = DeliveryManager()
+                self.delivery_manager = DeliveryManager(access_level=self.access_level)
             except Exception as e:
                 logger.error(f"DeliveryManager başlatılamadı: {e}")
 
@@ -193,7 +206,7 @@ class OperationsManager:
         self.menu_file.write_text(json.dumps(default_menu, indent=4, ensure_ascii=False), encoding="utf-8")
 
     def get_menu_list(self) -> str:
-        """Formatlanmış menü listesi döner."""
+        """Formatlanmış menü listesi döner. (Her erişim seviyesinde kullanılabilir)"""
         if not self.menu_data: return "Menü şu an güncelleniyor."
         lines = ["--- 🌿 LOTUS BAĞEVİ GÜNCEL MENÜ ---"]
         for cat, items in self.menu_data.items():
@@ -203,7 +216,7 @@ class OperationsManager:
         return "\n".join(lines)
 
     def get_recommendation(self, weather_context: str = "") -> str:
-        """Hava durumu ve saate göre GPU/AI destekli akıllı öneri sunar."""
+        """Hava durumu ve saate göre GPU/AI destekli akıllı öneri sunar. (Her erişim seviyesinde kullanılabilir)"""
         hour = datetime.now().hour
         weather = weather_context.lower()
         
@@ -223,7 +236,13 @@ class OperationsManager:
     # --- REZERVASYON SİSTEMİ ---
 
     def add_reservation(self, name: str, time_slot: str, count: Union[int, str], phone: str = None, messenger: Any = None) -> str:
-        """Yeni bir rezervasyon kaydeder ve onay gönderir."""
+        """
+        Yeni bir rezervasyon kaydeder ve onay gönderir.
+        Sadece sandbox ve full modda çalışır.
+        """
+        if self.access_level == AccessLevel.RESTRICTED:
+            return "🔒 Kısıtlı modda rezervasyon eklenemez. Sadece bilgi alabilirsiniz."
+        
         with self.lock:
             try:
                 qty = int(count)
@@ -263,7 +282,14 @@ class OperationsManager:
                 return "❌ Rezervasyon eklenemedi."
 
     def cancel_reservation(self, res_id: int) -> bool:
-        """Rezervasyonu ID üzerinden iptal eder."""
+        """
+        Rezervasyonu ID üzerinden iptal eder.
+        Sadece sandbox ve full modda çalışır.
+        """
+        if self.access_level == AccessLevel.RESTRICTED:
+            logger.warning("🚫 Kısıtlı modda iptal engellendi")
+            return False
+        
         with self.lock:
             db = self._load_db()
             original_len = len(db["rezervasyonlar"])
@@ -277,7 +303,14 @@ class OperationsManager:
     # --- STOK YÖNETİMİ ---
 
     def update_stock(self, item_name: str, amount: float, operation: str = "add") -> bool:
-        """Stok miktarını günceller (add/remove)."""
+        """
+        Stok miktarını günceller (add/remove).
+        Sadece sandbox ve full modda çalışır.
+        """
+        if self.access_level == AccessLevel.RESTRICTED:
+            logger.warning("🚫 Kısıtlı modda stok güncelleme engellendi")
+            return False
+        
         with self.lock:
             db = self._load_db()
             name = item_name.strip().title()
@@ -297,12 +330,18 @@ class OperationsManager:
             return True
 
     def check_stock_critical(self, threshold: float = 5.0) -> List[str]:
-        """Kritik seviyenin altına düşen ürünleri listeler."""
+        """Kritik seviyenin altına düşen ürünleri listeler. (Her erişim seviyesinde kullanılabilir)"""
         db = self._load_db()
         return [f"{name} ({data['miktar']})" for name, data in db["stok"].items() if data['miktar'] < threshold]
 
     def process_invoice_items(self, items_list: List[Dict]) -> str:
-        """Gaya'nın faturadan okuduğu listeyi stoklara işler."""
+        """
+        Gaya'nın faturadan okuduğu listeyi stoklara işler.
+        Sadece sandbox ve full modda çalışır.
+        """
+        if self.access_level == AccessLevel.RESTRICTED:
+            return "🔒 Kısıtlı modda fatura işlenemez."
+        
         processed = []
         for item in items_list:
             name = item.get("isim", "Bilinmeyen Ürün")
@@ -319,7 +358,7 @@ class OperationsManager:
     # --- DURUM RAPORLAMA ---
 
     def get_status_report(self) -> str:
-        """Sistemin genel sağlık ve operasyon özetini döner."""
+        """Sistemin genel sağlık ve operasyon özetini döner. (Her erişim seviyesinde kullanılabilir)"""
         db = self._load_db()
         res_list = db.get("rezervasyonlar", [])
         
@@ -327,8 +366,16 @@ class OperationsManager:
         today = datetime.now().strftime("%Y-%m-%d")
         today_res = [r for r in res_list if today in str(r.get("time", ""))]
         
+        # Erişim seviyesi simgesi
+        access_icon = {
+            AccessLevel.RESTRICTED: "🔒",
+            AccessLevel.SANDBOX: "📦",
+            AccessLevel.FULL: "⚡"
+        }.get(self.access_level, "🔐")
+        
         report = [
-            "--- 📊 OPERASYONEL DURUM RAPORU ---",
+            f"--- 📊 OPERASYONEL DURUM RAPORU ---",
+            f"🔐 Erişim: {self.access_level.upper()} {access_icon}",
             f"⚙️ Donanım: {'🚀 GPU Aktif' if self.has_gpu else '💻 CPU Modu'}",
             f"📅 Bugünün Rezervasyonları: {len(today_res)} / Toplam: {len(res_list)}",
             f"🤖 Paket Servis Botu: {'✅ AKTİF' if self.is_selenium_active else '⚪ KAPALI'}"
@@ -341,7 +388,7 @@ class OperationsManager:
         return "\n".join(report)
 
     def get_ops_summary(self) -> str:
-        """Ajanlar için kısa bağlam özeti."""
+        """Ajanlar için kısa bağlam özeti. (Her erişim seviyesinde kullanılabilir)"""
         db = self._load_db()
         hw = "GPU" if self.has_gpu else "CPU"
-        return f"Ops ({hw}): {len(db.get('rezervasyonlar', []))} Kayıt | Bot: {'Açık' if self.is_selenium_active else 'Kapalı'}"
+        return f"Ops ({hw}, {self.access_level}): {len(db.get('rezervasyonlar', []))} Kayıt | Bot: {'Açık' if self.is_selenium_active else 'Kapalı'}"

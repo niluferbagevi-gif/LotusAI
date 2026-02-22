@@ -1,6 +1,6 @@
 """
 LotusAI System State Manager
-Sürüm: 2.5.3
+Sürüm: 2.5.4 (Eklendi: Erişim Seviyesi Desteği)
 Açıklama: Merkezi durum yönetimi, kaynak koordinasyonu ve FSM
 
 Özellikler:
@@ -11,6 +11,7 @@ Açıklama: Merkezi durum yönetimi, kaynak koordinasyonu ve FSM
 - State history
 - Timeout protection
 - Hardware monitoring
+- Erişim seviyesi bilgisi
 """
 
 import threading
@@ -25,7 +26,7 @@ from contextlib import contextmanager
 # ═══════════════════════════════════════════════════════════════
 # CONFIG
 # ═══════════════════════════════════════════════════════════════
-from config import Config
+from config import Config, AccessLevel
 
 logger = logging.getLogger("LotusAI.SystemState")
 
@@ -146,6 +147,7 @@ class SystemStateManager:
     - Observer pattern implementasyonu
     - Timeout koruması
     - Hardware monitoring
+    - Erişim seviyesi takibi
     
     Thread-safe design ile concurrent access desteklenir.
     """
@@ -192,10 +194,18 @@ class SystemStateManager:
         SystemState.PROCESSING: StateConfig.TIMEOUT_PROCESSING
     }
     
-    def __init__(self):
-        """State manager başlatıcı"""
+    def __init__(self, access_level: str = "sandbox"):
+        """
+        State manager başlatıcı
+        
+        Args:
+            access_level: Erişim seviyesi (restricted, sandbox, full)
+        """
         # Thread safety
         self.lock = threading.RLock()
+        
+        # Access level
+        self.access_level = access_level
         
         # Current state
         self._current_state = SystemState.INITIALIZING
@@ -228,7 +238,8 @@ class SystemStateManager:
         
         logger.info(
             f"✅ SystemStateManager başlatıldı "
-            f"(GPU: {'Aktif' if self._gpu_available else 'Pasif'})"
+            f"(GPU: {'Aktif' if self._gpu_available else 'Pasif'}, "
+            f"Erişim: {self.access_level})"
         )
     
     # ───────────────────────────────────────────────────────────
@@ -685,7 +696,8 @@ class SystemStateManager:
                 "active_user": self._active_user.name,
                 "locked_resources": len(self._resource_locks),
                 "gpu_available": self._gpu_available,
-                "is_running": self._is_running
+                "is_running": self._is_running,
+                "access_level": self.access_level
             }
     
     # ───────────────────────────────────────────────────────────
@@ -727,7 +739,8 @@ class SystemStateManager:
             
             return (
                 f"LotusState[{self._current_state.name_tr} ({duration}s) | "
-                f"{gpu_str} | Agent: {self._active_agent} | "
+                f"{gpu_str} | Erişim: {self.access_level} | "
+                f"Agent: {self._active_agent} | "
                 f"User: {self._active_user.name}]"
             )
     

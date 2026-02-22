@@ -1,6 +1,6 @@
 """
 LotusAI Messaging Manager
-Sürüm: 2.5.3
+Sürüm: 2.5.4 (Eklendi: Erişim Seviyesi Desteği)
 Açıklama: Merkezi mesajlaşma yönetimi (Meta Graph API)
 
 Özellikler:
@@ -11,6 +11,7 @@ Açıklama: Merkezi mesajlaşma yönetimi (Meta Graph API)
 - Template mesajlar
 - Simülasyon modu
 - GPU desteği
+- Erişim seviyesi kontrolleri (restricted/sandbox/full)
 """
 
 import requests
@@ -28,7 +29,7 @@ from enum import Enum
 # ═══════════════════════════════════════════════════════════════
 # CONFIG
 # ═══════════════════════════════════════════════════════════════
-from config import Config
+from config import Config, AccessLevel
 
 logger = logging.getLogger("LotusAI.Messaging")
 
@@ -147,8 +148,15 @@ class MessagingManager:
     # Request timeout
     REQUEST_TIMEOUT = 20  # seconds
     
-    def __init__(self):
-        """Messaging manager başlatıcı"""
+    def __init__(self, access_level: str = "sandbox"):
+        """
+        Messaging manager başlatıcı
+        
+        Args:
+            access_level: Erişim seviyesi (restricted, sandbox, full)
+        """
+        self.access_level = access_level
+        
         # Thread safety
         self.lock = threading.RLock()
         
@@ -189,7 +197,7 @@ class MessagingManager:
         if not self.is_active:
             logger.warning("⚠️ SİMÜLASYON MODU (Kimlik bilgileri eksik)")
         else:
-            logger.info(f"✅ API MODU AKTİF (Device: {self.device})")
+            logger.info(f"✅ API MODU AKTİF (Device: {self.device}, Erişim: {self.access_level})")
     
     # ───────────────────────────────────────────────────────────
     # GPU PROCESSING
@@ -210,7 +218,6 @@ class MessagingManager:
         
         try:
             # Placeholder for GPU processing
-            # Gerçek senaryoda torch tensor işlemleri olurdu
             return text_data
         
         except Exception as e:
@@ -228,7 +235,7 @@ class MessagingManager:
         challenge: str
     ) -> Optional[str]:
         """
-        Webhook doğrulama (Meta setup)
+        Webhook doğrulama (Meta setup) - Tüm erişim seviyelerinde kullanılabilir.
         
         Args:
             mode: Subscribe mode
@@ -248,7 +255,7 @@ class MessagingManager:
     
     def verify_signature(self, payload: bytes, signature: str) -> bool:
         """
-        HMAC imza doğrulama
+        HMAC imza doğrulama - Tüm erişim seviyelerinde kullanılabilir.
         
         Args:
             payload: Raw payload bytes
@@ -333,7 +340,6 @@ class MessagingManager:
                         f"{error_msg[:100]}"
                     )
                     
-                    # Client errors (4xx) - don't retry
                     if response.status_code < 500:
                         self.metrics.errors_encountered += 1
                         return {"status": "error", "error": error_msg}
@@ -344,7 +350,6 @@ class MessagingManager:
                         f"(Deneme {attempt + 1}/{retries}): {e}"
                     )
                 
-                # Exponential backoff
                 if attempt < retries - 1:
                     time.sleep(self.RETRY_BASE_DELAY ** (attempt + 1))
         
@@ -355,12 +360,12 @@ class MessagingManager:
         }
     
     # ───────────────────────────────────────────────────────────
-    # WHATSAPP
+    # WHATSAPP (Erişim kontrollü)
     # ───────────────────────────────────────────────────────────
     
     def send_whatsapp_text(self, to_number: str, text: str) -> SendResult:
         """
-        WhatsApp metin mesajı
+        WhatsApp metin mesajı - Sadece sandbox ve full modda çalışır.
         
         Args:
             to_number: Alıcı telefon numarası
@@ -369,6 +374,14 @@ class MessagingManager:
         Returns:
             SendResult objesi
         """
+        if self.access_level == AccessLevel.RESTRICTED:
+            return SendResult(
+                success=False,
+                platform=Platform.WHATSAPP,
+                recipient_id=to_number,
+                error="🔒 Kısıtlı modda mesaj gönderilemez"
+            )
+        
         processed_text = self.process_with_gpu(text)
         
         payload = {
@@ -403,7 +416,7 @@ class MessagingManager:
         caption: str = ""
     ) -> SendResult:
         """
-        WhatsApp medya mesajı
+        WhatsApp medya mesajı - Sadece sandbox ve full modda çalışır.
         
         Args:
             to_number: Alıcı telefon numarası
@@ -414,6 +427,14 @@ class MessagingManager:
         Returns:
             SendResult objesi
         """
+        if self.access_level == AccessLevel.RESTRICTED:
+            return SendResult(
+                success=False,
+                platform=Platform.WHATSAPP,
+                recipient_id=to_number,
+                error="🔒 Kısıtlı modda mesaj gönderilemez"
+            )
+        
         payload = {
             "messaging_product": "whatsapp",
             "to": to_number,
@@ -448,7 +469,7 @@ class MessagingManager:
         components: Optional[List] = None
     ) -> SendResult:
         """
-        WhatsApp template mesajı
+        WhatsApp template mesajı - Sadece sandbox ve full modda çalışır.
         
         Args:
             to_number: Alıcı telefon numarası
@@ -459,6 +480,14 @@ class MessagingManager:
         Returns:
             SendResult objesi
         """
+        if self.access_level == AccessLevel.RESTRICTED:
+            return SendResult(
+                success=False,
+                platform=Platform.WHATSAPP,
+                recipient_id=to_number,
+                error="🔒 Kısıtlı modda mesaj gönderilemez"
+            )
+        
         payload = {
             "messaging_product": "whatsapp",
             "to": to_number,
@@ -489,7 +518,7 @@ class MessagingManager:
         )
     
     # ───────────────────────────────────────────────────────────
-    # INSTAGRAM & FACEBOOK
+    # INSTAGRAM & FACEBOOK (Erişim kontrollü)
     # ───────────────────────────────────────────────────────────
     
     def send_typing_indicator(
@@ -499,13 +528,19 @@ class MessagingManager:
         on: bool = True
     ) -> None:
         """
-        Yazıyor göstergesi
+        Yazıyor göstergesi - Tüm erişim seviyelerinde kullanılabilir (sadece API modunda etki eder).
         
         Args:
             recipient_id: Alıcı ID
             platform: Platform
             on: Açık/Kapalı
         """
+        if self.access_level == AccessLevel.RESTRICTED:
+            # Kısıtlı modda bile göstermek sorun değil, sadece simülasyon log'u
+            if not self.is_active:
+                logger.info(f"☁️ [SİMÜLASYON] Yazıyor göstergesi: {platform.value}")
+            return
+        
         action = "typing_on" if on else "typing_off"
         
         payload = {
@@ -513,7 +548,6 @@ class MessagingManager:
             "sender_action": action
         }
         
-        # Determine endpoint
         if platform == Platform.INSTAGRAM:
             id_source = self.ig_account_id
         else:
@@ -529,7 +563,7 @@ class MessagingManager:
         text: str
     ) -> SendResult:
         """
-        Instagram DM
+        Instagram DM - Sadece sandbox ve full modda çalışır.
         
         Args:
             recipient_id: Alıcı ID
@@ -538,7 +572,14 @@ class MessagingManager:
         Returns:
             SendResult objesi
         """
-        # Typing indicator
+        if self.access_level == AccessLevel.RESTRICTED:
+            return SendResult(
+                success=False,
+                platform=Platform.INSTAGRAM,
+                recipient_id=recipient_id,
+                error="🔒 Kısıtlı modda mesaj gönderilemez"
+            )
+        
         self.send_typing_indicator(recipient_id, Platform.INSTAGRAM, True)
         
         processed_text = self.process_with_gpu(text)
@@ -555,7 +596,6 @@ class MessagingManager:
         
         result = self._send_request(endpoint, payload)
         
-        # Turn off typing
         self.send_typing_indicator(recipient_id, Platform.INSTAGRAM, False)
         
         success = result.get("status") == "success"
@@ -578,7 +618,7 @@ class MessagingManager:
         text: str
     ) -> SendResult:
         """
-        Facebook Messenger mesajı
+        Facebook Messenger mesajı - Sadece sandbox ve full modda çalışır.
         
         Args:
             recipient_id: Alıcı ID
@@ -587,7 +627,14 @@ class MessagingManager:
         Returns:
             SendResult objesi
         """
-        # Typing indicator
+        if self.access_level == AccessLevel.RESTRICTED:
+            return SendResult(
+                success=False,
+                platform=Platform.FACEBOOK,
+                recipient_id=recipient_id,
+                error="🔒 Kısıtlı modda mesaj gönderilemez"
+            )
+        
         self.send_typing_indicator(recipient_id, Platform.FACEBOOK, True)
         
         processed_text = self.process_with_gpu(text)
@@ -604,7 +651,6 @@ class MessagingManager:
         
         result = self._send_request(endpoint, payload)
         
-        # Turn off typing
         self.send_typing_indicator(recipient_id, Platform.FACEBOOK, False)
         
         success = result.get("status") == "success"
@@ -622,7 +668,7 @@ class MessagingManager:
         )
     
     # ───────────────────────────────────────────────────────────
-    # WEBHOOK PARSER
+    # WEBHOOK PARSER (Tüm erişim seviyelerinde kullanılabilir)
     # ───────────────────────────────────────────────────────────
     
     def parse_incoming_webhook(
@@ -630,7 +676,7 @@ class MessagingManager:
         data: Dict
     ) -> Optional[IncomingMessage]:
         """
-        Webhook parse
+        Webhook parse - Tüm erişim seviyelerinde çalışır.
         
         Args:
             data: Webhook JSON
@@ -644,11 +690,8 @@ class MessagingManager:
             
             entry = data['entry'][0]
             
-            # WhatsApp
             if 'changes' in entry:
                 return self._parse_whatsapp(entry)
-            
-            # Instagram / Facebook
             elif 'messaging' in entry:
                 return self._parse_ig_fb(entry)
             
@@ -671,7 +714,6 @@ class MessagingManager:
             
             msg_type_str = msg.get('type', 'text')
             
-            # Content extraction
             if msg_type_str == 'text':
                 content = msg.get('text', {}).get('body', '')
             elif msg_type_str == 'location':
@@ -683,7 +725,6 @@ class MessagingManager:
             else:
                 content = f"[{msg_type_str.upper()} Medya]"
             
-            # Map to MessageType enum
             try:
                 msg_type = MessageType(msg_type_str)
             except ValueError:
@@ -714,7 +755,6 @@ class MessagingManager:
             msg_data = event['message']
             sender_id = event['sender']['id']
             
-            # Platform detection
             entry_id = str(entry.get('id', ''))
             
             if self.ig_account_id and self.ig_account_id in entry_id:
@@ -722,7 +762,6 @@ class MessagingManager:
             else:
                 platform = Platform.FACEBOOK
             
-            # Content extraction
             if 'text' in msg_data:
                 content = msg_data['text']
                 msg_type = MessageType.TEXT
@@ -765,6 +804,7 @@ class MessagingManager:
         return {
             "active_mode": "API" if self.is_active else "SIMULATION",
             "compute_device": self.device,
+            "access_level": self.access_level,
             "gpu_available": HAS_GPU,
             "configured_platforms": {
                 "whatsapp": bool(self.wa_phone_id),
@@ -790,5 +830,6 @@ class MessagingManager:
             "errors_encountered": self.metrics.errors_encountered,
             "webhooks_verified": self.metrics.webhooks_verified,
             "device": self.device,
+            "access_level": self.access_level,
             "active": self.is_active
         }

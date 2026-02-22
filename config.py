@@ -1,7 +1,7 @@
 """
 LotusAI Merkezi Yapılandırma Modülü
-Sürüm: 2.5.5 (Feature: Binance API & Instagram Config)
-Açıklama: Sistem ayarları, API anahtarları, donanım tespiti ve dizin yönetimi
+Sürüm: 2.5.6 (Eklendi: Erişim Seviyesi Desteği - OpenClaw uyumlu)
+Açıklama: Sistem ayarları, API anahtarları, donanım tespiti, dizin yönetimi ve erişim seviyesi
 """
 
 import os
@@ -85,6 +85,15 @@ def get_list_env(key: str, default: Optional[List[str]] = None, separator: str =
 
 
 # ═══════════════════════════════════════════════════════════════
+# ERİŞİM SEVİYESİ TANIMLARI (OpenClaw stili)
+# ═══════════════════════════════════════════════════════════════
+class AccessLevel:
+    RESTRICTED = "restricted"   # 0: Sadece bilgi alma (okuma)
+    SANDBOX = "sandbox"         # 1: Güvenli dosya yazma (sınırlı yazma)
+    FULL = "full"               # 2: Tam erişim (terminal komutları dahil)
+
+
+# ═══════════════════════════════════════════════════════════════
 # DONANIM TESPİTİ
 # ═══════════════════════════════════════════════════════════════
 @dataclass
@@ -144,7 +153,7 @@ class Config:
     """
     LotusAI Merkezi Yapılandırma Sınıfı
 
-    Sürüm: 2.5.5
+    Sürüm: 2.5.6
     Özellikler:
     - Çoklu API anahtarı yönetimi
     - Ajan bazlı konfigürasyon
@@ -152,13 +161,14 @@ class Config:
     - Dizin yönetimi
     - CODING_MODEL desteği (Sidar özel)
     - Binance ve Instagram API entegrasyonu
+    - **Erişim seviyesi (OpenClaw stili)**
     """
 
     # ───────────────────────────────────────────────────────────
     # GENEL SİSTEM BİLGİLERİ
     # ───────────────────────────────────────────────────────────
     PROJECT_NAME: str = "LotusAI"
-    VERSION: str = "2.5.5"
+    VERSION: str = "2.5.6"
     DEBUG_MODE: bool = get_bool_env("DEBUG_MODE", False)
     WORK_DIR: Path = Path(os.getenv("WORK_DIR", BASE_DIR))
 
@@ -194,6 +204,15 @@ class Config:
     USE_GPU: bool = HARDWARE.has_cuda
     GPU_INFO: str = HARDWARE.gpu_name
     CPU_COUNT: int = HARDWARE.cpu_count
+
+    # ───────────────────────────────────────────────────────────
+    # ERİŞİM SEVİYESİ (OpenClaw stili)
+    # ───────────────────────────────────────────────────────────
+    ACCESS_LEVEL: str = os.getenv("ACCESS_LEVEL", AccessLevel.SANDBOX).lower()
+    # Geçerlilik kontrolü
+    if ACCESS_LEVEL not in [AccessLevel.RESTRICTED, AccessLevel.SANDBOX, AccessLevel.FULL]:
+        ACCESS_LEVEL = AccessLevel.SANDBOX
+        logger.warning(f"Geçersiz ACCESS_LEVEL, varsayılan {ACCESS_LEVEL} kullanılıyor.")
 
     # ───────────────────────────────────────────────────────────
     # GEMINI (GOOGLE) MODEL AYARLARI
@@ -413,6 +432,22 @@ class Config:
             logger.info(f"   Geçerli modlar: {', '.join(mode_map.keys())}")
 
     @classmethod
+    def set_access_level(cls, level: str) -> None:
+        """
+        Erişim seviyesini ayarlar (launcher'dan çağrılır).
+        
+        Args:
+            level: "restricted", "sandbox" veya "full"
+        """
+        level_lower = level.lower()
+        if level_lower in [AccessLevel.RESTRICTED, AccessLevel.SANDBOX, AccessLevel.FULL]:
+            cls.ACCESS_LEVEL = level_lower
+            logger.info(f"✅ Erişim seviyesi: {cls.ACCESS_LEVEL}")
+        else:
+            logger.error(f"❌ Geçersiz erişim seviyesi: {level}, varsayılan sandbox kullanılacak")
+            cls.ACCESS_LEVEL = AccessLevel.SANDBOX
+
+    @classmethod
     def validate_critical_settings(cls) -> bool:
         """
         Kritik sistem ayarlarını doğrular.
@@ -479,6 +514,7 @@ class Config:
             "project": cls.PROJECT_NAME,
             "version": cls.VERSION,
             "provider": cls.AI_PROVIDER,
+            "access_level": cls.ACCESS_LEVEL,
             "gpu_enabled": cls.USE_GPU,
             "gpu_info": cls.GPU_INFO,
             "cpu_count": cls.CPU_COUNT,
@@ -500,6 +536,7 @@ class Config:
         print("═" * 60)
         print(f"  AI Sağlayıcı    : {cls.AI_PROVIDER.upper()}")
         print(f"  GPU Desteği     : {'✓ ' + cls.GPU_INFO if cls.USE_GPU else '✗ CPU Modu'}")
+        print(f"  Erişim Seviyesi : {cls.ACCESS_LEVEL.upper()}")
         print(f"  CPU Çekirdek    : {cls.CPU_COUNT}")
         print(f"  Aktif Ajanlar   : {len(cls.AGENT_CONFIGS)}")
         print(f"  Debug Modu      : {'Açık' if cls.DEBUG_MODE else 'Kapalı'}")
@@ -528,7 +565,6 @@ else:
 
     if Config.DEBUG_MODE:
         Config.print_config_summary()
-
 
 # """
 # LotusAI Merkezi Yapılandırma Modülü

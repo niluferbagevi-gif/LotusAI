@@ -251,6 +251,29 @@
         }
 
         /* ═══════════════════════════════════════════════════════════════
+           ACCESS LEVEL INDICATOR
+           ═══════════════════════════════════════════════════════════════ */
+        .access-level-indicator {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            background: rgba(255, 255, 255, 0.05);
+            padding: 8px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            border: 1px solid var(--panel-border);
+            color: var(--text-secondary);
+        }
+
+        .access-level-indicator i {
+            color: var(--accent);
+        }
+
+        .access-level-indicator.restricted i { color: #f44336; }
+        .access-level-indicator.sandbox i { color: #ff9800; }
+        .access-level-indicator.full i { color: #4caf50; }
+
+        /* ═══════════════════════════════════════════════════════════════
            MESSAGES AREA
            ═══════════════════════════════════════════════════════════════ */
         .messages-area {
@@ -689,6 +712,12 @@
                 
                 <!-- Header actions -->
                 <div style="display:flex; gap:10px;">
+                    <!-- Erişim seviyesi göstergesi -->
+                    <div class="access-level-indicator" id="access-level-indicator" title="Erişim Seviyesi">
+                        <i class="fas fa-shield-alt"></i>
+                        <span id="access-level-text">Sandbox</span>
+                    </div>
+                    
                     <button class="action-btn" 
                             id="voice-call-btn" 
                             onclick="toggleBackendVoice()" 
@@ -791,6 +820,7 @@
             loadChatHistory('GENEL');
             checkMobileView();
             initTextareaAutoResize();
+            fetchConfigInfo(); // YENİ: config bilgisini al
         };
 
         window.onresize = checkMobileView;
@@ -817,6 +847,58 @@
                 backBtn.style.display = 'none';
                 document.getElementById('contact-list-view').style.transform = 'translateX(0)';
                 document.getElementById('chat-view').style.transform = 'translateX(0)';
+            }
+        }
+
+        // ───────────────────────────────────────────────────────────
+        // CONFIG FETCH
+        // ───────────────────────────────────────────────────────────
+        async function fetchConfigInfo() {
+            try {
+                const response = await fetch('/api/config');
+                const data = await response.json();
+                
+                if (data.status === 'success') {
+                    const config = data.config;
+                    updateAccessLevel(config.access_display, config.access_level);
+                }
+            } catch (error) {
+                console.error('Config bilgisi alınamadı:', error);
+            }
+        }
+
+        function updateAccessLevel(displayText, levelValue) {
+            const indicator = document.getElementById('access-level-indicator');
+            const textSpan = document.getElementById('access-level-text');
+            
+            if (!indicator || !textSpan) return;
+            
+            textSpan.innerText = displayText;
+            
+            // Remove existing classes
+            indicator.classList.remove('restricted', 'sandbox', 'full');
+            
+            // Add class based on level
+            if (levelValue === 'restricted') {
+                indicator.classList.add('restricted');
+            } else if (levelValue === 'sandbox') {
+                indicator.classList.add('sandbox');
+            } else if (levelValue === 'full') {
+                indicator.classList.add('full');
+            }
+
+            // Erişim seviyesine göre UI elemanlarını ayarla
+            const fileUploadBtn = document.querySelector('label[for="file-input"]');
+            const micBtn = document.getElementById('mic-btn');
+            
+            if (levelValue === 'restricted') {
+                // Kısıtlı mod: dosya yükleme ve mikrofon gizle
+                if (fileUploadBtn) fileUploadBtn.style.display = 'none';
+                if (micBtn) micBtn.style.display = 'none';
+            } else {
+                // Diğer modlarda göster
+                if (fileUploadBtn) fileUploadBtn.style.display = 'flex';
+                if (micBtn) micBtn.style.display = 'flex';
             }
         }
 

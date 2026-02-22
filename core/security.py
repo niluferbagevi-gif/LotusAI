@@ -1,6 +1,6 @@
 """
 LotusAI Security & Authentication Manager
-Sürüm: 2.5.3
+Sürüm: 2.5.4 (Eklendi: Erişim Seviyesi Desteği)
 Açıklama: Biyometrik kimlik doğrulama ve güvenlik yönetimi
 
 Özellikler:
@@ -10,6 +10,7 @@ Açıklama: Biyometrik kimlik doğrulama ve güvenlik yönetimi
 - Kullanıcı kaydı
 - Güvenlik durumu takibi
 - Thread-safe operations
+- Erişim seviyesi kontrolleri (kısıtlı modda yeni kayıt engellenir)
 """
 
 import cv2
@@ -28,7 +29,7 @@ from enum import Enum
 # ═══════════════════════════════════════════════════════════════
 # CONFIG
 # ═══════════════════════════════════════════════════════════════
-from config import Config
+from config import Config, AccessLevel
 from core.user_manager import UserManager
 
 logger = logging.getLogger("LotusAI.Security")
@@ -180,7 +181,8 @@ class SecurityManager:
     def __init__(
         self,
         camera_manager: Any,
-        memory_manager: Optional[Any] = None
+        memory_manager: Optional[Any] = None,
+        access_level: str = "sandbox"
     ):
         """
         Security manager başlatıcı
@@ -188,9 +190,11 @@ class SecurityManager:
         Args:
             camera_manager: Kamera yöneticisi
             memory_manager: Hafıza yöneticisi (opsiyonel)
+            access_level: Erişim seviyesi (restricted, sandbox, full)
         """
         self.camera_manager = camera_manager
         self.memory = memory_manager
+        self.access_level = access_level
         self.user_manager = UserManager()
         
         # Thread safety
@@ -231,7 +235,7 @@ class SecurityManager:
         if FACE_REC_AVAILABLE:
             self.reload_identities()
         
-        logger.info("✅ SecurityManager başlatıldı")
+        logger.info(f"✅ SecurityManager başlatıldı (Erişim: {self.access_level})")
     
     def _configure_model(self) -> None:
         """Model yapılandırması"""
@@ -276,7 +280,7 @@ class SecurityManager:
     # ───────────────────────────────────────────────────────────
     
     def reload_identities(self) -> None:
-        """Kullanıcı veritabanından biyometrik verileri yükle"""
+        """Kullanıcı veritabanından biyometrik verileri yükle (okuma işlemi, her seviyede açık)"""
         with self.lock:
             self.face_encodings.clear()
             self.voice_profiles.clear()
@@ -350,7 +354,7 @@ class SecurityManager:
         audio_data: Optional[Any] = None
     ) -> Tuple[bool, str]:
         """
-        Yeni kullanıcı kaydı
+        Yeni kullanıcı kaydı (sadece sandbox ve full modda)
         
         Args:
             name: Kullanıcı adı
@@ -359,6 +363,10 @@ class SecurityManager:
         Returns:
             Tuple[başarı durumu, mesaj]
         """
+        # Erişim kontrolü
+        if self.access_level == AccessLevel.RESTRICTED:
+            return False, "🔒 Kısıtlı modda yeni kullanıcı kaydı yapılamaz."
+        
         if not FACE_REC_AVAILABLE:
             return False, "❌ Yüz tanıma modülü yüklü değil"
         
@@ -840,6 +848,7 @@ class SecurityManager:
         return {
             "model": self.model_type.value,
             "gpu_enabled": GPU_AVAILABLE,
+            "access_level": self.access_level,
             "total_recognitions": self.metrics.total_recognitions,
             "successful_recognitions": self.metrics.successful_recognitions,
             "failed_recognitions": self.metrics.failed_recognitions,
