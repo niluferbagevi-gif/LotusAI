@@ -79,8 +79,8 @@ class OperationsManager:
         # Yollar
         default_work_dir = getattr(Config, "WORK_DIR", os.getcwd())
         self.work_dir = Path(default_work_dir)
-        self.db_file = self.work_dir / "lotus_operasyon.json"
-        self.menu_file = self.work_dir / "lotus_menu.json"
+        self.db_file = self.work_dir / "lotus/lotus_operasyon.json"
+        self.menu_file = self.work_dir / "lotus/lotus_menu.json"
         self.backup_dir = self.work_dir / "backups" / "operations"
         
         try:

@@ -168,7 +168,7 @@ class AccountingManager:
         
         # Paths
         self.work_dir = Config.WORK_DIR
-        self.filename = self.work_dir / "lotus_kasa_defteri.csv"
+        self.filename = self.work_dir / "lotus/lotus_kasa_defteri.csv"
         self.backup_dir = self.work_dir / "backups" / "accounting"
         
         # Hardware

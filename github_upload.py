@@ -53,7 +53,7 @@ def run_command(command, show_output=True):
 # ═══════════════════════════════════════════════════════════════
 def main():
     print(f"{Colors.HEADER}{'='*65}{Colors.ENDC}")
-    print(f"{Colors.BOLD} 🐙 LotusAI - GitHub Otomatik Yükleme & Yedekleme Aracı (v1.8) {Colors.ENDC}")
+    print(f"{Colors.BOLD} 🐙 Lotus - GitHub Otomatik Yükleme & Yedekleme Aracı (v1.8) {Colors.ENDC}")
     print(f"{Colors.HEADER}{'='*65}{Colors.ENDC}\n")
 
     # 1. Git kurulu mu?
@@ -83,7 +83,7 @@ def main():
     success, remotes = run_command("git remote -v", show_output=False)
     if "origin" not in remotes:
         print(f"{Colors.WARNING}GitHub depo (repository) bağlantısı bulunamadı.{Colors.ENDC}")
-        repo_url = input(f"{Colors.OKBLUE}Lütfen GitHub Depo URL'sini girin\n(Örn: https://github.com/niluferbagevi-gif/LotusAI.git): {Colors.ENDC}").strip()
+        repo_url = input(f"{Colors.OKBLUE}Lütfen GitHub Depo URL'sini girin\n(Örn: https://github.com/niluferbagevi-gif/Lotus.git): {Colors.ENDC}").strip()
         
         if not repo_url:
             print(f"{Colors.FAIL}URL girilmedi, işlem iptal edildi.{Colors.ENDC}")

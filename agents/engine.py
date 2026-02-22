@@ -399,18 +399,21 @@ class AgentEngine:
     def _read_user_bio(self, user_obj: Optional[Dict] = None) -> str:
         """
         Kullanıcı biyografisini oku
-
+        
         Args:
             user_obj: Kullanıcı bilgileri
-
+        
         Returns:
             Bio metni veya boş string
         """
         bio_file = user_obj.get("bio_file", "halil_bio.txt") if user_obj else "halil_bio.txt"
-        bio_path = Config.WORK_DIR / bio_file
+        
+        # Lotus klasörüne yönlendirme
+        lotus_dir = Config.WORK_DIR / "Lotus"
+        bio_path = lotus_dir / bio_file
 
         if not bio_path.exists():
-            bio_path = Config.WORK_DIR / "halil_bio.txt"
+            bio_path = lotus_dir / "halil_bio.txt"
 
         if bio_path.exists():
             try:

@@ -217,7 +217,7 @@ class UserManager:
         
         # Paths
         self.work_dir = Config.WORK_DIR
-        self.db_file = self.work_dir / "users_db.json"
+        self.db_file = self.work_dir / "lotus/users_db.json"
         self.backup_file = self.db_file.with_suffix(".json.backup")
         self.audit_log_file = self.work_dir / "users_audit.log"
         
