@@ -301,7 +301,7 @@ class MemoryManager:
         
         # Paths
         self.work_dir = Config.WORK_DIR
-        self.db_path = self.work_dir / "lotus_system.db"
+        self.db_path = self.work_dir / "lotus_vector_db" / "lotus_system.db"
         self.docs_path = self.work_dir / "documents"
         self.vector_db_path = self.work_dir / "lotus_vector_db"
         
