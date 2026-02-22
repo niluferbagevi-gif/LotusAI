@@ -59,6 +59,12 @@ from agents.poyraz import PoyrazAgent
 from agents.sidar import SidarAgent
 
 # ═══════════════════════════════════════════════════════════════
+# HEARTBEAT & SKILL MODÜLLER
+# ═══════════════════════════════════════════════════════════════
+from core.heartbeat import HeartbeatEngine
+from skills.registry import SkillRegistry
+
+# ═══════════════════════════════════════════════════════════════
 # WEB SERVER
 # ═══════════════════════════════════════════════════════════════
 from server import run_flask
@@ -147,11 +153,15 @@ class LotusSystem:
         
         # Agents
         self.engine: Optional[AgentEngine] = None
-        
+
+        # Heartbeat & Skill sistemi
+        self.heartbeat_engine: Optional[HeartbeatEngine] = None
+        self.skill_registry: Optional[SkillRegistry] = None
+
         # Ses tanıma
         self.recognizer: Optional[sr.Recognizer] = None
         self.microphone: Optional[sr.Microphone] = None
-        
+
         logger.info(f"LotusSystem başlatılıyor - Mod: {mode}")
     
     def _setup_gpu(self) -> str:
@@ -290,7 +300,46 @@ class LotusSystem:
         RuntimeContext.set_engine(self.engine)
         
         logger.info("✅ Agent engine hazır")
-    
+
+    # ───────────────────────────────────────────────────────────
+    # SKILL & HEARTBEAT BAŞLATMA
+    # ───────────────────────────────────────────────────────────
+    async def _initialize_skills(self, tools: Dict[str, Any]) -> None:
+        """
+        Skill Registry ve Heartbeat Engine'i başlat.
+
+        1. SkillRegistry tüm skill dizinlerini tarar ve yükler.
+        2. Her skill'in initialize() metodu çağrılır.
+        3. heartbeat_interval > 0 olan skill'ler HeartbeatEngine'e kaydedilir.
+        """
+        logger.info("🔌 Skill & Heartbeat sistemi başlatılıyor...")
+
+        # Skill Registry
+        self.skill_registry = SkillRegistry()
+        skill_count = self.skill_registry.load_all(tools=tools)
+        await self.skill_registry.initialize_all()
+
+        # Heartbeat Engine — bildirim callback'ini bağla
+        self.heartbeat_engine = HeartbeatEngine(on_notify=self._heartbeat_notify)
+
+        hb_skills = self.skill_registry.get_heartbeat_skills()
+        for skill in hb_skills:
+            self.heartbeat_engine.register_skill(skill)
+
+        logger.info(
+            f"✅ {skill_count} skill yüklendi, "
+            f"{self.heartbeat_engine.task_count} heartbeat görevi aktif"
+        )
+
+    async def _heartbeat_notify(self, message: str, agent: str) -> None:
+        """
+        Heartbeat skill'inden gelen bildirimi işle:
+        - Loglara yaz
+        - İlgili ajan sesiyle seslendir
+        """
+        logger.info(f"[💓 BİLDİRİM] [{agent}] {message}")
+        RuntimeContext.submit_task(play_voice, message, agent)
+
     def _start_web_dashboard(self) -> None:
         """Web dashboard'u başlat"""
         dashboard_path = Config.TEMPLATE_DIR / "index.html"
@@ -506,12 +555,18 @@ class LotusSystem:
         """Sistem kapatma işlemleri"""
         logger.info("🛑 Sistem kapatılıyor...")
         
+        # Heartbeat motorunu durdur
+        if self.heartbeat_engine:
+            with suppress(Exception):
+                self.heartbeat_engine.stop()
+                logger.info("✓ Heartbeat motoru durduruldu")
+
         # Kamerayı durdur
         if self.camera_manager:
             with suppress(Exception):
                 self.camera_manager.stop()
                 logger.info("✓ Kamera durduruldu")
-        
+
         # Delivery'yi durdur
         if self.delivery_manager:
             with suppress(Exception):
@@ -549,30 +604,53 @@ class LotusSystem:
             
             # Agent'ları başlat
             self._initialize_agents(tools, nlp_manager)
-            
+
+            # Skill Registry + Heartbeat Engine'i başlat
+            await self._initialize_skills(tools)
+
             # Web dashboard'u başlat
             self._start_web_dashboard()
-            
+
             # Mikrofonu ayarla
             mic_ready = self._setup_microphone()
-            
+
             # Sistem hazır
             print(f"\n{Colors.GREEN}{'═' * 70}{Colors.ENDC}")
             print(f"{Colors.GREEN}{Colors.BOLD}  ✅ {Config.PROJECT_NAME.upper()} TÜM SİSTEMLER AKTİF{Colors.ENDC}")
+            if self.skill_registry:
+                print(
+                    f"{Colors.CYAN}  💓 Heartbeat  : "
+                    f"{self.heartbeat_engine.task_count} görev | "
+                    f"{self.skill_registry.summary()}{Colors.ENDC}"
+                )
             print(f"{Colors.GREEN}{'═' * 70}{Colors.ENDC}\n")
-            
+
             if not mic_ready:
                 print(f"{Colors.YELLOW}  ⚠️  Mikrofon devre dışı - Sadece dashboard aktif{Colors.ENDC}\n")
-            
+
             # Debug: RuntimeContext durumu
             if Config.DEBUG_MODE:
                 RuntimeContext.print_status()
-            
-            # Ana döngüyü başlat
+
+            # Heartbeat motorunu arka plan görevi olarak başlat
+            heartbeat_task = None
+            if self.heartbeat_engine and self.heartbeat_engine.task_count > 0:
+                heartbeat_task = asyncio.create_task(
+                    self.heartbeat_engine.start(),
+                    name="heartbeat_engine",
+                )
+
+            # Ana döngüyü çalıştır (heartbeat paralelde devam eder)
             await self._main_loop()
-        
+
         finally:
-            # Temizlik
+            # Heartbeat görevini iptal et
+            if "heartbeat_task" in dir() and heartbeat_task:
+                heartbeat_task.cancel()
+                with suppress(asyncio.CancelledError):
+                    await heartbeat_task
+
+            # Sistem temizliği
             self._cleanup()
 
 
