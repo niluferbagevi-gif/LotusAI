@@ -889,6 +889,16 @@ class AgentEngine:
                 except Exception as e:
                     logger.error(f"Agent auto_handle hatası ({agent_name}): {e}")
 
+        # 5.5 TOOL SONUCUNU DOĞRUDAN DÖN
+        # Not: auto_handle/github/visual işlemleri tamamlanmış bir çıktı üretmişse
+        # LLM'e tekrar yorumlatmak tutarsızlık/hallusinasyon üretebilir.
+        # Bu nedenle operasyonel sonuçları öncelikle doğrudan kullanıcıya döndür.
+        if op_result:
+            return {
+                "agent": agent_name,
+                "content": op_result
+            }
+
         # 6. LLM YANIT ÜRETİMİ
         sys_prompt = self._build_core_prompt(agent_name, clean_input, sec_result, op_result)
 
