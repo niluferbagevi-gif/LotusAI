@@ -367,6 +367,32 @@ AGENTS_CONFIG = {
 }
 ```
 
+#### Sidar Güvenli Dosya (Sandbox) Modu
+
+Sidar'ı proje ana klasöründe güvenli dosya erişimi ile çalıştırmak için `.env` içinde şu ayarları kullanın:
+
+```env
+ACCESS_LEVEL=sandbox
+WORK_DIR=/workspace/LotusAI
+```
+
+- `ACCESS_LEVEL=sandbox`: Sidar ve CodeManager için güvenli yazma/okuma modu.
+- `WORK_DIR`: Sandbox kök dizinidir. Sidar sadece bu dizin ve altındaki dosyalarda işlem yapar.
+
+Sistem başlatma:
+
+```bash
+python main.py
+```
+
+Örnek Sidar komutları:
+
+```text
+"Sidar, ana klasördeki dosyaları listele"
+"Sidar, agents/sidar.py dosyasını oku"
+"Sidar, core/utils.py içine güvenli biçimde şu fonksiyonu ekle"
+```
+
 #### Ses Ayarları
 ```python
 # config.py
