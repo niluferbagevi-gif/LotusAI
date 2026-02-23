@@ -2,7 +2,7 @@
   "name": "Lotus AI Asistan",
   "short_name": "LotusAI",
   "description": "Lotus Bağevi Akıllı Yönetim Sistemi - Çok ajanlı yapay zeka asistanı",
-  "version": "2.5.3",
+  "version": "2.6.0",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#0b141a",

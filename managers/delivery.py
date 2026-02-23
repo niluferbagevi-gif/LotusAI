@@ -1,6 +1,6 @@
 """
 LotusAI Delivery Manager
-Sürüm: 2.5.5 (Eklendi: Erişim Seviyesi Desteği)
+Sürüm: 2.6.0 (Dinamik Erişim Seviyesi Senkronu)
 Açıklama: Paket servis entegrasyon yönetimi
 
 Özellikler:
@@ -164,14 +164,15 @@ class DeliveryManager:
     # Check delay
     CHECK_DELAY = 0.3
     
-    def __init__(self, access_level: str = "sandbox"):
+    def __init__(self, access_level: Optional[str] = None):
         """
         Delivery manager başlatıcı
         
         Args:
             access_level: Erişim seviyesi (restricted, sandbox, full)
         """
-        self.access_level = access_level
+        # Değişiklik: Eğer parametre girilmezse doğrudan Config'den oku
+        self.access_level = access_level or Config.ACCESS_LEVEL
         
         # Selenium
         self.driver: Optional[webdriver.Chrome] = None

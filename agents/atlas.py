@@ -1,6 +1,6 @@
 """
 LotusAI Atlas Agent
-Sürüm: 2.5.4 (Eklendi: Erişim Seviyesi Desteği)
+Sürüm: 2.6.0 (Dinamik Erişim Seviyesi Senkronu)
 Açıklama: Lider agent - sistem denetimi ve görev dağıtımı
 
 Sorumluluklar:
@@ -177,7 +177,7 @@ class AtlasAgent:
         self,
         memory_manager: Any,
         tools: Optional[Dict[str, Any]] = None,
-        access_level: str = "sandbox"
+        access_level: Optional[str] = None
     ):
         """
         Atlas başlatıcı
@@ -189,7 +189,10 @@ class AtlasAgent:
         """
         self.memory = memory_manager
         self.tools = tools or {}
-        self.access_level = access_level
+        
+        # Değişiklik: Eğer parametre girilmezse doğrudan Config'den oku
+        self.access_level = access_level or Config.ACCESS_LEVEL
+        
         self.agent_name = "ATLAS"
         
         # Thread safety

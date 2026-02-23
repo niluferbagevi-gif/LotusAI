@@ -67,14 +67,15 @@ class OperationsManager:
     - Erişim seviyesi kontrolleri (restricted/sandbox/full)
     """
     
-    def __init__(self, access_level: str = "sandbox"):
+    def __init__(self, access_level: Optional[str] = None):
         """
         OperationsManager başlatıcı
         
         Args:
             access_level: Erişim seviyesi (restricted, sandbox, full)
         """
-        self.access_level = access_level
+        # Değişiklik: Eğer parametre girilmezse doğrudan Config'den oku
+        self.access_level = access_level or getattr(Config, "ACCESS_LEVEL", "sandbox")
         
         # Yollar
         default_work_dir = getattr(Config, "WORK_DIR", os.getcwd())
@@ -85,6 +86,7 @@ class OperationsManager:
         
         try:
             self.backup_dir.mkdir(parents=True, exist_ok=True)
+            self.db_file.parent.mkdir(parents=True, exist_ok=True)
         except Exception as e:
             logger.error(f"Dizin oluşturma hatası: {e}")
         

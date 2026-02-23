@@ -1,6 +1,6 @@
 """
 LotusAI Security & Authentication Manager
-Sürüm: 2.5.4 (Eklendi: Erişim Seviyesi Desteği)
+Sürüm: 2.6.0 (Dinamik Erişim Seviyesi Senkronu)
 Açıklama: Biyometrik kimlik doğrulama ve güvenlik yönetimi
 
 Özellikler:
@@ -182,7 +182,7 @@ class SecurityManager:
         self,
         camera_manager: Any,
         memory_manager: Optional[Any] = None,
-        access_level: str = "sandbox"
+        access_level: Optional[str] = None
     ):
         """
         Security manager başlatıcı
@@ -194,8 +194,11 @@ class SecurityManager:
         """
         self.camera_manager = camera_manager
         self.memory = memory_manager
-        self.access_level = access_level
-        self.user_manager = UserManager()
+        
+        # Değişiklik: Eğer parametre girilmezse doğrudan Config'den oku
+        self.access_level = access_level or Config.ACCESS_LEVEL
+        
+        self.user_manager = UserManager(access_level=self.access_level)
         
         # Thread safety
         self.lock = threading.RLock()

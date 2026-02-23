@@ -1,6 +1,6 @@
 """
 LotusAI System State Manager
-Sürüm: 2.5.4 (Eklendi: Erişim Seviyesi Desteği)
+Sürüm: 2.6.0 (Dinamik Erişim Seviyesi Senkronu)
 Açıklama: Merkezi durum yönetimi, kaynak koordinasyonu ve FSM
 
 Özellikler:
@@ -194,7 +194,7 @@ class SystemStateManager:
         SystemState.PROCESSING: StateConfig.TIMEOUT_PROCESSING
     }
     
-    def __init__(self, access_level: str = "sandbox"):
+    def __init__(self, access_level: Optional[str] = None):
         """
         State manager başlatıcı
         
@@ -204,8 +204,8 @@ class SystemStateManager:
         # Thread safety
         self.lock = threading.RLock()
         
-        # Access level
-        self.access_level = access_level
+        # Access level (Config'den dinamik okuma)
+        self.access_level = access_level or Config.ACCESS_LEVEL
         
         # Current state
         self._current_state = SystemState.INITIALIZING

@@ -1,6 +1,6 @@
 """
 LotusAI Agent Tanımlamaları ve Kişilik Matrisi
-Sürüm: 2.5.4
+Sürüm: 2.6.0 (Merkezi Uyum Senkronizasyonu)
 Açıklama: Her agent'ın karakteri, yetkileri ve davranış kuralları
 
 VİZYON: 

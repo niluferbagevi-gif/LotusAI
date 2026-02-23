@@ -1,6 +1,6 @@
 """
 LotusAI Code Manager
-Sürüm: 2.5.4 (Eklendi: Erişim Seviyesi Desteği)
+Sürüm: 2.6.0 (Dinamik Erişim Seviyesi Senkronu)
 Açıklama: Dosya, terminal ve geliştirme yönetimi
 
 Özellikler:
@@ -161,7 +161,7 @@ class CodeManager:
     # Illegal command characters
     ILLEGAL_CHARS = [";", "&&", "||", ">", ">>", "|", "`", "$"]
     
-    def __init__(self, work_dir: Optional[Union[str, Path]] = None, access_level: str = "sandbox"):
+    def __init__(self, work_dir: Optional[Union[str, Path]] = None, access_level: Optional[str] = None):
         """
         Code manager başlatıcı
         
@@ -169,7 +169,8 @@ class CodeManager:
             work_dir: Çalışma dizini (None ise Config.WORK_DIR)
             access_level: Erişim seviyesi (restricted, sandbox, full)
         """
-        self.access_level = access_level
+        # Değişiklik: Eğer parametre girilmezse doğrudan Config'den oku
+        self.access_level = access_level or Config.ACCESS_LEVEL
         
         # Sandbox root
         if work_dir:

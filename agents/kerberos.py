@@ -1,6 +1,6 @@
 """
 LotusAI Kerberos Agent
-Sürüm: 2.5.4 (Eklendi: Erişim Seviyesi Desteği)
+Sürüm: 2.6.0 (Dinamik Erişim Seviyesi Senkronu)
 Açıklama: Güvenlik şefi ve mali denetçi
 
 Sorumluluklar:
@@ -174,7 +174,7 @@ class KerberosAgent:
     # Working hours
     WORKING_HOURS = (8, 22)  # 08:00 - 22:00
     
-    def __init__(self, tools_dict: Dict[str, Any], access_level: str = "sandbox"):
+    def __init__(self, tools_dict: Dict[str, Any], access_level: Optional[str] = None):
         """
         Kerberos başlatıcı
         
@@ -183,7 +183,10 @@ class KerberosAgent:
             access_level: Erişim seviyesi (restricted, sandbox, full)
         """
         self.tools = tools_dict
-        self.access_level = access_level
+        
+        # Değişiklik: Eğer parametre girilmezse doğrudan Config'den oku
+        self.access_level = access_level or Config.ACCESS_LEVEL
+        
         self.agent_name = "KERBEROS"
         
         # Thread safety

@@ -1,12 +1,12 @@
 /**
  * LotusAI Service Worker
- * Version: 2.5.3
+ * Version: 2.6.0
  * Description: PWA offline support and caching
  */
 
-const CACHE_NAME = 'lotus-ai-v2.5.3';
-const STATIC_CACHE = 'lotus-static-v2.5.3';
-const DYNAMIC_CACHE = 'lotus-dynamic-v2.5.3';
+const CACHE_NAME = 'lotus-ai-v2.6.0';
+const STATIC_CACHE = 'lotus-static-v2.6.0';
+const DYNAMIC_CACHE = 'lotus-dynamic-v2.6.0';
 
 // Static resources to cache
 const STATIC_URLS = [
@@ -80,7 +80,6 @@ self.addEventListener('fetch', (event) => {
     caches.match(request)
       .then((cachedResponse) => {
         if (cachedResponse) {
-          console.log('[ServiceWorker] Serving from cache:', request.url);
           return cachedResponse;
         }
         

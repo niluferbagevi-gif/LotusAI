@@ -1,6 +1,6 @@
 """
 LotusAI Memory Management System
-Sürüm: 2.5.5 (Eklendi: Erişim Seviyesi Desteği)
+Sürüm: 2.6.0 (Dinamik Erişim Seviyesi Senkronu)
 Açıklama: Hybrid hafıza sistemi (SQLite + ChromaDB) ve RAG implementasyonu
 Özellikler:
 - Kısa süreli hafıza: SQLite (hızlı erişim)
@@ -290,14 +290,15 @@ class MemoryManager:
     - AI_PROVIDER='gemini' → SentenceTransformerEmbeddingFunction (GPU destekli)
     """
     
-    def __init__(self, access_level: str = "sandbox"):
+    def __init__(self, access_level: Optional[str] = None):
         """
         Memory manager başlatıcı
         
         Args:
             access_level: Erişim seviyesi (restricted, sandbox, full)
         """
-        self.access_level = access_level
+        # Değişiklik: Eğer parametre girilmezse veya None gelirse doğrudan Config'den oku
+        self.access_level = access_level or Config.ACCESS_LEVEL
         
         # Paths
         self.work_dir = Config.WORK_DIR

@@ -49,6 +49,7 @@ from managers.accounting import AccountingManager
 from managers.messaging import MessagingManager
 from managers.delivery import DeliveryManager
 from managers.nlp import NLPManager
+from managers.github_manager import GithubManager  # <--- EKLENDİ
 
 # ═══════════════════════════════════════════════════════════════
 # AGENT MODÜLLER
@@ -93,7 +94,7 @@ class SystemConfig:
     AMBIENT_NOISE_DURATION: float = 1.0
     LISTEN_TIMEOUT: float = 3.0
     PHRASE_TIME_LIMIT: float = 10.0
-    SPEECH_LANGUAGE: str = "tr-TR"
+    SPEECH_LANGUAGE: str = os.getenv("STT_LANGUAGE", "tr-TR")
     
     # Sipariş kontrolü
     ORDER_CHECK_INTERVAL: int = 30  # saniye
@@ -104,7 +105,7 @@ class SystemConfig:
     ERROR_SLEEP: float = 2.0
     
     # Web dashboard
-    DASHBOARD_PORT: int = 5000
+    DASHBOARD_PORT: int = int(os.getenv("FLASK_PORT", 5000))
     DASHBOARD_OPEN_DELAY: float = 3.0
     
     # Thread pool
@@ -145,6 +146,7 @@ class LotusSystem:
         self.camera_manager: Optional[CameraManager] = None
         self.security_manager: Optional[SecurityManager] = None
         self.delivery_manager: Optional[DeliveryManager] = None
+        self.github_manager: Optional[GithubManager] = None # <--- EKLENDİ
         
         # Agents
         self.engine: Optional[AgentEngine] = None
@@ -207,7 +209,7 @@ class LotusSystem:
         
         self.memory_manager = MemoryManager()
         
-        # Kamera (erişim seviyesine göre kısıtlanabilir, şimdilik her zaman açık)
+        # Kamera
         self.camera_manager = CameraManager()
         with ignore_stderr():
             self.camera_manager.start()
@@ -227,9 +229,12 @@ class LotusSystem:
         messaging_manager = MessagingManager()
         RuntimeContext.set_messaging_manager(messaging_manager)
         
+        # GitHub Manager
+        self.github_manager = GithubManager(access_level=self.access_level) # <--- EKLENDİ
+
         # Delivery manager
         self.delivery_manager = DeliveryManager()
-        if Config.FINANCE_MODE:
+        if getattr(Config, "FINANCE_MODE", False):
             logger.info("🛵 Paket Servis Modülü aktif")
             self.delivery_manager.start_service()
         
@@ -239,7 +244,7 @@ class LotusSystem:
         init_audio_system()
         logger.info("🔊 Ses sistemi aktif")
         
-        # Tools dictionary - erişim seviyesine göre bazı managerlar filtrelenebilir
+        # Tools dictionary
         tools = {
             "camera": self.camera_manager,
             "code": code_manager,
@@ -250,7 +255,8 @@ class LotusSystem:
             "messaging": messaging_manager,
             "delivery": self.delivery_manager,
             "nlp": nlp_manager,
-            "state": self.state_manager
+            "state": self.state_manager,
+            "github": self.github_manager  # <--- EKLENDİ
         }
         
         # Media manager (opsiyonel)
@@ -276,12 +282,13 @@ class LotusSystem:
         # Poyraz agent
         poyraz_agent = PoyrazAgent(nlp_manager, {})
         
-        # Sidar agent - erişim seviyesini de iletiyoruz (opsiyonel)
+        # Sidar agent
         sidar_tools = {
             'code': tools['code'],
             'system': tools['system'],
             'security': self.security_manager,
-            'memory': self.memory_manager
+            'memory': self.memory_manager,
+            'github': tools['github'] # <--- EKLENDİ
         }
         sidar_agent = SidarAgent(sidar_tools, access_level=self.access_level)
         
@@ -292,7 +299,7 @@ class LotusSystem:
         # Poyraz'a tüm toolları ver
         poyraz_agent.update_tools(tools)
         
-        # Engine'i oluştur - access_level'i de engine'e veriyoruz
+        # Engine'i oluştur
         self.engine = AgentEngine(self.memory_manager, tools, access_level=self.access_level)
         RuntimeContext.set_engine(self.engine)
         
@@ -334,6 +341,12 @@ class LotusSystem:
         Returns:
             Başarılı ise True
         """
+        # Ses sistemi Config üzerinden kapalıysa doğrudan devre dışı bırak
+        if not getattr(Config, "VOICE_ENABLED", True):
+            logger.info("🎙️ Mikrofon kullanımı .env ayarları ile devre dışı bırakıldı (VOICE_ENABLED=False)")
+            RuntimeContext.set_voice_mode(False)
+            return False
+
         self.recognizer = sr.Recognizer()
         
         try:
@@ -474,7 +487,7 @@ class LotusSystem:
                 current_time = time.time()
                 
                 # Sipariş kontrolü (periyodik)
-                if (Config.FINANCE_MODE and 
+                if (getattr(Config, "FINANCE_MODE", False) and 
                     current_time - last_order_check >= SystemConfig.ORDER_CHECK_INTERVAL):
                     await self._check_delivery_orders()
                     last_order_check = current_time

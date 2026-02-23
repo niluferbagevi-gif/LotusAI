@@ -1,100 +1,139 @@
-# 🌿 LotusAI - Multi-Agent AI Assistant System
+🌿 LotusAI - Multi-Agent AI Assistant System
 
 <div align="center">
 
-![LotusAI Logo](https://cdn-icons-png.flaticon.com/512/4712/4712035.png)
+Çok Ajanlı Yapay Zeka Asistan Sistemi
 
-**Çok Ajanlı Yapay Zeka Asistan Sistemi**
-
-[![Python](https://img.shields.io/badge/Python-3.11+-blue.svg)](https://www.python.org/downloads/)
-[![PyTorch](https://img.shields.io/badge/PyTorch-2.1.0-red.svg)](https://pytorch.org/)
-[![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
-[![CUDA](https://img.shields.io/badge/CUDA-11.8-76B900.svg)](https://developer.nvidia.com/cuda-toolkit)
-
-[English](#english) | [Türkçe](#turkish)
+English | Türkçe
 
 </div>
 
----
+🇹🇷 Turkish
 
-## 🇹🇷 Turkish
+📋 İçindekiler
 
-### 📋 İçindekiler
+Genel Bakış
 
-- [Genel Bakış](#genel-bakış)
-- [Özellikler](#özellikler)
-- [Mimari](#mimari)
-- [Ajanlar](#ajanlar)
-- [Kurulum](#kurulum)
-- [Kullanım](#kullanım)
-- [Yapılandırma](#yapılandırma)
-- [API Dokümantasyonu](#api-dokümantasyonu)
-- [Katkıda Bulunma](#katkıda-bulunma)
-- [Lisans](#lisans)
+Özellikler
 
----
+Mimari
 
-### 🎯 Genel Bakış
+Ajanlar
 
-LotusAI, **6 özelleşmiş yapay zeka ajanı** ile çalışan gelişmiş bir işletme yönetim sistemidir. Her ajan farklı bir uzmanlık alanında görev yapar ve birlikte senkronize bir ekosistem oluşturur.
+Kurulum
 
-**Temel Yetenekler:**
-- 🧠 **Multi-Agent System**: 6 özelleşmiş AI ajan
-- 🚀 **GPU Acceleration**: CUDA ile hızlandırılmış işlemler
-- 🎤 **Voice Interface**: Türkçe ses tanıma ve sentezi
-- 📱 **Multi-Platform**: WhatsApp, Instagram, Facebook entegrasyonu
-- 🔒 **Face Recognition**: Güvenlik için yüz tanıma
-- 📊 **Real-time Analytics**: Canlı veri analizi
-- 🌐 **Web Dashboard**: Modern web arayüzü
+Kullanım
 
----
+Yapılandırma
 
-### ✨ Özellikler
+API Dokümantasyonu
 
-#### 🤖 Yapay Zeka & NLP
-- Google Gemini API entegrasyonu
-- Yerel LLM desteği (Ollama)
-- Türkçe NLP ve duygu analizi
-- Vector database (ChromaDB)
-- Konuşma hafızası
-- Multi-turn conversation
+Katkıda Bulunma
 
-#### 🎙️ Ses İşleme
-- Türkçe konuşma tanıma (STT)
-- Gerçekçi ses sentezi (TTS)
-- Edge-TTS ve Coqui-TTS desteği
-- Gerçek zamanlı ses akışı
+Lisans
 
-#### 👁️ Görüntü İşleme
-- Yüz tanıma ve kimlik doğrulama
-- Kamera tabanlı güvenlik
-- OCR (Optik Karakter Tanıma)
-- Belge tarama
+🎯 Genel Bakış
 
-#### 💬 Mesajlaşma
-- WhatsApp Business API
-- Instagram Direct Message
-- Facebook Messenger
-- Webhook entegrasyonu
+LotusAI, 6 özelleşmiş yapay zeka ajanı ile çalışan gelişmiş bir işletme yönetim sistemidir. Her ajan farklı bir uzmanlık alanında görev yapar ve birlikte senkronize bir ekosistem oluşturur.
 
-#### 📊 İşletme Yönetimi
-- Muhasebe ve finans takibi
-- Stok yönetimi
-- Rezervasyon sistemi
-- Paket servis entegrasyonu
-- Sosyal medya yönetimi
+Temel Yetenekler:
 
-#### 🚀 Performans
-- NVIDIA GPU hızlandırma
-- Multi-threading
-- Asenkron işlemler
-- Cache sistemi
-- Auto-scaling
+🧠 Multi-Agent System: 6 özelleşmiş AI ajan
 
----
+🚀 GPU Acceleration: CUDA ile hızlandırılmış işlemler
 
-### 🏗️ Mimari
-```
+🐙 GitHub Integration: Bulut tabanlı repo analizi ve kod okuma (YENİ!)
+
+🎤 Voice Interface: Türkçe ses tanıma ve sentezi
+
+📱 Multi-Platform: WhatsApp, Instagram, Facebook entegrasyonu
+
+🔒 Face Recognition: Güvenlik için yüz tanıma
+
+📊 Real-time Analytics: Canlı veri analizi
+
+🌐 Web Dashboard: Modern web arayüzü
+
+✨ Özellikler
+
+🤖 Yapay Zeka & NLP
+
+Google Gemini API entegrasyonu
+
+Yerel LLM desteği (Ollama)
+
+Sidar'a Özel: qwen2.5-coder ile profesyonel kodlama yeteneği
+
+ReAct (Reason+Act): Akıllı düşünme döngüsü ve kendi kendine dosya okuma
+
+Türkçe NLP ve duygu analizi
+
+Konuşma hafızası
+
+🐙 Yazılım Mimarisi (Sidar)
+
+GitHub Bağlantısı: Uzaktaki repoları (niluferbagevi-gif/LotusAI) analiz etme
+
+Kod Analizi: Yerel ve bulut tabanlı dosya okuma/yazma
+
+Otomatik Denetim: Proje yapısını ve donanım sağlığını denetleme
+
+Sözdizimi Kontrolü: Yazılan kodlarda otomatik syntax ve JSON validasyonu
+
+🎙️ Ses İşleme
+
+Türkçe konuşma tanıma (STT)
+
+Gerçekçi ses sentezi (TTS)
+
+Edge-TTS ve Coqui-TTS desteği
+
+Gerçek zamanlı ses akışı
+
+👁️ Görüntü İşleme
+
+Yüz tanıma ve kimlik doğrulama
+
+Kamera tabanlı güvenlik
+
+OCR (Optik Karakter Tanıma) ve fatura analizi
+
+💬 Mesajlaşma
+
+WhatsApp Business API
+
+Instagram Direct Message
+
+Facebook Messenger
+
+Webhook entegrasyonu
+
+📊 İşletme Yönetimi
+
+Muhasebe ve finans takibi
+
+Stok yönetimi
+
+Rezervasyon sistemi
+
+Paket servis entegrasyonu
+
+Sosyal medya yönetimi
+
+🚀 Performans
+
+NVIDIA GPU hızlandırma
+
+Multi-threading
+
+Asenkron işlemler
+
+Cache sistemi
+
+Erişim Seviyesi (Access Level) Kontrolü (Restricted/Sandbox/Full)
+
+🏗️ Mimari
+
 LotusAI/
 ├── 🧠 Core System
 │   ├── Runtime Context (Merkezi koordinasyon)
@@ -104,13 +143,13 @@ LotusAI/
 │
 ├── 🤖 Agents (6 AI Agent)
 │   ├── Atlas (Proje Yöneticisi)
-│   ├── Sidar (Yazılım Mimarı)
+│   ├── Sidar (Yazılım Mimarı & GitHub Uzmanı) [GÜNCELLENDİ]
 │   ├── Kurt (Finans Stratejisti)
 │   ├── Gaya (İşletme Müdürü)
 │   ├── Poyraz (Medya Direktörü)
 │   └── Kerberos (Güvenlik Şefi)
 │
-├── 🛠️ Managers (10 Specialized Manager)
+├── 🛠️ Managers (11 Specialized Manager)
 │   ├── Accounting (Muhasebe)
 │   ├── Finance (Finans & Borsa)
 │   ├── Operations (Operasyon)
@@ -119,6 +158,7 @@ LotusAI/
 │   ├── Delivery (Paket Servis)
 │   ├── Camera (Kamera Yönetimi)
 │   ├── Code Manager (Kod Yönetimi)
+│   ├── GitHub Manager (Repo Entegrasyonu) [YENİ]
 │   ├── NLP (Doğal Dil İşleme)
 │   └── System Health (Sistem İzleme)
 │
@@ -127,150 +167,193 @@ LotusAI/
     ├── RESTful API
     ├── WebSocket (Real-time)
     └── PWA Support
-```
 
----
 
-### 👥 Ajanlar
+👥 Ajanlar
 
-#### 🌐 **ATLAS** - Proje Yöneticisi
-**Roller:** Liderlik, Koordinasyon, Strateji  
-**Yetenekler:**
-- Proje planlama ve yönetim
-- Ekip koordinasyonu
-- Genel sistem kontrolü
-- Karar mekanizmaları
+🌐 ATLAS - Proje Yöneticisi
 
-**Örnek Görevler:**
-```
+Roller: Liderlik, Koordinasyon, Strateji
+
+Yetenekler:
+
+Proje planlama ve yönetim
+
+Ekip koordinasyonu
+
+Genel sistem kontrolü
+
+Karar mekanizmaları
+
+Örnek Görevler:
+
 "Atlas, bugünün önceliklerini belirle"
 "Ekip durumunu raporla"
 "Haftalık analiz hazırla"
-```
 
-#### 💻 **SİDAR** - Yazılım Mimarı
-**Roller:** Kod Geliştirme, Teknik Destek  
-**Yetenekler:**
-- Kod yazma ve debugging
-- Sistem optimizasyonu
-- Teknik dokümantasyon
-- API geliştirme
 
-**Örnek Görevler:**
-```
-"Sidar, Python'da bir rezervasyon sistemi yaz"
-"Bu kodu optimize et"
-"API dokümantasyonu oluştur"
-```
+💻 SİDAR - Yazılım Mimarı (GÜNCELLENDİ)
 
-#### 🐺 **KURT** - Finans Stratejisti
-**Roller:** Finans Analizi, Borsa Takibi  
-**Yetenekler:**
-- Teknik analiz (RSI, EMA, MACD)
-- Kripto para takibi
-- Finansal raporlama
-- Grafik oluşturma
+Roller: Kod Geliştirme, Teknik Destek, GitHub Yöneticisi
 
-**Örnek Görevler:**
-```
+Yetenekler:
+
+Kod yazma ve debugging (qwen2.5-coder kullanır)
+
+Sistem optimizasyonu ve donanım denetimi
+
+GitHub repo analizi ve commit takibi
+
+Yerel dosya okuma ve düzenleme
+
+Örnek Görevler:
+
+"Sidar, GitHub'daki son commit'leri listele"
+"Bu dosyayı oku ve hataları düzelt"
+"Sistemi denetle ve GPU durumunu raporla"
+
+
+🐺 KURT - Finans Stratejisti
+
+Roller: Finans Analizi, Borsa Takibi
+
+Yetenekler:
+
+Teknik analiz (RSI, EMA, MACD)
+
+Kripto para takibi
+
+Finansal raporlama
+
+Grafik oluşturma
+
+Örnek Görevler:
+
 "Kurt, BTC/USDT analizi yap"
 "Piyasa özeti ver"
 "Haftalık finans raporu hazırla"
-```
 
-#### 🪷 **GAYA** - İşletme Müdürü
-**Roller:** Operasyon, Müşteri İlişkileri  
-**Yetenekler:**
-- Rezervasyon yönetimi
-- Stok takibi
-- Menü yönetimi
-- Müşteri hizmetleri
 
-**Örnek Görevler:**
-```
+🪷 GAYA - İşletme Müdürü
+
+Roller: Operasyon, Müşteri İlişkileri
+
+Yetenekler:
+
+Rezervasyon yönetimi
+
+Stok takibi
+
+Menü yönetimi
+
+Fatura okuma ve işleme
+
+Örnek Görevler:
+
 "Gaya, yarın 4 kişilik saat 19:00 rezervasyon"
 "Stok durumunu kontrol et"
-"Bugünkü rezervasyonları listele"
-```
+"Bu faturayı oku ve sisteme işle"
 
-#### 🌪️ **POYRAZ** - Medya Direktörü
-**Roller:** Sosyal Medya, İçerik Üretimi  
-**Yetenekler:**
-- Sosyal medya yönetimi
-- İçerik planlama
-- Trend analizi
-- AI görsel oluşturma
 
-**Örnek Görevler:**
-```
+🌪️ POYRAZ - Medya Direktörü
+
+Roller: Sosyal Medya, İçerik Üretimi
+
+Yetenekler:
+
+Sosyal medya yönetimi
+
+İçerik planlama
+
+Trend analizi
+
+AI görsel oluşturma
+
+Örnek Görevler:
+
 "Poyraz, Instagram için içerik öner"
 "Güncel trendleri analiz et"
 "AI ile bir kapak görseli oluştur"
-```
 
-#### 🛡️ **KERBEROS** - Güvenlik Şefi
-**Roller:** Güvenlik, Kimlik Doğrulama  
-**Yetenekler:**
-- Yüz tanıma
-- Kullanıcı yönetimi
-- Güvenlik logları
-- Erişim kontrolü
 
-**Örnek Görevler:**
-```
+🛡️ KERBEROS - Güvenlik Şefi
+
+Roller: Güvenlik, Kimlik Doğrulama
+
+Yetenekler:
+
+Yüz tanıma
+
+Kullanıcı yönetimi
+
+Güvenlik logları
+
+Erişim kontrolü
+
+Örnek Görevler:
+
 "Kerberos, kimlik doğrulama yap"
 "Güvenlik loglarını göster"
 "Yeni kullanıcı ekle"
-```
 
----
 
-### 🚀 Kurulum
+🚀 Kurulum
 
-#### Sistem Gereksinimleri
+Sistem Gereksinimleri
 
-**Minimum:**
-- Python 3.11+
-- 8GB RAM
-- 10GB Disk
+Minimum:
 
-**Önerilen:**
-- Python 3.11+
-- 16GB RAM
-- NVIDIA GPU (CUDA 11.8)
-- 50GB Disk
+Python 3.11+
 
-#### 1. Depoyu Klonlayın
-```bash
-git clone https://github.com/niluferbagevi-gif/LotusAI.git
+8GB RAM
+
+10GB Disk
+
+Önerilen:
+
+Python 3.11+
+
+16GB RAM
+
+NVIDIA GPU (CUDA 11.8)
+
+50GB Disk
+
+1. Depoyu Klonlayın
+
+git clone [https://github.com/niluferbagevi-gif/LotusAI.git](https://github.com/niluferbagevi-gif/LotusAI.git)
 cd LotusAI
-```
 
-#### 2. Sanal Ortam Oluşturun
 
-**Conda (Önerilen):**
-```bash
+2. Sanal Ortam Oluşturun
+
+Conda (Önerilen):
+
 conda env create -f environment.yml
 conda activate lotus-ai
-```
 
-**Pip:**
-```bash
+
+Pip:
+
 python -m venv venv
 source venv/bin/activate  # Linux/Mac
 venv\Scripts\activate     # Windows
 pip install -r requirements.txt
-```
 
-#### 3. Ortam Değişkenlerini Ayarlayın
-```bash
+
+3. Ortam Değişkenlerini Ayarlayın
+
 cp .env.example .env
-```
 
-`.env` dosyasını düzenleyin:
-```ini
+
+.env dosyasını düzenleyin:
+
 # AI API
 GEMINI_API_KEY=your_gemini_api_key
+
+# GitHub (Yeni)
+GITHUB_REPO=niluferbagevi-gif/LotusAI
+GITHUB_TOKEN=your_github_token_here
 
 # GPU
 USE_GPU=True
@@ -278,110 +361,125 @@ USE_GPU=True
 # Meta API
 META_ACCESS_TOKEN=your_meta_token
 WHATSAPP_PHONE_ID=your_phone_id
-```
 
-#### 4. Sistemi Başlatın
-```bash
+
+4. Sistemi Başlatın
+
 python main.py
-```
 
-Web arayüzü: `http://localhost:5000`
 
----
+Web arayüzü: http://localhost:5000
 
-### 💻 Kullanım
+💻 Kullanım
 
-#### Temel Kullanım
+Temel Kullanım
 
-**1. Terminal Modu:**
-```bash
+1. Terminal Modu:
+
 python main.py
-```
 
-**2. Web Arayüzü:**
-```
+
+2. Web Arayüzü:
+
 http://localhost:5000
-```
 
-**3. Sesli Komutlar:**
-```
+
+3. Sesli Komutlar:
+
 [Space] tuşuna basın ve konuşun
-```
 
-#### Örnek Komutlar
 
-**Genel:**
-```
+Örnek Komutlar
+
+Genel:
+
 "Merhaba"
 "Sistem durumu nedir?"
 "Bugünün özetini ver"
-```
 
-**Rezervasyon:**
-```
+
+GitHub & Kod (Sidar):
+
+"GitHub reposundaki dosyaları listele"
+"GitHub'daki main.py dosyasını oku ve analiz et"
+"Son commit geçmişini göster"
+
+
+Rezervasyon:
+
 "Yarın saat 19:00 için 4 kişilik masa ayır"
 "Bugünkü rezervasyonları göster"
 "Rezervasyon #123'ü iptal et"
-```
 
-**Finans:**
-```
+
+Finans:
+
 "BTC fiyatı nedir?"
 "ETH/USDT analizi yap"
 "Kasa bakiyesi ne kadar?"
-```
 
-**Sosyal Medya:**
-```
+
+Sosyal Medya:
+
 "Instagram'da yeni ne var?"
 "Türkiye trendleri nedir?"
 "Yarın için içerik öner"
-```
 
-**Stok:**
-```
+
+Stok:
+
 "Domates stokunu kontrol et"
 "Zeytinyağı ekle 5 litre"
 "Kritik stokları göster"
-```
 
----
 
-### ⚙️ Yapılandırma
+⚙️ Yapılandırma
 
-#### GPU Ayarları
-```python
+GPU Ayarları
+
 # config.py
 USE_GPU = True  # GPU kullanımı
-```
 
-#### Agent Ayarları
-```python
-# agents/definitions.py
-AGENTS_CONFIG = {
-    "ATLAS": {
-        "name": "Atlas",
-        "emoji": "🌐",
-        "color": "#29b6f6"
-    }
-}
-```
 
-#### Ses Ayarları
-```python
+Sidar Güvenli Dosya (Sandbox) Modu
+
+Sidar'ı proje ana klasöründe güvenli dosya erişimi ile çalıştırmak için .env içinde şu ayarları kullanın:
+
+ACCESS_LEVEL=sandbox
+WORK_DIR=/workspace/LotusAI
+
+
+ACCESS_LEVEL=restricted: Sadece bilgi verir, işlem yapmaz.
+
+ACCESS_LEVEL=sandbox: Güvenli okuma/yazma yapar (Önerilen).
+
+ACCESS_LEVEL=full: Terminal komutları dahil tam yetki (Dikkatli kullanın).
+
+Sistem başlatma:
+
+python main.py
+
+
+Örnek Sidar komutları:
+
+"Sidar, ana klasördeki dosyaları listele"
+"Sidar, GitHub'dan config.py dosyasını oku"
+"Sidar, core/utils.py içine güvenli biçimde şu fonksiyonu ekle"
+
+
+Ses Ayarları
+
 # config.py
 VOICE_ENABLED = True
 USE_XTTS = True  # Yerel TTS
-```
 
----
 
-### 📚 API Dokümantasyonu
+📚 API Dokümantasyonu
 
-#### REST API Endpoints
+REST API Endpoints
 
-**Chat:**
-```http
+Chat:
+
 POST /api/chat
 Content-Type: multipart/form-data
 
@@ -390,30 +488,30 @@ Content-Type: multipart/form-data
   "target_agent": "ATLAS",
   "file": <file>
 }
-```
 
-**Chat History:**
-```http
+
+Chat History:
+
 GET /api/chat_history?agent=ATLAS
-```
 
-**Voice Toggle:**
-```http
+
+Voice Toggle:
+
 POST /api/toggle_voice
-```
 
-**Webhook:**
-```http
+
+Webhook:
+
 POST /webhook
 Content-Type: application/json
 
 {
   "entry": [...]
 }
-```
 
-#### Python API
-```python
+
+Python API
+
 from lotus_system import LotusSystem
 
 # Initialize
@@ -427,17 +525,13 @@ response = await lotus.engine.get_response(
 )
 
 print(response['content'])
-```
 
----
 
-### 🔧 Gelişmiş Özellikler
+🔧 Gelişmiş Özellikler
 
-#### 1. Custom Agent Oluşturma
-```python
-# agents/custom_agent.py
-from agents.definitions import AGENTS_CONFIG
+1. Custom Agent Oluşturma
 
+# agents/definitions.py
 AGENTS_CONFIG["CUSTOM"] = {
     "name": "Custom Agent",
     "emoji": "🎯",
@@ -445,10 +539,10 @@ AGENTS_CONFIG["CUSTOM"] = {
     "capabilities": ["task1", "task2"],
     "system_prompt": "Your system prompt here"
 }
-```
 
-#### 2. Manager Genişletme
-```python
+
+2. Manager Genişletme
+
 # managers/custom_manager.py
 class CustomManager:
     def __init__(self):
@@ -457,48 +551,43 @@ class CustomManager:
     def custom_function(self):
         # Your code here
         pass
-```
 
-#### 3. Webhook Handler
-```python
-# server.py
-@app.route('/custom_webhook', methods=['POST'])
-def custom_webhook():
-    data = request.json
-    # Process webhook
-    return jsonify({"status": "ok"})
-```
 
----
+🐛 Sorun Giderme
 
-### 🐛 Sorun Giderme
+PyGithub Kurulumu (Yeni)
 
-#### PyAudio Kurulum Hatası
+GitHub entegrasyonu için:
 
-**Windows:**
-```bash
+pip install PyGithub
+
+
+PyAudio Kurulum Hatası
+
+Windows:
+
 # Wheel dosyasını indirin
-# https://www.lfd.uci.edu/~gohlke/pythonlibs/#pyaudio
+# [https://www.lfd.uci.edu/~gohlke/pythonlibs/#pyaudio](https://www.lfd.uci.edu/~gohlke/pythonlibs/#pyaudio)
 pip install PyAudio‑0.2.14‑cp311‑cp311‑win_amd64.whl
-```
 
-**Linux:**
-```bash
+
+Linux:
+
 sudo apt-get install portaudio19-dev
 pip install pyaudio
-```
 
-#### CUDA Hatası
-```bash
+
+CUDA Hatası
+
 # CUDA versiyonunu kontrol edin
 nvidia-smi
 
 # PyTorch CUDA versiyonunu kontrol edin
 python -c "import torch; print(torch.cuda.is_available())"
-```
 
-#### Face Recognition Hatası
-```bash
+
+Face Recognition Hatası
+
 # CMake yükleyin
 pip install cmake
 
@@ -507,114 +596,156 @@ pip install dlib
 
 # face-recognition yükleyin
 pip install face-recognition
-```
 
----
 
-### 📊 Performans
+📊 Performans
 
-**Sistem Gereksinimleri vs Performans:**
+Sistem Gereksinimleri vs Performans:
 
-| Özellik | CPU Only | GPU (RTX 3070 Ti) |
-|---------|----------|-------------------|
-| Response Time | 2-5 sn | 0.5-1 sn |
-| Concurrent Users | 5 | 50+ |
-| Face Recognition | 2 fps | 30 fps |
-| TTS Generation | 1x | 5x |
+Özellik
 
----
+CPU Only
 
-### 🤝 Katkıda Bulunma
+GPU (RTX 3070 Ti)
+
+Response Time
+
+2-5 sn
+
+0.5-1 sn
+
+Concurrent Users
+
+5
+
+50+
+
+Face Recognition
+
+2 fps
+
+30 fps
+
+TTS Generation
+
+1x
+
+5x
+
+GitHub Analysis
+
+3-5 sn
+
+1-2 sn
+
+🤝 Katkıda Bulunma
 
 Katkılarınızı bekliyoruz! Lütfen şu adımları izleyin:
 
-1. Fork edin
-2. Feature branch oluşturun (`git checkout -b feature/amazing`)
-3. Commit yapın (`git commit -m 'Add amazing feature'`)
-4. Push edin (`git push origin feature/amazing`)
-5. Pull Request açın
+Fork edin
 
-**Kod Standartları:**
-- PEP 8 uyumlu
-- Type hints kullanın
-- Docstring ekleyin
-- Test yazın
+Feature branch oluşturun (git checkout -b feature/amazing)
 
----
+Commit yapın (git commit -m 'Add amazing feature')
 
-### 📝 Changelog
+Push edin (git push origin feature/amazing)
 
-#### v2.6.0 (2026-02-22)
-- ✅ Tekil sürüm kaynağına geçiş (Config.VERSION)
-- ✅ Launcher/Core/Server sürüm senkronizasyonu
-- ✅ Webhook doğrulamada `WEBHOOK_VERIFY_TOKEN` zorunlu hâle getirildi
-- ✅ README bağlantıları ve iletişim bilgileri güncellendi
+Pull Request açın
 
-#### v2.5.3 (2026-02-10)
-- Full code refactoring
-- Type hints %100
-- Better error handling
-- Metrics tracking
-- Improved documentation
+Kod Standartları:
 
-#### v2.0.0 (2025-12-01)
-- Multi-agent system
-- Web interface
-- PWA support
+PEP 8 uyumlu
 
----
+Type hints kullanın
 
-### 📄 Lisans
+Docstring ekleyin
 
-Bu proje [MIT License](LICENSE) altında lisanslanmıştır.
+Test yazın
 
----
+📝 Changelog
 
-### 👨‍💻 Geliştirici
+v2.6.0 (2026-02-23)
 
-**Halil Sevim**  
-📧 Email: halilsevim@hotmail.com  
-🌐 Website: https://yourwebsite.com  
+🚀 GitHub Entegrasyonu: GithubManager eklendi, repo analizi yeteneği geldi.
+
+🔄 ReAct Döngüsü: Sidar'a "düşünme ve eyleme geçme" yeteneği (Auto-Handle) eklendi.
+
+🔐 Access Level: Dinamik erişim seviyesi (Restricted/Sandbox/Full) tüm sisteme yayıldı.
+
+🛠️ Config: Tüm ayarlar config.py üzerinden merkezi yönetime alındı.
+
+✅ Sürüm Senkronizasyonu: Tüm dosyalar v2.6.0 olarak işaretlendi.
+
+v2.5.3 (2026-02-10)
+
+Full code refactoring
+
+Type hints %100
+
+Better error handling
+
+Metrics tracking
+
+Improved documentation
+
+v2.0.0 (2025-12-01)
+
+Multi-agent system
+
+Web interface
+
+PWA support
+
+📄 Lisans
+
+Bu proje MIT License altında lisanslanmıştır.
+
+👨‍💻 Geliştirici
+
+Halil Sevim 📧 Email: halilsevim@hotmail.com
+
+🌐 Website: https://yourwebsite.com
+
 💼 LinkedIn: https://linkedin.com/in/yourprofile
 
----
+🙏 Teşekkürler
 
-### 🙏 Teşekkürler
+Google Gemini AI
 
-- Google Gemini AI
-- Anthropic Claude
-- OpenCV Community
-- PyTorch Team
-- HuggingFace
+Anthropic Claude
 
----
+OpenCV Community
 
-### 📞 Destek
+PyTorch Team
 
-**Sorularınız mı var?**
+HuggingFace
 
-- 📧 Email: support@lotusai.com
-- 💬 Discord: [LotusAI Community](#)
-- 📖 Docs: [docs.lotusai.com](#)
-- 🐛 Issues: [GitHub Issues](https://github.com/niluferbagevi-gif/LotusAI/issues)
+PyGithub Contributors
 
----
+📞 Destek
+
+Sorularınız mı var?
+
+📧 Email: support@lotusai.com
+
+💬 Discord: LotusAI Community
+
+📖 Docs: docs.lotusai.com
+
+🐛 Issues: GitHub Issues
 
 <div align="center">
 
-**Made with ❤️ in Turkey**
+Made with ❤️ in Turkey
 
 ⭐ Star us on GitHub — it helps!
 
-[⬆ Back to Top](#-lotusai---multi-agent-ai-assistant-system)
+⬆ Back to Top
 
 </div>
-```
 
----
+📜 https://www.google.com/search?q=LICENSE (MIT)
 
-## 📜 LICENSE (MIT)
-```
 MIT License
 
 Copyright (c) 2026 Halil Sevim - LotusAI Project

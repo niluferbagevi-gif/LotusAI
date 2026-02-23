@@ -1,6 +1,6 @@
 """
 LotusAI Runtime Context
-Sürüm: 2.5.4 (Fix: Metaclass Property Support & Silent Init)
+Sürüm: 2.6.0 (Config Entegrasyonu ve Dinamik Ses Modu)
 Açıklama: Global runtime state yönetimi (Thread-safe singleton pattern)
 """
 
@@ -11,6 +11,8 @@ from concurrent.futures import ThreadPoolExecutor
 from threading import Lock
 from typing import Optional, Any
 from contextlib import suppress
+
+from config import Config
 
 logger = logging.getLogger("LotusAI.Runtime")
 
@@ -123,7 +125,8 @@ class RuntimeContext(metaclass=RuntimeMeta):
     
     # Web/Voice durumları
     _active_web_agent: str = "ATLAS"
-    _voice_mode_active: bool = False
+    # GÜNCELLEME: Ses modu artık merkezi Config üzerinden okunuyor
+    _voice_mode_active: bool = getattr(Config, "VOICE_ENABLED", True)
     
     # Thread Pool
     _executor: Optional[ThreadPoolExecutor] = None
@@ -147,7 +150,6 @@ class RuntimeContext(metaclass=RuntimeMeta):
         """
         with cls._lock:
             if cls._initialized:
-                # GÜNCELLEME: Warning yerine Debug kullanıldı (Log kirliliğini önlemek için)
                 logger.debug("RuntimeContext zaten başlatılmış")
                 return
             

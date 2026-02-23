@@ -1,6 +1,6 @@
 """
 LotusAI Poyraz Agent
-Sürüm: 2.5.4 (Eklendi: Erişim Seviyesi Desteği)
+Sürüm: 2.6.0 (Dinamik Erişim Seviyesi Senkronu)
 Açıklama: Medya ve gündem uzmanı
 
 Sorumluluklar:
@@ -162,7 +162,7 @@ class PoyrazAgent:
         self,
         nlp_manager: Optional[Any] = None,
         tools_dict: Optional[Dict[str, Any]] = None,
-        access_level: str = "sandbox"
+        access_level: Optional[str] = None
     ):
         """
         Poyraz başlatıcı
@@ -175,7 +175,9 @@ class PoyrazAgent:
         self.nlp = nlp_manager
         self.tools = tools_dict or {}
         self.agent_name = "POYRAZ"
-        self.access_level = access_level
+        
+        # Değişiklik: Eğer parametre girilmezse doğrudan Config'den oku
+        self.access_level = access_level or Config.ACCESS_LEVEL
         
         # Thread safety
         self.lock = threading.RLock()
@@ -295,10 +297,27 @@ class PoyrazAgent:
         try:
             summaries = []
             
+            # Instagram stats
             if hasattr(media_tool, 'get_instagram_stats'):
-                summaries.append(media_tool.get_instagram_stats())
+                summaries.append(
+                    "📸 INSTAGRAM:\n" +
+                    media_tool.get_instagram_stats()
+                )
             
-            return "\n".join(summaries) if summaries else ""
+            # Competitor analysis
+            if hasattr(media_tool, 'check_competitors'):
+                summaries.append(
+                    "\n🏁 RAKİP ANALİZİ:\n" +
+                    media_tool.check_competitors()
+                )
+            
+            self.metrics.social_health_checks += 1
+            
+            return (
+                "\n".join(summaries)
+                if summaries else "ℹ️ İstatistik verisi yok"
+            )
+            
         except Exception:
             return ""
     

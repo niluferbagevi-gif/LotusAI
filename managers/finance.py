@@ -1,6 +1,6 @@
 """
 LotusAI Finance Manager
-Sürüm: 2.5.5 (Eklendi: Erişim Seviyesi Desteği)
+Sürüm: 2.6.0 (Dinamik Erişim Seviyesi Senkronu)
 Açıklama: Finans, borsa ve analiz yönetimi
 
 Özellikler:
@@ -185,7 +185,7 @@ class FinanceManager:
     def __init__(
         self,
         accounting_manager: Optional[Any] = None,
-        access_level: str = "sandbox"
+        access_level: Optional[str] = None
     ):
         """
         Finance manager başlatıcı
@@ -194,7 +194,8 @@ class FinanceManager:
             accounting_manager: Muhasebe yöneticisi (opsiyonel)
             access_level: Erişim seviyesi (restricted, sandbox, full)
         """
-        self.access_level = access_level
+        # Değişiklik: Eğer parametre girilmezse doğrudan Config'den oku
+        self.access_level = access_level or Config.ACCESS_LEVEL
         
         # Thread safety
         self.lock = threading.RLock()

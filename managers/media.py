@@ -1,6 +1,6 @@
 """
 LotusAI Media Manager
-Sürüm: 2.5.5 (Eklendi: Erişim Seviyesi Desteği)
+Sürüm: 2.6.0 (Dinamik Erişim Seviyesi Senkronu)
 Açıklama: Medya, içerik ve sosyal medya yönetimi
 
 Özellikler:
@@ -200,14 +200,15 @@ class MediaManager:
     MAX_RETRIES = 5
     RETRY_DELAYS = [1, 2, 4, 8, 16]
     
-    def __init__(self, access_level: str = "sandbox"):
+    def __init__(self, access_level: Optional[str] = None):
         """
         Media manager başlatıcı
         
         Args:
             access_level: Erişim seviyesi (restricted, sandbox, full)
         """
-        self.access_level = access_level
+        # Değişiklik: Eğer parametre girilmezse doğrudan Config'den oku
+        self.access_level = access_level or Config.ACCESS_LEVEL
         
         # Thread safety
         self.lock = threading.RLock()

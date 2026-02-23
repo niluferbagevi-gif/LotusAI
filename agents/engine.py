@@ -1,6 +1,6 @@
 """
 LotusAI Agent Engine - Multi-Agent Koordinasyon Motoru
-Sürüm: 2.5.6 (Eklendi: Erişim Seviyesi Desteği)
+Sürüm: 2.6.0 (Dinamik Erişim Seviyesi ve Merkezi Config Senkronu)
 Açıklama: Agent seçimi, LLM iletişimi, görsel analiz ve dinamik yanıt üretimi
 Güncelleme: CODING_MODEL (Sidar) desteği, ajan bazlı Ollama model seçimi, erişim seviyesi eklendi.
 """
@@ -86,12 +86,15 @@ class EngineConfig:
     WELCOME_KEYWORDS = ["selam", "merhaba", "geldim", "buradayım", "hey lotus"]
     VISUAL_TRIGGERS = ["fatura", "fiş", "dekont", "hesap", "oku", "işle",
                        "ne yazıyor", "analiz et", "göster"]
+    
+    # GitHub tetikleyicileri
+    GITHUB_TRIGGERS = ["github", "repo", "depo", "commit", "pull request", "branch", "git"]
 
     # SIDAR için kod/sistem tetikleyicileri (Ollama CODING_MODEL yönlendirmesi için)
     SIDAR_CODE_TRIGGERS = [
         "kod", "kodla", "yaz", "hata", "debug", "terminal", "log",
         "script", "python", "fonksiyon", "class", "modül", "düzelt",
-        "refactor", "test", "fix", "bug", "exception", "import"
+        "refactor", "test", "fix", "bug", "exception", "import", "github", "repo"
     ]
 
     # Deterministik zaman/tarih intent regex kalıpları
@@ -238,7 +241,7 @@ class AgentEngine:
     - Erişim seviyesine göre yetkilendirme
     """
 
-    def __init__(self, memory_manager: Any, tools_dict: Dict[str, Any], access_level: str = "sandbox"):
+    def __init__(self, memory_manager: Any, tools_dict: Dict[str, Any], access_level: Optional[str] = None):
         """
         Engine başlatıcı
 
@@ -249,7 +252,10 @@ class AgentEngine:
         """
         self.memory = memory_manager
         self.tools = tools_dict
-        self.access_level = access_level
+        
+        # Değişiklik: Eğer parametre girilmezse doğrudan Config'den oku
+        self.access_level = access_level or Config.ACCESS_LEVEL
+        
         self.app_id = Config.PROJECT_NAME.lower().replace(" ", "-")
 
         # GPU durumu
@@ -316,7 +322,7 @@ class AgentEngine:
             SidarAgent = AgentLoader.load_agent("SIDAR")
             sidar_tools = {
                 k: self.tools.get(k)
-                for k in ['code', 'system', 'security', 'memory']
+                for k in ['code', 'system', 'security', 'memory', 'github'] # github eklendi
             }
             self.agents["SIDAR"] = SidarAgent(sidar_tools, access_level=self.access_level)
 
@@ -744,6 +750,59 @@ class AgentEngine:
 
         return gemini_file_part, op_result
 
+    async def _handle_github_tasks(
+        self,
+        clean_input: str,
+        agent_name: str
+    ) -> Optional[str]:
+        """
+        GitHub görevlerini işle (YENİ)
+        
+        Args:
+            clean_input: Temizlenmiş kullanıcı metni
+            agent_name: Mevcut agent
+            
+        Returns:
+            Operasyon sonucu string veya None
+        """
+        # Sadece Sidar veya Atlas GitHub'a erişebilir
+        if agent_name not in ["SIDAR", "ATLAS"]:
+            return None
+            
+        if "github" not in self.tools:
+            return None
+            
+        github_manager = self.tools["github"]
+        
+        # GitHub tetikleyicileri kontrolü
+        is_github_task = any(t in clean_input for t in EngineConfig.GITHUB_TRIGGERS)
+        if not is_github_task:
+            return None
+            
+        # 1. Dosya listeleme (repo)
+        if any(w in clean_input for w in ["listele", "dosyalar", "içerik", "neler var"]):
+            return f"📂 GITHUB REPO İÇERİĞİ:\n{github_manager.list_repo_files()}"
+            
+        # 2. Commit geçmişi
+        if any(w in clean_input for w in ["commit", "değişiklik", "son durum", "güncelleme"]):
+            return github_manager.get_recent_commits()
+            
+        # 3. Dosya okuma (repo)
+        if "oku" in clean_input or "incele" in clean_input:
+            import re
+            file_match = re.search(r'([\w/\\.-]+\.\w+)', clean_input)
+            if file_match:
+                target_file = file_match.group(1)
+                content = github_manager.read_file_from_repo(target_file)
+                if "❌" in content:
+                    return content
+                return (
+                    f"📄 GITHUB DOSYASI OKUNDU ({target_file}):\n"
+                    f"```python\n{content[:8000]}\n```"
+                )
+                
+        return None
+
     async def get_response(
         self,
         agent_name: str,
@@ -807,16 +866,21 @@ class AgentEngine:
             agent_name
         )
 
-        # 4. AGENT ÖZEL FONKSİYON
+        # 4. GITHUB İŞLEMLERİ (YENİ)
+        if not op_result:
+            op_result = await self._handle_github_tasks(clean_input, agent_name)
+
+        # 5. AGENT ÖZEL FONKSİYON (AUTO HANDLE)
         if not op_result:
             agent_instance = self.agents.get(agent_name)
             if agent_instance and hasattr(agent_instance, "auto_handle"):
                 try:
+                    # Sidar için özel auto_handle çağrısı
                     op_result = await agent_instance.auto_handle(clean_input)
                 except Exception as e:
                     logger.error(f"Agent auto_handle hatası ({agent_name}): {e}")
 
-        # 5. LLM YANIT ÜRETİMİ
+        # 6. LLM YANIT ÜRETİMİ
         sys_prompt = self._build_core_prompt(agent_name, clean_input, sec_result, op_result)
 
         try:

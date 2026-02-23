@@ -160,8 +160,8 @@ class Config:
     - Otomatik donanım tespiti
     - Dizin yönetimi
     - CODING_MODEL desteği (Sidar özel)
-    - Binance ve Instagram API entegrasyonu
-    - **Erişim seviyesi (OpenClaw stili)**
+    - Binance, Instagram ve GitHub API entegrasyonu
+    - Erişim seviyesi (OpenClaw stili)
     """
 
     # ───────────────────────────────────────────────────────────
@@ -171,6 +171,8 @@ class Config:
     VERSION: str = "2.6.0"
     DEBUG_MODE: bool = get_bool_env("DEBUG_MODE", False)
     WORK_DIR: Path = Path(os.getenv("WORK_DIR", BASE_DIR))
+    LANGUAGE: str = os.getenv("LANGUAGE", "tr").lower()
+    VOICE_ENABLED: bool = get_bool_env("VOICE_ENABLED", True)
 
     # ───────────────────────────────────────────────────────────
     # DİZİN YAPILANDIRMASI
@@ -327,6 +329,12 @@ class Config:
     VOICE_SPEED: int = get_int_env("VOICE_SPEED", 150)
 
     # ───────────────────────────────────────────────────────────
+    # GITHUB ENTEGRASYONU
+    # ───────────────────────────────────────────────────────────
+    GITHUB_REPO: str = os.getenv("GITHUB_REPO", "niluferbagevi-gif/LotusAI")
+    GITHUB_TOKEN: Optional[str] = os.getenv("GITHUB_TOKEN", None)
+
+    # ───────────────────────────────────────────────────────────
     # GÜVENLİK AYARLARI
     # ───────────────────────────────────────────────────────────
     API_AUTH_ENABLED: bool = get_bool_env("API_AUTH_ENABLED", True)
@@ -464,10 +472,11 @@ class Config:
 
         # 2. API anahtarı kontrolü (Gemini modu için)
         if cls.AI_PROVIDER == "gemini":
-            if not cls._MAIN_KEY:
+            dummy_key = "BURAYA_GEMINI_API_KEY_YAZIN"
+            if not cls._MAIN_KEY or cls._MAIN_KEY == dummy_key:
                 logger.error(
-                    "❌ KRİTİK HATA: Hiçbir GEMINI API anahtarı bulunamadı!\n"
-                    "   .env dosyasına GEMINI_API_KEY ekleyin."
+                    "❌ KRİTİK HATA: Geçerli bir GEMINI API anahtarı bulunamadı!\n"
+                    "   .env dosyasına kendi GEMINI_API_KEY değerinizi ekleyin."
                 )
                 is_valid = False
             else:
@@ -486,12 +495,16 @@ class Config:
         if cls.AI_PROVIDER == "ollama":
             try:
                 import requests
+                # OLLAMA_URL dinamik olarak işleniyor
+                base_url = cls.OLLAMA_URL.rstrip('/')
+                tags_url = f"{base_url}/tags" if base_url.endswith('api') else f"{base_url}/api/tags"
+                
                 response = requests.get(
-                    "http://localhost:11434/api/tags",
+                    tags_url,
                     timeout=2
                 )
                 if response.status_code != 200:
-                    logger.warning("⚠️ Ollama servisi yanıt vermiyor")
+                    logger.warning(f"⚠️ Ollama servisi ({tags_url}) yanıt vermiyor. Durum Kodu: {response.status_code}")
                 else:
                     logger.info(
                         f"✅ Ollama bağlantısı başarılı | "
@@ -501,8 +514,8 @@ class Config:
                     )
             except Exception:
                 logger.warning(
-                    "⚠️ Ollama servisi kontrol edilemedi\n"
-                    "   Terminal'de 'ollama serve' komutunu çalıştırın"
+                    f"⚠️ Ollama servisi kontrol edilemedi ({cls.OLLAMA_URL})\n"
+                    "   Terminal'de 'ollama serve' komutunu çalıştırdığınızdan emin olun."
                 )
 
         return is_valid
@@ -519,6 +532,7 @@ class Config:
             "gpu_info": cls.GPU_INFO,
             "cpu_count": cls.CPU_COUNT,
             "debug_mode": cls.DEBUG_MODE,
+            "github_integration": bool(cls.GITHUB_TOKEN),
             "agents": list(cls.AGENT_CONFIGS.keys()),
             "ollama_models": {
                 "text": cls.TEXT_MODEL,
@@ -540,6 +554,7 @@ class Config:
         print(f"  CPU Çekirdek    : {cls.CPU_COUNT}")
         print(f"  Aktif Ajanlar   : {len(cls.AGENT_CONFIGS)}")
         print(f"  Debug Modu      : {'Açık' if cls.DEBUG_MODE else 'Kapalı'}")
+        print(f"  GitHub Repo     : {cls.GITHUB_REPO}")
         if cls.AI_PROVIDER == "ollama":
             print("  ── Ollama Modelleri ──────────────────────────────")
             print(f"  TEXT Model      : {cls.TEXT_MODEL}")

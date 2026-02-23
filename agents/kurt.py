@@ -1,6 +1,6 @@
 """
 LotusAI Kurt Agent
-Sürüm: 2.5.4 (Eklendi: Erişim Seviyesi Desteği)
+Sürüm: 2.6.0 (Dinamik Erişim Seviyesi Senkronu)
 Açıklama: Finans ve borsa stratejisti
 
 Sorumluluklar:
@@ -166,7 +166,7 @@ class KurtAgent:
         LiquidityLevel.EXCELLENT: 50000.0
     }
     
-    def __init__(self, tools_dict: Dict[str, Any], access_level: str = "sandbox"):
+    def __init__(self, tools_dict: Dict[str, Any], access_level: Optional[str] = None):
         """
         Kurt başlatıcı
         
@@ -175,7 +175,10 @@ class KurtAgent:
             access_level: Erişim seviyesi (restricted, sandbox, full)
         """
         self.tools = tools_dict
-        self.access_level = access_level
+        
+        # Değişiklik: Eğer parametre girilmezse doğrudan Config'den oku
+        self.access_level = access_level or Config.ACCESS_LEVEL
+        
         self.agent_name = "KURT"
         
         # Thread safety

@@ -666,4 +666,4 @@ try:
     _suppress_opencv_logs()
     _suppress_alsa_logs()
 except Exception as e:
-    logger.debug(f"Log suppression hatası: {e}")
+    logger.debug(f"Log suppression hatası: {e}")   

@@ -1,6 +1,6 @@
 """
 LotusAI Ses Sistemi (Audio System)
-Sürüm: 2.5.4 (Eklendi: Erişim Seviyesi Kontrolü)
+Sürüm: 2.6.0 (Merkezi Config Senkronizasyonu)
 Açıklama: Text-to-Speech (TTS) ve ses çalma yönetimi
 """
 
@@ -22,7 +22,6 @@ from threading import Lock
 from config import Config, AccessLevel
 from core.utils import ignore_stderr
 from core.system_state import SystemState
-from agents.definitions import AGENTS_CONFIG
 
 # ═══════════════════════════════════════════════════════════════
 # EXTERNAL LIBRARIES
@@ -336,9 +335,10 @@ class AudioSystem:
         Returns:
             Tuple[speaker_wav_path, edge_voice_id]
         """
-        agent_data = AGENTS_CONFIG.get(
-            agent_name,
-            AGENTS_CONFIG.get("ATLAS", {})
+        # GÜNCELLEME: Ajan ayarları artık doğrudan Config'den alınıyor
+        agent_data = Config.AGENT_CONFIGS.get(
+            agent_name.upper(),
+            Config.AGENT_CONFIGS.get("ATLAS", {})
         )
         
         # Speaker wav dosyası

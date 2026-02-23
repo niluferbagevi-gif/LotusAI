@@ -1,6 +1,6 @@
 """
 LotusAI User Management System
-Sürüm: 2.5.4 (Eklendi: Erişim Seviyesi Desteği - uyumluluk için)
+Sürüm: 2.6.0 (Dinamik Erişim Seviyesi Senkronu)
 Açıklama: Kullanıcı yönetimi, yetkilendirme ve kimlik profilleri
 
 Özellikler:
@@ -206,14 +206,15 @@ class UserManager:
         }
     }
     
-    def __init__(self, access_level: str = "sandbox"):
+    def __init__(self, access_level: Optional[str] = None):
         """
         User manager başlatıcı
         
         Args:
-            access_level: Erişim seviyesi (restricted, sandbox, full) - sadece bilgi amaçlı
+            access_level: Erişim seviyesi (restricted, sandbox, full)
         """
-        self.access_level = access_level
+        # Değişiklik: Eğer parametre girilmezse doğrudan Config'den oku
+        self.access_level = access_level or Config.ACCESS_LEVEL
         
         # Paths
         self.work_dir = Config.WORK_DIR
@@ -226,6 +227,8 @@ class UserManager:
         
         # Ensure directory
         self.work_dir.mkdir(parents=True, exist_ok=True)
+        # Create lotus data directory if not exists
+        (self.work_dir / "lotus").mkdir(parents=True, exist_ok=True)
         
         # GPU detection
         self.device = self._detect_hardware()

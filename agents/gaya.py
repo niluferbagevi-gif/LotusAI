@@ -1,6 +1,6 @@
 """
 LotusAI Gaya Agent
-Sürüm: 2.5.4 (Eklendi: Erişim Seviyesi Desteği)
+Sürüm: 2.6.0 (Dinamik Erişim Seviyesi Senkronu)
 Açıklama: Operasyon, finans ve iletişim uzmanı
 
 Sorumluluklar:
@@ -166,7 +166,7 @@ class GayaAgent:
         self,
         tools_dict: Dict[str, Any],
         nlp_manager: Optional[Any] = None,
-        access_level: str = "sandbox"
+        access_level: Optional[str] = None
     ):
         """
         Gaya başlatıcı
@@ -178,7 +178,10 @@ class GayaAgent:
         """
         self.tools = tools_dict
         self.nlp = nlp_manager
-        self.access_level = access_level
+        
+        # Değişiklik: Eğer parametre girilmezse doğrudan Config'den oku
+        self.access_level = access_level or Config.ACCESS_LEVEL
+        
         self.agent_name = "GAYA"
         
         # Thread safety
