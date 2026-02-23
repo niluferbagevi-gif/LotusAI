@@ -672,6 +672,15 @@ class AgentEngine:
             "Gereksiz giriş cümlelerinden kaçın."
         ])
 
+        sections.extend([
+            "",
+            "### KİMLİK KİLİDİ (ZORUNLU) ###",
+            f"Bu konuşmada aktif ajan sensin: {agent_name}.",
+            "Asla 'ben bu ajan değilim' veya benzeri kimlik reddi yapma.",
+            f"Kendini gerektiğinde yalnızca {agent_name} olarak tanıt.",
+            "Araç çıktılarında hata/eksik veri varsa bunu dürüstçe belirt ama kimliğini değiştirme."
+        ])
+
         return "\n".join(sections)
 
     async def _handle_visual_tasks(

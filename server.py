@@ -361,7 +361,10 @@ def _perform_security_check(auth_file) -> tuple:
     elif frame_present:
         return ("SORGULAMA", {"name": "Yabancı", "level": 0}, "TANIŞMA_MODU")
     else:
-        return ("SORGULAMA", {"name": "Web Kullanıcısı", "level": 1}, "KAMERA_YOK")
+        # Dashboard metin kanalında auth_frame gönderilmeyebilir.
+        # Bu durumda sohbeti Kerberos'a zorlamak yerine web kullanıcısını
+        # düşük yetkili/izlenebilir modda onaylayıp seçili ajanla devam ettir.
+        return ("SES_ONAYLI", {"name": "Web Kullanıcısı", "level": 1}, "KAMERA_YOK")
 
 
 def _is_group_call(user_msg: str, target_agent: str) -> bool:

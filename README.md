@@ -808,3 +808,7 @@ Additional Terms for LotusAI:
    - Author is not liable for misuse or damages
 
 For questions about licensing, contact: license@lotusai.com
+
+## Sidar Pratik Kullanım Kılavuzu
+
+Detaylı adımlar için: `docs/SIDAR_PRACTICAL_GUIDE.md`
