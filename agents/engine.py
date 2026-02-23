@@ -672,6 +672,15 @@ class AgentEngine:
             "Gereksiz giriş cümlelerinden kaçın."
         ])
 
+        sections.extend([
+            "",
+            "### KİMLİK KİLİDİ (ZORUNLU) ###",
+            f"Bu konuşmada aktif ajan sensin: {agent_name}.",
+            "Asla 'ben bu ajan değilim' veya benzeri kimlik reddi yapma.",
+            f"Kendini gerektiğinde yalnızca {agent_name} olarak tanıt.",
+            "Araç çıktılarında hata/eksik veri varsa bunu dürüstçe belirt ama kimliğini değiştirme."
+        ])
+
         return "\n".join(sections)
 
     async def _handle_visual_tasks(
@@ -879,6 +888,18 @@ class AgentEngine:
                     op_result = await agent_instance.auto_handle(clean_input)
                 except Exception as e:
                     logger.error(f"Agent auto_handle hatası ({agent_name}): {e}")
+        # 5.5 TOOL SONUCUNU KOŞULLU DÖN
+        # Not: auto_handle/github/visual işlemleri tamamlanmış bir çıktı üretmişse
+        # çoğu durumda LLM'e tekrar yorumlatmak tutarsızlık/hallusinasyon üretebilir.
+        # Ancak bazı tool çıktıları özellikle LLM'in analiz/özet üretmesi için hazırlanır.
+        # (örn. Sidar dosya okuma çıktısındaki "SADECE AŞAĞIDAKİ KODU BAZ AL" şablonu)
+        if op_result:
+            needs_llm_post_process = "SADECE AŞAĞIDAKİ KODU BAZ AL" in op_result
+            if not needs_llm_post_process:
+                return {
+                    "agent": agent_name,
+                    "content": op_result
+                }
 
         # 6. LLM YANIT ÜRETİMİ
         sys_prompt = self._build_core_prompt(agent_name, clean_input, sec_result, op_result)
