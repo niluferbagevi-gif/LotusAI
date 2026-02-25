@@ -1,5 +1,5 @@
 """
-LotusAI - Otomatik GitHub Yükleme Aracı
+LotusAI  github_upload.py - Otomatik GitHub Yükleme Aracı
 Sürüm: 1.8
 Açıklama: Mevcut projeyi kolayca GitHub'a yedekler/yükler. 
 Kimlik, çakışma ve otomatik birleştirme (Auto-Merge) kontrolleri içerir.

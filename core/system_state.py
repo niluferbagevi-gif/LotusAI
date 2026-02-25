@@ -1,5 +1,5 @@
 """
-LotusAI System State Manager
+LotusAI core/system_state.py - System State Manager
 Sürüm: 2.6.0 (Dinamik Erişim Seviyesi Senkronu)
 Açıklama: Merkezi durum yönetimi, kaynak koordinasyonu ve FSM
 
@@ -9,7 +9,7 @@ Açıklama: Merkezi durum yönetimi, kaynak koordinasyonu ve FSM
 - Observer pattern
 - Resource locking
 - State history
-- Timeout protection
+- Timeout protection (Config entegreli)
 - Hardware monitoring
 - Erişim seviyesi bilgisi
 """
@@ -32,6 +32,16 @@ logger = logging.getLogger("LotusAI.SystemState")
 
 
 # ═══════════════════════════════════════════════════════════════
+# TORCH (GPU)
+# ═══════════════════════════════════════════════════════════════
+try:
+    import torch
+    TORCH_AVAILABLE = True
+except ImportError:
+    TORCH_AVAILABLE = False
+
+
+# ═══════════════════════════════════════════════════════════════
 # STATE ENUMERATION
 # ═══════════════════════════════════════════════════════════════
 class SystemState(IntEnum):
@@ -41,7 +51,7 @@ class SystemState(IntEnum):
     State Transition Flow:
     INITIALIZING → IDLE ⟷ LISTENING → THINKING → SPEAKING → IDLE
                      ↓
-                  PROCESSING → IDLE
+                 PROCESSING → IDLE
                      ↓
                    ERROR → IDLE
                      ↓
@@ -77,11 +87,11 @@ class SystemState(IntEnum):
 # ═══════════════════════════════════════════════════════════════
 class StateConfig:
     """State manager konfigürasyonu"""
-    # Timeout'lar (saniye)
-    TIMEOUT_THINKING = 45.0
-    TIMEOUT_SPEAKING = 30.0
-    TIMEOUT_LISTENING = 20.0
-    TIMEOUT_PROCESSING = 60.0
+    # Timeout'lar (saniye) - Config modülü ile senkronize edildi
+    TIMEOUT_THINKING = float(getattr(Config, "CONVERSATION_TIMEOUT", 45.0))
+    TIMEOUT_SPEAKING = float(getattr(Config, "CONVERSATION_TIMEOUT", 30.0))
+    TIMEOUT_LISTENING = float(getattr(Config, "CONVERSATION_TIMEOUT", 20.0))
+    TIMEOUT_PROCESSING = float(getattr(Config, "SYSTEM_CHECK_INTERVAL", 60.0))
     
     # History
     MAX_HISTORY_SIZE = 50
@@ -493,10 +503,9 @@ class SystemStateManager:
                 }
             )
             
-            # GPU detayları
-            if self._gpu_available:
+            # GPU detayları (Gereksiz import temizlendi)
+            if self._gpu_available and TORCH_AVAILABLE:
                 try:
-                    import torch
                     if torch.cuda.is_available():
                         status.gpu_name = torch.cuda.get_device_name(0)
                         status.vram_allocated_mb = (

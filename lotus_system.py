@@ -1,7 +1,7 @@
 """
-LotusAI Ana Sistem Motoru
-Sürüm: 2.6.0 (Erişim seviyesi ve sürüm senkronu)
-Açıklama: Multi-agent AI sistemi, ses tanıma, güvenlik ve otomasyon
+LotusAI lotus_system.py - Ana Sistem Motoru
+Sürüm: 2.6.0 (Erişim seviyesi ve Hibrit Mod Entegrasyonu)
+Açıklama: Multi-agent AI sistemi, ses tanıma, güvenlik, otomasyon ve OpenClaw erişim yönetimi.
 """
 
 import asyncio
@@ -49,7 +49,13 @@ from managers.accounting import AccountingManager
 from managers.messaging import MessagingManager
 from managers.delivery import DeliveryManager
 from managers.nlp import NLPManager
-from managers.github_manager import GithubManager  # <--- EKLENDİ
+
+# Github Manager Opsiyonel Import
+try:
+    from managers.github_manager import GithubManager
+except ImportError:
+    GithubManager = None
+    logging.warning("⚠️ GithubManager modülü bulunamadı, GitHub özellikleri devre dışı.")
 
 # ═══════════════════════════════════════════════════════════════
 # AGENT MODÜLLER
@@ -94,7 +100,7 @@ class SystemConfig:
     AMBIENT_NOISE_DURATION: float = 1.0
     LISTEN_TIMEOUT: float = 3.0
     PHRASE_TIME_LIMIT: float = 10.0
-    SPEECH_LANGUAGE: str = os.getenv("STT_LANGUAGE", "tr-TR")
+    SPEECH_LANGUAGE: str = Config.STT_LANGUAGE
     
     # Sipariş kontrolü
     ORDER_CHECK_INTERVAL: int = 30  # saniye
@@ -105,11 +111,11 @@ class SystemConfig:
     ERROR_SLEEP: float = 2.0
     
     # Web dashboard
-    DASHBOARD_PORT: int = int(os.getenv("FLASK_PORT", 5000))
+    DASHBOARD_PORT: int = Config.FLASK_PORT
     DASHBOARD_OPEN_DELAY: float = 3.0
     
     # Thread pool
-    MAX_WORKERS: int = 5
+    MAX_WORKERS: int = Config.MAX_CONCURRENT_AGENTS if hasattr(Config, "MAX_CONCURRENT_AGENTS") else 5
 
 
 # ═══════════════════════════════════════════════════════════════
@@ -121,11 +127,10 @@ class LotusSystem:
     
     Sorumluluklar:
     - Tüm managerleri başlatma
-    - Agent'ları koordine etme
+    - Agent'ları koordine etme (OpenClaw yetkilerine göre)
     - Ses tanıma döngüsü
     - Web dashboard
     - Sistem kapatma
-    - Erişim seviyesi kontrolü (OpenClaw stili)
     """
     
     def __init__(self, mode: str = "online", access_level: str = "sandbox"):
@@ -146,7 +151,7 @@ class LotusSystem:
         self.camera_manager: Optional[CameraManager] = None
         self.security_manager: Optional[SecurityManager] = None
         self.delivery_manager: Optional[DeliveryManager] = None
-        self.github_manager: Optional[GithubManager] = None # <--- EKLENDİ
+        self.github_manager: Optional[GithubManager] = None
         
         # Agents
         self.engine: Optional[AgentEngine] = None
@@ -221,7 +226,7 @@ class LotusSystem:
         logger.info("🔒 Güvenlik sistemi aktif")
         
         # Diğer managerlar
-        code_manager = CodeManager(Config.WORK_DIR)
+        code_manager = CodeManager(Config.WORK_DIR, access_level=self.access_level)
         sys_health_manager = SystemHealthManager()
         finance_manager = FinanceManager()
         accounting_manager = AccountingManager()
@@ -229,8 +234,12 @@ class LotusSystem:
         messaging_manager = MessagingManager()
         RuntimeContext.set_messaging_manager(messaging_manager)
         
-        # GitHub Manager
-        self.github_manager = GithubManager(access_level=self.access_level) # <--- EKLENDİ
+        # GitHub Manager (Erişim seviyesi ile başlat)
+        if GithubManager:
+            self.github_manager = GithubManager(access_level=self.access_level)
+            logger.info(f"🐙 GitHub Manager aktif (Erişim: {self.access_level})")
+        else:
+            self.github_manager = None
 
         # Delivery manager
         self.delivery_manager = DeliveryManager()
@@ -256,7 +265,7 @@ class LotusSystem:
             "delivery": self.delivery_manager,
             "nlp": nlp_manager,
             "state": self.state_manager,
-            "github": self.github_manager  # <--- EKLENDİ
+            "github": self.github_manager
         }
         
         # Media manager (opsiyonel)
@@ -282,13 +291,13 @@ class LotusSystem:
         # Poyraz agent
         poyraz_agent = PoyrazAgent(nlp_manager, {})
         
-        # Sidar agent
+        # Sidar agent (Erişim seviyesi kritik!)
         sidar_tools = {
             'code': tools['code'],
             'system': tools['system'],
             'security': self.security_manager,
             'memory': self.memory_manager,
-            'github': tools['github'] # <--- EKLENDİ
+            'github': tools['github']
         }
         sidar_agent = SidarAgent(sidar_tools, access_level=self.access_level)
         
@@ -299,7 +308,7 @@ class LotusSystem:
         # Poyraz'a tüm toolları ver
         poyraz_agent.update_tools(tools)
         
-        # Engine'i oluştur
+        # Engine'i oluştur (Engine de erişim seviyesini bilmeli)
         self.engine = AgentEngine(self.memory_manager, tools, access_level=self.access_level)
         RuntimeContext.set_engine(self.engine)
         
@@ -330,6 +339,8 @@ class LotusSystem:
                 SystemConfig.DASHBOARD_OPEN_DELAY,
                 lambda: webbrowser.open(dashboard_url)
             ).start()
+            
+            logger.info("✅ Dashboard servisi çalışıyor")
             
         except Exception as e:
             logger.error(f"❌ Dashboard başlatma hatası: {e}")
@@ -379,15 +390,15 @@ class LotusSystem:
             RuntimeContext.set_voice_mode(False)
             return False
     
-    async def _listen_for_speech(self) -> Optional[str]:
+    async def _listen_for_speech(self) -> Tuple[Optional[str], Optional[Any]]:
         """
         Kullanıcı konuşmasını dinle
         
         Returns:
-            Tanınan metin veya None
+            Tuple[Tanınan metin veya None, Ham Ses Verisi veya None]
         """
         if not self.microphone or not self.recognizer:
-            return None
+            return None, None
         
         try:
             with self.microphone as source:
@@ -405,19 +416,15 @@ class LotusSystem:
                     language=SystemConfig.SPEECH_LANGUAGE
                 )
                 
-                return text
+                return text, audio_data
         
         except sr.WaitTimeoutError:
-            # Normal - zaman aşımı
-            return None
-        
+            return None, None
         except sr.UnknownValueError:
-            # Normal - anlaşılamayan ses
-            return None
-        
+            return None, None
         except Exception as e:
             logger.error(f"Ses tanıma hatası: {e}")
-            return None
+            return None, None
     
     async def _process_user_input(self, user_input: str, audio_data: Optional[Any] = None) -> None:
         """
@@ -429,7 +436,7 @@ class LotusSystem:
         """
         print(f"{Colors.CYAN}>> KULLANICI: {user_input}{Colors.ENDC}")
         
-        # Güvenlik analizi
+        # Güvenlik analizi (ses verisi eksiksiz gidiyor)
         sec_result = self.security_manager.analyze_situation(audio_data=audio_data)
         
         # Uygun agent'ı belirle
@@ -449,7 +456,7 @@ class LotusSystem:
         # Yanıtı göster
         print(f"{Colors.GREEN}🤖 {resp_data['agent']}: {resp_data['content']}{Colors.ENDC}")
         
-        # Seslendirme (erişim seviyesine göre kısıtlama yok)
+        # Seslendirme
         RuntimeContext.submit_task(
             play_voice,
             resp_data['content'],
@@ -486,7 +493,7 @@ class LotusSystem:
             try:
                 current_time = time.time()
                 
-                # Sipariş kontrolü (periyodik)
+                # Sipariş kontrolü
                 if (getattr(Config, "FINANCE_MODE", False) and 
                     current_time - last_order_check >= SystemConfig.ORDER_CHECK_INTERVAL):
                     await self._check_delivery_orders()
@@ -495,11 +502,10 @@ class LotusSystem:
                 # Ses dinleme modu
                 if RuntimeContext.is_voice_mode_active() and self.state_manager.should_listen():
                     self.state_manager.set_state(SystemState.LISTENING)
-                    
-                    user_input = await self._listen_for_speech()
+                    user_input, audio_data = await self._listen_for_speech()
                     
                     if user_input:
-                        await self._process_user_input(user_input)
+                        await self._process_user_input(user_input, audio_data)
                 
                 # Idle modu
                 else:
@@ -509,7 +515,7 @@ class LotusSystem:
                     
                     await asyncio.sleep(SystemConfig.IDLE_SLEEP)
                 
-                # Kısa bekleme (CPU kullanımını azalt)
+                # Kısa bekleme
                 await asyncio.sleep(SystemConfig.LOOP_SLEEP)
             
             except KeyboardInterrupt:
@@ -553,9 +559,8 @@ class LotusSystem:
             self.loop = asyncio.get_running_loop()
             RuntimeContext.set_loop(self.loop)
             
-            # Provider modunu ayarla (Config'e işle)
+            # Config ayarlarını güncelle (Launcher'dan veya Command Line'dan gelen seçimlere göre)
             Config.set_provider_mode(self.mode)
-            # Erişim seviyesini de Config'e set et (launcher'dan gelmişti, pekiştirme)
             Config.set_access_level(self.access_level)
             
             # GPU'yu hazırla
@@ -611,6 +616,7 @@ def start_lotus_system(mode: str = "online", access_level: str = "sandbox") -> N
         if sys.platform == 'win32':
             asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
         
+        # Launcher'dan gelen parametreleri sisteme enjekte et
         system = LotusSystem(mode=mode, access_level=access_level)
         asyncio.run(system.run())
     
@@ -624,8 +630,7 @@ def start_lotus_system(mode: str = "online", access_level: str = "sandbox") -> N
 
 
 if __name__ == "__main__":
-    # Doğrudan çalıştırılırsa varsayılan değerler
-    mode = os.getenv("AI_PROVIDER", "online")
-    # Erişim seviyesi .env'den okunabilir, yoksa sandbox
-    access = os.getenv("ACCESS_LEVEL", "sandbox")
+    # Doğrudan çalıştırılırsa varsayılan değerler Config üzerinden okunur
+    mode = Config.AI_PROVIDER
+    access = Config.ACCESS_LEVEL
     start_lotus_system(mode, access)

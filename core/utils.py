@@ -1,14 +1,14 @@
 """
-LotusAI Utility Functions
-Sürüm: 2.5.4 (ALSA Log Silencer Eklendi)
-Açıklama: Yardımcı fonksiyonlar, logging setup ve sistem konfigürasyonu
+LotusAI core/utils.py - Utility Functions
+Sürüm: 2.6.0 (Merkezi Config Log Senkronu & ALSA Log Silencer)
+Açıklama: Yardımcı fonksiyonlar, 3. parti log bastırma ve sistem yamaları (patches)
 
 Özellikler:
-- Logging configuration
-- Library patches
-- stderr suppression
+- Third-party logging suppression
+- Library patches (Transformers, Pygame)
+- stderr/stdout suppression
 - Environment setup
-- Decorators
+- Decorators (Retry, Silent)
 """
 
 import os
@@ -29,27 +29,14 @@ logger = logging.getLogger("LotusAI.Utils")
 # ═══════════════════════════════════════════════════════════════
 # LOGGING SETUP
 # ═══════════════════════════════════════════════════════════════
-def setup_logging(
-    level: int = logging.INFO,
-    suppress_third_party: bool = True
-) -> None:
+def setup_logging(suppress_third_party: bool = True) -> None:
     """
-    Logging sistemini yapılandır
+    Ek Logging yapılandırması (Ana yapılandırma config.py'de yapılmaktadır)
+    Buradaki temel amaç 3. parti kütüphanelerin gereksiz loglarını susturmaktır.
     
     Args:
-        level: Log seviyesi (default: INFO)
         suppress_third_party: 3. parti kütüphane loglarını bastır
     """
-    # Temel konfigürasyon (eğer daha önce yapılmadıysa)
-    root_logger = logging.getLogger()
-    
-    if not root_logger.handlers:
-        logging.basicConfig(
-            level=level,
-            format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-            datefmt='%Y-%m-%d %H:%M:%S'
-        )
-    
     # 3. parti kütüphane loglarını bastır
     if suppress_third_party:
         suppress_libraries = [
@@ -59,7 +46,8 @@ def setup_logging(
             "huggingface_hub",
             "transformers",
             "requests",
-            "asyncio"
+            "asyncio",
+            "werkzeug"  # Flask'in gereksiz trafik loglarını susturur
         ]
         
         for lib in suppress_libraries:
@@ -72,7 +60,7 @@ def setup_logging(
     _suppress_opencv_logs()
     _suppress_alsa_logs()
     
-    logger.debug("✅ Logging yapılandırması tamamlandı")
+    logger.debug("✅ 3. parti kütüphane log susturucuları aktif edildi")
 
 
 def _suppress_opencv_logs() -> None:
@@ -85,6 +73,9 @@ def _suppress_opencv_logs() -> None:
 
 def _suppress_alsa_logs() -> None:
     """ALSA (Linux Ses Çekirdeği) C-seviyesi loglarını kökünden susturur"""
+    if sys.platform != "linux":
+        return  # Windows/Mac'te ALSA olmaz, atla.
+        
     try:
         from ctypes import CFUNCTYPE, c_char_p, c_int, cdll
         
@@ -666,4 +657,4 @@ try:
     _suppress_opencv_logs()
     _suppress_alsa_logs()
 except Exception as e:
-    logger.debug(f"Log suppression hatası: {e}")   
+    logger.debug(f"Log suppression hatası: {e}")

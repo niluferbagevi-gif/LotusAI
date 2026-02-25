@@ -1,13 +1,13 @@
 """
-LotusAI Accounting Manager
-Sürüm: 2.6.0 (Dinamik Erişim Seviyesi Senkronu)
+LotusAI managers/accounting.py - Accounting Manager
+Sürüm: 2.6.0 (Dinamik Erişim Seviyesi Senkronu & Path Fix)
 Açıklama: Muhasebe ve finans yönetimi
 
 Özellikler:
 - GPU hızlandırma (cuDF)
-- Merkezi kasa defteri
+- Merkezi kasa defteri (Config.DATA_DIR entegrasyonu)
 - Kategori bazlı analiz
-- Otomatik yedekleme
+- Otomatik yedekleme ve eski veritabanı migrasyonu
 - Veri kurtarma
 - Thread-safe operations
 - Erişim seviyesi kontrolleri (restricted/sandbox/full)
@@ -164,13 +164,12 @@ class AccountingManager:
         Args:
             access_level: Erişim seviyesi (restricted, sandbox, full)
         """
-        # Değişiklik: Eğer parametre girilmezse doğrudan Config'den oku
         self.access_level = access_level or Config.ACCESS_LEVEL
         
-        # Paths
+        # Paths (Merkezi Data dizinleri)
         self.work_dir = Config.WORK_DIR
-        self.filename = self.work_dir / "lotus/lotus_kasa_defteri.csv"
-        self.backup_dir = self.work_dir / "backups" / "accounting"
+        self.filename = Config.DATA_DIR / "lotus_kasa_defteri.csv"
+        self.backup_dir = Config.DATA_DIR / "accounting_backups"
         
         # Hardware
         self.use_gpu = HAS_GPU
@@ -183,9 +182,13 @@ class AccountingManager:
         
         # Create directories
         try:
+            Config.DATA_DIR.mkdir(parents=True, exist_ok=True)
             self.backup_dir.mkdir(parents=True, exist_ok=True)
         except Exception as e:
             logger.error(f"Dizin oluşturma hatası: {e}")
+        
+        # Eski veri taşıma işlemi
+        self._migrate_old_db()
         
         # Initialize database
         self._init_db()
@@ -197,6 +200,16 @@ class AccountingManager:
     # DATABASE INITIALIZATION
     # ───────────────────────────────────────────────────────────
     
+    def _migrate_old_db(self) -> None:
+        """Eski dizin yapısındaki kasa defterini yeni yapıya taşır"""
+        old_db_file = self.work_dir / "lotus/lotus_kasa_defteri.csv"
+        if old_db_file.exists() and not self.filename.exists():
+            try:
+                shutil.move(str(old_db_file), str(self.filename))
+                logger.info(f"📦 Eski kasa defteri yeni merkezi konuma taşındı: {self.filename}")
+            except Exception as e:
+                logger.warning(f"⚠️ Eski kasa defteri taşıma hatası: {e}")
+
     def _get_df_engine(self):
         """Veri motorunu döndür (cudf veya pandas)"""
         return cudf if (self.use_gpu and cudf) else pd
@@ -724,7 +737,7 @@ class AccountingManager:
         try:
             if not target_path:
                 timestamp = datetime.now().strftime("%Y%m%d")
-                target_path = self.work_dir / f"Lotus_Finans_{timestamp}.xlsx"
+                target_path = Config.DATA_DIR / f"Lotus_Finans_{timestamp}.xlsx"
             
             df = pd.read_csv(self.filename)
             df.to_excel(target_path, index=False)

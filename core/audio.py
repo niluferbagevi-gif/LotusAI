@@ -1,5 +1,5 @@
 """
-LotusAI Ses Sistemi (Audio System)
+LotusAI core/audio.py - Ses Sistemi (Audio System)
 Sürüm: 2.6.0 (Merkezi Config Senkronizasyonu)
 Açıklama: Text-to-Speech (TTS) ve ses çalma yönetimi
 """
@@ -108,6 +108,7 @@ class AudioSystem:
     - Kesme tuşları (Space/Esc)
     - State management entegrasyonu
     - Erişim seviyesi kontrolü (kısıtlı modda ses çalma devre dışı)
+    - Config modülü tam senkronizasyonu
     """
     
     _instance: Optional['AudioSystem'] = None
@@ -144,6 +145,9 @@ class AudioSystem:
             # Temp files
             self.temp_files: set = set()
             
+            # Sandbox dizinini hazırla
+            Config.SANDBOX_DIR.mkdir(parents=True, exist_ok=True)
+            
             self._initialized = True
             logger.info("AudioSystem instance oluşturuldu")
     
@@ -163,8 +167,8 @@ class AudioSystem:
             logger.error("Pygame mixer başlatılamadı")
             return False
         
-        # XTTS'yi yükle (opsiyonel)
-        if Config.USE_XTTS:
+        # XTTS'yi yükle (opsiyonel) Config üzerinden kontrol ediliyor
+        if getattr(Config, "USE_XTTS", False):
             self._load_xtts()
         
         # Edge TTS kontrolü
@@ -207,14 +211,15 @@ class AudioSystem:
         return False
     
     def _load_xtts(self) -> None:
-        """XTTS modelini yükle (GPU desteği ile)"""
+        """XTTS modelini yükle (GPU desteği ve Config entegrasyonu ile)"""
         try:
             from TTS.api import TTS
             
-            logger.info("🔊 XTTS modeli yükleniyor...")
+            logger.info(f"🔊 XTTS modeli yükleniyor: {Config.XTTS_MODEL}")
             
             with ignore_stderr():
-                model = TTS("tts_models/multilingual/multi-dataset/xtts_v2")
+                # Model yolu artık Config'den besleniyor
+                model = TTS(Config.XTTS_MODEL)
                 
                 if self.device == "cuda":
                     model = model.to("cuda")
@@ -309,7 +314,7 @@ class AudioSystem:
             self.xtts_engine.model.tts_to_file(
                 text=text,
                 speaker_wav=speaker_wav,
-                language="tr",
+                language=Config.TTS_LANGUAGE, # Config'deki dil kodunu kullan
                 file_path=output_path
             )
             
@@ -335,7 +340,7 @@ class AudioSystem:
         Returns:
             Tuple[speaker_wav_path, edge_voice_id]
         """
-        # GÜNCELLEME: Ajan ayarları artık doğrudan Config'den alınıyor
+        # Ajan ayarları doğrudan Config'den alınıyor
         agent_data = Config.AGENT_CONFIGS.get(
             agent_name.upper(),
             Config.AGENT_CONFIGS.get("ATLAS", {})
@@ -346,9 +351,9 @@ class AudioSystem:
         wav_path = Config.VOICES_DIR / wav_filename
         
         if not wav_path.exists():
-            # Fallback to agent definition
+            # Fallback to agent definition, resolve using WORK_DIR
             wav_ref = agent_data.get("voice_ref", "voices/atlas.wav")
-            wav_path = Path(wav_ref)
+            wav_path = Config.WORK_DIR / wav_ref
         
         # Edge voice
         edge_voice = agent_data.get("edge", "tr-TR-AhmetNeural")
@@ -421,7 +426,8 @@ class AudioSystem:
                 self.xtts_engine.available and 
                 Path(speaker_wav).exists()):
                 
-                output_path = Config.WORK_DIR / AudioConfig.TEMP_OUTPUT_FILE
+                # Geçici dosyayı Sandbox (temp) dizinine yaz
+                output_path = Config.SANDBOX_DIR / AudioConfig.TEMP_OUTPUT_FILE
                 
                 if self._generate_xtts(clean_text, speaker_wav, str(output_path)):
                     try:

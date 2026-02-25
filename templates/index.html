@@ -593,8 +593,8 @@
             
             <div class="contacts-scroll">
                 <!-- General Chat -->
-                <div class="contact-item active" 
-                     onclick="selectRoom('GENEL', 'Lotus Takım (Genel)', 'var(--accent)')">
+                <div class="contact-item active"
+                     onclick="selectRoom(this, 'GENEL', 'Lotus Takım (Genel)', 'var(--accent)')">
                     <div class="contact-avatar" style="color: var(--accent);">👥</div>
                     <div class="contact-info">
                         <span class="contact-name">Lotus Takım</span>
@@ -603,8 +603,8 @@
                 </div>
 
                 <!-- Atlas -->
-                <div class="contact-item" 
-                     onclick="selectRoom('ATLAS', 'Atlas', 'var(--color-atlas)')">
+                <div class="contact-item"
+                     onclick="selectRoom(this, 'ATLAS', 'Atlas', 'var(--color-atlas)')">
                     <div class="contact-avatar" style="color: var(--color-atlas);">🌐</div>
                     <div class="contact-info">
                         <span class="contact-name">Atlas</span>
@@ -612,9 +612,9 @@
                     </div>
                 </div>
 
-                <!-- Sidar (ID Düzeltildi) -->
-                <div class="contact-item" 
-                     onclick="selectRoom('SIDAR', 'Sidar', 'var(--color-sidar)')">
+                <!-- Sidar -->
+                <div class="contact-item"
+                     onclick="selectRoom(this, 'SIDAR', 'Sidar', 'var(--color-sidar)')">
                     <div class="contact-avatar" style="color: var(--color-sidar);">💻</div>
                     <div class="contact-info">
                         <span class="contact-name">Sidar</span>
@@ -623,8 +623,8 @@
                 </div>
 
                 <!-- Kurt -->
-                <div class="contact-item" 
-                     onclick="selectRoom('KURT', 'Kurt', 'var(--color-kurt)')">
+                <div class="contact-item"
+                     onclick="selectRoom(this, 'KURT', 'Kurt', 'var(--color-kurt)')">
                     <div class="contact-avatar" style="color: var(--color-kurt);">🐺</div>
                     <div class="contact-info">
                         <span class="contact-name">Kurt</span>
@@ -633,8 +633,8 @@
                 </div>
                 
                 <!-- Gaya -->
-                <div class="contact-item" 
-                     onclick="selectRoom('GAYA', 'Gaya', 'var(--color-gaya)')">
+                <div class="contact-item"
+                     onclick="selectRoom(this, 'GAYA', 'Gaya', 'var(--color-gaya)')">
                     <div class="contact-avatar" style="color: var(--color-gaya);">🪷</div>
                     <div class="contact-info">
                         <span class="contact-name">Gaya</span>
@@ -643,8 +643,8 @@
                 </div>
 
                 <!-- Poyraz -->
-                <div class="contact-item" 
-                     onclick="selectRoom('POYRAZ', 'Poyraz', 'var(--color-poyraz)')">
+                <div class="contact-item"
+                     onclick="selectRoom(this, 'POYRAZ', 'Poyraz', 'var(--color-poyraz)')">
                     <div class="contact-avatar" style="color: var(--color-poyraz);">🌪️</div>
                     <div class="contact-info">
                         <span class="contact-name">Poyraz</span>
@@ -653,8 +653,8 @@
                 </div>
 
                 <!-- Kerberos -->
-                <div class="contact-item" 
-                     onclick="selectRoom('KERBEROS', 'Kerberos', 'var(--color-kerberos)')">
+                <div class="contact-item"
+                     onclick="selectRoom(this, 'KERBEROS', 'Kerberos', 'var(--color-kerberos)')">
                     <div class="contact-avatar" style="color: var(--color-kerberos);">🛡️</div>
                     <div class="contact-info">
                         <span class="contact-name">Kerberos</span>
@@ -795,7 +795,7 @@
         const agentColors = {
             'ATLAS': '#29b6f6',
             'GAYA': '#f06292',
-            'SIDAR': '#66bb6a', // Fix
+            'SIDAR': '#66bb6a',
             'KURT': '#ffee58',
             'POYRAZ': '#ffa726',
             'KERBEROS': '#ef5350',
@@ -806,7 +806,7 @@
         const agentIcons = {
             'ATLAS': '🌐',
             'GAYA': '🪷',
-            'SIDAR': '💻', // Fix
+            'SIDAR': '💻',
             'KURT': '🐺',
             'POYRAZ': '🌪️',
             'KERBEROS': '🛡️',
@@ -829,9 +829,10 @@
         // PWA Service Worker Registration
         function registerServiceWorker() {
             if ('serviceWorker' in navigator) {
-                navigator.serviceWorker.register('/static/sw.js')
+                // Root scope için /sw.js kullanıyoruz
+                navigator.serviceWorker.register('/sw.js')
                 .then(registration => {
-                    console.log('Service Worker kayıt edildi:', registration.scope);
+                    console.log('Service Worker kayıt edildi. Scope:', registration.scope);
                 })
                 .catch(error => {
                     console.error('Service Worker kayıt hatası:', error);
@@ -919,7 +920,7 @@
         // ───────────────────────────────────────────────────────────
         // ROOM MANAGEMENT
         // ───────────────────────────────────────────────────────────
-        async function selectRoom(agentKey, title, colorVar) {
+        async function selectRoom(element, agentKey, title, colorVar) {
             currentAgent = agentKey;
             
             // Update header
@@ -927,11 +928,11 @@
             document.getElementById('header-avatar').innerHTML = agentIcons[agentKey] || '🤖';
             document.getElementById('header-avatar').style.color = agentColors[agentKey] || '#fff';
             
-            // Update active state
+            // Update active state safely
             document.querySelectorAll('.contact-item').forEach(item => {
                 item.classList.remove('active');
             });
-            event.currentTarget.classList.add('active');
+            if (element) element.classList.add('active');
 
             // Mobile: Open chat view
             if (window.innerWidth <= 768) {
@@ -1113,7 +1114,7 @@
 
         function showTyping(show) {
             const indicator = document.getElementById('typing-indicator');
-            indicator.style.display = show ? 'flex' : 'none';
+            if (indicator) indicator.style.display = show ? 'flex' : 'none';
         }
 
         function getCurrentTime() {
@@ -1210,10 +1211,10 @@
                 
                 if (data.active) {
                     btn.style.color = '#4caf50';
-                    btn.classList.add('fa-beat-fade');
+                    btn.classList.add('active');
                 } else {
                     btn.style.color = 'var(--text-secondary)';
-                    btn.classList.remove('fa-beat-fade');
+                    btn.classList.remove('active');
                 }
             } catch (error) {
                 console.error('Voice toggle hatası:', error);

@@ -1,11 +1,13 @@
 """
-LotusAI NLP Manager
-Sürüm: 2.6.0 (Dinamik Erişim Seviyesi Senkronu)
+LotusAI managers/nlp.py - NLP Manager
+Sürüm: 2.6.0 (Dinamik Erişim Seviyesi Senkronu & Portability Fix)
 Açıklama: NLP ve duygu analizi yönetimi
 
 Özellikler:
 - Transformers/BERT entegrasyonu
 - GPU hızlandırmalı duygu analizi
+- Taşınabilir Model Dizini (Local Model Cache)
+- Hugging Face Token desteği
 - Batch processing
 - Keyword extraction
 - Rezervasyon ayıklama
@@ -14,6 +16,7 @@ Açıklama: NLP ve duygu analizi yönetimi
 - Erişim seviyesi kontrolleri
 """
 
+import os
 import re
 import logging
 import threading
@@ -26,6 +29,11 @@ from enum import Enum
 # CONFIG
 # ═══════════════════════════════════════════════════════════════
 from config import Config, AccessLevel
+
+# Hugging Face modellerinin global dizine değil, projenin kendi model dizinine 
+# inmesini zorla (Taşınabilirlik/Portability için çok önemlidir)
+os.environ["HF_HOME"] = str(Config.MODELS_DIR / "huggingface")
+os.environ["TRANSFORMERS_CACHE"] = str(Config.MODELS_DIR / "huggingface")
 
 logger = logging.getLogger("LotusAI.NLP")
 
@@ -183,7 +191,6 @@ class NLPManager:
         Args:
             access_level: Erişim seviyesi (restricted, sandbox, full)
         """
-        # Değişiklik: Eğer parametre girilmezse doğrudan Config'den oku
         self.access_level = access_level or Config.ACCESS_LEVEL
         
         # Thread safety
@@ -194,6 +201,9 @@ class NLPManager:
         
         # Metrics
         self.metrics = NLPMetrics()
+        
+        # Dizinleri hazırla
+        (Config.MODELS_DIR / "huggingface").mkdir(parents=True, exist_ok=True)
         
         # Initialize model
         if NLP_AVAILABLE:
@@ -206,11 +216,16 @@ class NLPManager:
     def _init_model(self) -> None:
         """BERT modelini yükle"""
         try:
+            hf_token = getattr(Config, "HF_TOKEN", None)
+            
+            # Hugging Face'den indirirken HF_TOKEN kullanarak limitlere takılmayı önleriz.
             self.sentiment_pipeline = pipeline(
                 "sentiment-analysis",
                 model=self.MODEL_NAME,
                 tokenizer=self.MODEL_NAME,
-                device=DEVICE_ID
+                device=DEVICE_ID,
+                token=hf_token,
+                model_kwargs={"cache_dir": str(Config.MODELS_DIR / "huggingface")}
             )
             
             device_name = "GPU (CUDA)" if HAS_GPU else "CPU"

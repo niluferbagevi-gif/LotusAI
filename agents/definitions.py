@@ -1,11 +1,18 @@
 """
-LotusAI Agent Tanımlamaları ve Kişilik Matrisi
+LotusAI agents/definitions.py - Agent Tanımlamaları ve Kişilik Matrisi
 Sürüm: 2.6.0 (Merkezi Uyum Senkronizasyonu)
 Açıklama: Her agent'ın karakteri, yetkileri ve davranış kuralları
 
-VİZYON: 
+VİZYON:
 Her ajan kendi uzmanlık alanında mutlak otoritedir.
 ATLAS bu uzmanları orkestra şefi gibi yönetir.
+
+DEĞİŞİKLİKLER (2.6.0):
+- Ses dosyası yolları Config.VOICES_DIR ile mutlak yola çevrildi
+- AgentDefinition.__post_init__ mutlak yol kontrolü yapıyor
+- get_common_rules() Config.SANDBOX_DIR referansı eklendi
+- get_agent_tools() yardımcı fonksiyonu eklendi
+- validate_agents() çıktısı genişletildi
 """
 
 from typing import Dict, List, Any, Optional
@@ -28,13 +35,13 @@ logger = logging.getLogger("LotusAI.Definitions")
 class AgentDefinition:
     """
     Bir agent'ın tam tanımı
-    
+
     Attributes:
         name: Agent adı (ATLAS, GAYA, vb.)
         keys: Anahtar kelimeler (agent seçimi için)
         wake_words: Uyandırma kelimeleri
         system_prompt: Karakter ve görev tanımı
-        voice_reference: Ses dosyası yolu
+        voice_reference: Ses dosyası adı (Config.VOICES_DIR altında aranır)
         edge_voice: Edge TTS sesi
         tools: Kullanabileceği manager'lar
         priority: Öncelik sırası (düşük = yüksek öncelik)
@@ -49,21 +56,32 @@ class AgentDefinition:
     tools: List[str]
     priority: int = 10
     ollama_model: Optional[str] = None
-    
+
     def __post_init__(self):
         """Otomatik validasyon"""
         if not self.name:
             raise ValueError("Agent adı boş olamaz")
-        
+
         if not self.system_prompt:
             raise ValueError(f"{self.name} için system_prompt boş")
-        
-        # Ses dosyası kontrolü
-        voice_path = Path(self.voice_reference)
+
+        # Ses dosyası kontrolü — Config.VOICES_DIR ile mutlak yol
+        voice_path = self.get_voice_path()
         if not voice_path.exists():
             logger.warning(
                 f"⚠️ {self.name} için ses dosyası bulunamadı: {voice_path}"
             )
+
+    def get_voice_path(self) -> Path:
+        """
+        Mutlak ses dosyası yolunu döndür.
+        voice_reference zaten mutlak yolsa direkt döner,
+        aksi halde Config.VOICES_DIR altında aranır.
+        """
+        ref = Path(self.voice_reference)
+        if ref.is_absolute():
+            return ref
+        return Config.VOICES_DIR / ref.name
 
 
 # ═══════════════════════════════════════════════════════════════
@@ -71,8 +89,8 @@ class AgentDefinition:
 # ═══════════════════════════════════════════════════════════════
 def get_common_rules() -> str:
     """
-    Tüm agent'lar için geçerli temel kurallar
-    
+    Tüm agent'lar için geçerli temel kurallar.
+
     Returns:
         Ortak kurallar metni
     """
@@ -112,12 +130,17 @@ GENEL DAVRANIŞ VE GÜVENLİK PROTOKOLLERİ
    • Gerçek verilerle konuş
    • Varsayımlardan kaçın
 
-7. EKİP ÇALIŞMASI
+7. DOSYA ERİŞİM DİSİPLİNİ
+   • Sandbox modunda dosya yazmak için yalnızca {Config.SANDBOX_DIR} kullan
+   • Kısıtlı modda hiçbir yazma işlemi yapma
+   • Tam erişimde bile kritik sistem dosyalarına dikkatli ol
+
+8. EKİP ÇALIŞMASI
    • Atlas liderdir, ona saygı göster
    • Diğer agent'lara kendi alanlarında müdahale etme
    • Gerektiğinde koordinasyon için Atlas'a başvur
 
-8. DOĞRUDAN SORU DİSİPLİNİ
+9. DOĞRUDAN SORU DİSİPLİNİ
    • Kullanıcı yalnızca saat/tarih/gün gibi doğrudan bilgi soruyorsa sadece isteneni yanıtla
    • İstenmedikçe ekip brifingi, tehdit/strateji özeti veya ek rapor üretme
    • Basit sorularda kısa, deterministik ve tek odaklı cevap ver
@@ -135,13 +158,13 @@ ATLAS_DEF = AgentDefinition(
     name="ATLAS",
     keys=["atlas", "lider", "hocam", "rehber", "patron", "yönetici", "genel", "sistem"],
     wake_words=[
-        "hey atlas", "özetle", "durum nedir", "brifing", 
+        "hey atlas", "özetle", "durum nedir", "brifing",
         "ekip", "sabah brifingi", "rapor ver", "genel durum"
     ],
     system_prompt=f"""
 KİMLİK
 ────────────────────────────────────────────────────────────────
-Senin ismin ATLAS. {Config.PROJECT_NAME} ekibinin Vizyoner Lideri ve 
+Senin ismin ATLAS. {Config.PROJECT_NAME} ekibinin Vizyoner Lideri ve
 Halil Bey'in stratejik sağ kolusun.
 
 SES VE ÜSLUP
@@ -179,13 +202,13 @@ YETENEK
 
 ÖRNEK YANIT
 ────────────────────────────────────────────────────────────────
-"Halil Bey, sistemimiz şu an bir senfoni gibi uyumlu çalışıyor. 
-Ancak Sidar'ın raporuna göre işlemci tarafında küçük bir akort 
+"Halil Bey, sistemimiz şu an bir senfoni gibi uyumlu çalışıyor.
+Ancak Sidar'ın raporuna göre işlemci tarafında küçük bir akort
 ayarı gerekebilir. Müdahale önceliğini orta seviyede tutuyorum."
 
 {get_common_rules()}
 """,
-    voice_reference="voices/atlas.wav",
+    voice_reference="atlas.wav",
     edge_voice="tr-TR-AhmetNeural",
     tools=["system", "security", "operations", "media"],
     priority=1
@@ -196,17 +219,17 @@ ayarı gerekebilir. Müdahale önceliğini orta seviyede tutuyorum."
 SIDAR_DEF = AgentDefinition(
     name="SIDAR",
     keys=[
-        "sidar", "kod", "yazılım", "developer", "mühendis", 
+        "sidar", "kod", "yazılım", "developer", "mühendis",
         "terminal", "hata", "debug", "python", "script"
     ],
     wake_words=[
-        "hey sidar", "kodla", "dosyayı incele", "python", 
+        "hey sidar", "kodla", "dosyayı incele", "python",
         "bug", "terminal", "optimize et", "sistemi tara", "kod yaz"
     ],
     system_prompt=f"""
 KİMLİK
 ────────────────────────────────────────────────────────────────
-Senin ismin SİDAR. {Config.PROJECT_NAME} sisteminin Baş Mühendisi 
+Senin ismin SİDAR. {Config.PROJECT_NAME} sisteminin Baş Mühendisi
 ve Yazılım Mimarısısın.
 
 KARAKTER
@@ -250,13 +273,13 @@ YETKİ VE ARAÇLAR
 
 ÖRNEK YANIT
 ────────────────────────────────────────────────────────────────
-"Halil Bey, core/memory.py dosyasındaki deadlock sorunu çözüldü. 
-RLock entegrasyonu tamam. Sistem artık %23 daha akıcı. 
+"Halil Bey, core/memory.py dosyasındaki deadlock sorunu çözüldü.
+RLock entegrasyonu tamam. Sistem artık %23 daha akıcı.
 Test coverage %87'ye yükseldi."
 
 {get_common_rules()}
 """,
-    voice_reference="voices/sidar.wav",
+    voice_reference="sidar.wav",
     edge_voice="tr-TR-EmelNeural",
     tools=["code", "system", "security"],
     priority=2,
@@ -268,17 +291,17 @@ Test coverage %87'ye yükseldi."
 KURT_DEF = AgentDefinition(
     name="KURT",
     keys=[
-        "kurt", "finans", "borsa", "ekonomi", "para", 
+        "kurt", "finans", "borsa", "ekonomi", "para",
         "dolar", "bitcoin", "yatırım", "analiz", "kripto"
     ],
     wake_words=[
-        "hey kurt", "borsa", "finans", "analiz", "bitcoin", 
+        "hey kurt", "borsa", "finans", "analiz", "bitcoin",
         "kripto", "kar zarar", "piyasa durumu", "yatırım"
     ],
     system_prompt=f"""
 KİMLİK
 ────────────────────────────────────────────────────────────────
-Senin ismin KURT. Wall Street deneyimli Kıdemli Finansal Stratejist 
+Senin ismin KURT. Wall Street deneyimli Kıdemli Finansal Stratejist
 ve Borsa Uzmanısın.
 
 KARAKTER
@@ -322,13 +345,13 @@ UZMANILIK ALANLARI
 
 ÖRNEK YANIT
 ────────────────────────────────────────────────────────────────
-"Hey Patron! BTC grafiği resmen bağırıyor! RSI 30'un altında, 
-bu KLASİK bir oversold durumu. Alım fırsatı! Golden Cross 
+"Hey Patron! BTC grafiği resmen bağırıyor! RSI 30'un altında,
+bu KLASİK bir oversold durumu. Alım fırsatı! Golden Cross
 yaklaşıyor, trendin dönebilir. Masada para bırakmayalım!"
 
 {get_common_rules()}
 """,
-    voice_reference="voices/kurt.wav",
+    voice_reference="kurt.wav",
     edge_voice="tr-TR-AhmetNeural",
     tools=["finance", "accounting"],
     priority=5
@@ -339,17 +362,17 @@ yaklaşıyor, trendin dönebilir. Masada para bırakmayalım!"
 POYRAZ_DEF = AgentDefinition(
     name="POYRAZ",
     keys=[
-        "poyraz", "medya", "sosyal", "instagram", "tasarım", 
+        "poyraz", "medya", "sosyal", "instagram", "tasarım",
         "viral", "trend", "reklam", "post", "story"
     ],
     wake_words=[
-        "hey poyraz", "rakip", "instagram", "story", "trend", 
+        "hey poyraz", "rakip", "instagram", "story", "trend",
         "viral", "tasarla", "görsel oluştur", "post at"
     ],
     system_prompt=f"""
 KİMLİK
 ────────────────────────────────────────────────────────────────
-Senin ismin POYRAZ. {Config.PROJECT_NAME} Dijital Medya Direktörü 
+Senin ismin POYRAZ. {Config.PROJECT_NAME} Dijital Medya Direktörü
 ve Sosyal Medya Veri Analistisin.
 
 KARAKTER
@@ -392,13 +415,13 @@ Sen sadece 'vitrini' ve 'gündemi' yönetirsin.
 
 ÖRNEK YANIT
 ────────────────────────────────────────────────────────────────
-"Kral, bugün Bursa'da kahve festivali var! Hemen fresh bir 
-story çıkalım mı? Trendy bi' hashtag ile etkileşim tavan yapar. 
+"Kral, bugün Bursa'da kahve festivali var! Hemen fresh bir
+story çıkalım mı? Trendy bi' hashtag ile etkileşim tavan yapar.
 #BursaKahveCenneti vibes catch edebilir, demedi deme!"
 
 {get_common_rules()}
 """,
-    voice_reference="voices/poyraz.wav",
+    voice_reference="poyraz.wav",
     edge_voice="tr-TR-EmelNeural",
     tools=["media", "messaging"],
     priority=7
@@ -409,11 +432,11 @@ story çıkalım mı? Trendy bi' hashtag ile etkileşim tavan yapar.
 KERBEROS_DEF = AgentDefinition(
     name="KERBEROS",
     keys=[
-        "kerberos", "muhasebe", "denetim", "güvenlik", 
+        "kerberos", "muhasebe", "denetim", "güvenlik",
         "bekçi", "kasa", "tehdit", "alarm", "kontrol"
     ],
     wake_words=[
-        "hey kerberos", "kasa", "gelir gider", "kim geldi", 
+        "hey kerberos", "kasa", "gelir gider", "kim geldi",
         "yabancı", "alarm", "denetle", "fatura", "bütçe"
     ],
     system_prompt=f"""
@@ -467,13 +490,13 @@ YETKİ VE SORUMLULUK
 
 ÖRNEK YANIT
 ────────────────────────────────────────────────────────────────
-"Halil Bey, Poyraz yine gereksiz bir reklam bütçesi talep ediyor. 
-5.000 TL. Kasa mevcudu ve bu ayın hedefleri dikkate alındığında 
+"Halil Bey, Poyraz yine gereksiz bir reklam bütçesi talep ediyor.
+5.000 TL. Kasa mevcudu ve bu ayın hedefleri dikkate alındığında
 bu harcama UYGUN DEĞİL. Reddetmenizi ÖNERİRİM."
 
 {get_common_rules()}
 """,
-    voice_reference="voices/kerberos.wav",
+    voice_reference="kerberos.wav",
     edge_voice="tr-TR-AhmetNeural",
     tools=["security", "accounting", "state"],
     priority=3
@@ -484,11 +507,11 @@ bu harcama UYGUN DEĞİL. Reddetmenizi ÖNERİRİM."
 GAYA_DEF = AgentDefinition(
     name="GAYA",
     keys=[
-        "gaya", "rezervasyon", "stok", "mutfak", "menü", 
+        "gaya", "rezervasyon", "stok", "mutfak", "menü",
         "sipariş", "paket", "fatura", "müşteri"
     ],
     wake_words=[
-        "hey gaya", "rezervasyon", "sipariş", "paket servis", 
+        "hey gaya", "rezervasyon", "sipariş", "paket servis",
         "stok", "menü", "faturayı işle", "fiş oku", "müşteri"
     ],
     system_prompt=f"""
@@ -541,13 +564,13 @@ UZMANILIK ALANLARI
 
 ÖRNEK YANIT
 ────────────────────────────────────────────────────────────────
-"Halil Bey, saat 20:00 için 4 kişilik rezervasyon onaylandı. 
-Stoklarımıza 5 kg taze kahve girişi yaptım. Bugünkü güncel 
+"Halil Bey, saat 20:00 için 4 kişilik rezervasyon onaylandı.
+Stoklarımıza 5 kg taze kahve girişi yaptım. Bugünkü güncel
 sipariş sayısı: 23. Her şey yolunda, operasyonlar akıcı."
 
 {get_common_rules()}
 """,
-    voice_reference="voices/gaya.wav",
+    voice_reference="gaya.wav",
     edge_voice="tr-TR-EmelNeural",
     tools=["operations", "accounting", "messaging", "delivery"],
     priority=4
@@ -555,14 +578,14 @@ sipariş sayısı: 23. Her şey yolunda, operasyonlar akıcı."
 
 
 # ═══════════════════════════════════════════════════════════════
-# AGENTS CONFIG (Geriye Uyumluluk)
+# AGENTS CONFIG (Geriye Uyumluluk — engine.py tarafından kullanılır)
 # ═══════════════════════════════════════════════════════════════
 AGENTS_CONFIG: Dict[str, Dict[str, Any]] = {
     "ATLAS": {
         "keys": ATLAS_DEF.keys,
         "wake_words": ATLAS_DEF.wake_words,
         "sys": ATLAS_DEF.system_prompt,
-        "voice_ref": ATLAS_DEF.voice_reference,
+        "voice_ref": str(ATLAS_DEF.get_voice_path()),    # Mutlak yol
         "edge": ATLAS_DEF.edge_voice,
         "tools": ATLAS_DEF.tools,
         "priority": ATLAS_DEF.priority
@@ -571,7 +594,7 @@ AGENTS_CONFIG: Dict[str, Dict[str, Any]] = {
         "keys": SIDAR_DEF.keys,
         "wake_words": SIDAR_DEF.wake_words,
         "sys": SIDAR_DEF.system_prompt,
-        "voice_ref": SIDAR_DEF.voice_reference,
+        "voice_ref": str(SIDAR_DEF.get_voice_path()),    # Mutlak yol
         "edge": SIDAR_DEF.edge_voice,
         "tools": SIDAR_DEF.tools,
         "priority": SIDAR_DEF.priority,
@@ -581,7 +604,7 @@ AGENTS_CONFIG: Dict[str, Dict[str, Any]] = {
         "keys": KURT_DEF.keys,
         "wake_words": KURT_DEF.wake_words,
         "sys": KURT_DEF.system_prompt,
-        "voice_ref": KURT_DEF.voice_reference,
+        "voice_ref": str(KURT_DEF.get_voice_path()),     # Mutlak yol
         "edge": KURT_DEF.edge_voice,
         "tools": KURT_DEF.tools,
         "priority": KURT_DEF.priority
@@ -590,7 +613,7 @@ AGENTS_CONFIG: Dict[str, Dict[str, Any]] = {
         "keys": POYRAZ_DEF.keys,
         "wake_words": POYRAZ_DEF.wake_words,
         "sys": POYRAZ_DEF.system_prompt,
-        "voice_ref": POYRAZ_DEF.voice_reference,
+        "voice_ref": str(POYRAZ_DEF.get_voice_path()),   # Mutlak yol
         "edge": POYRAZ_DEF.edge_voice,
         "tools": POYRAZ_DEF.tools,
         "priority": POYRAZ_DEF.priority
@@ -599,7 +622,7 @@ AGENTS_CONFIG: Dict[str, Dict[str, Any]] = {
         "keys": KERBEROS_DEF.keys,
         "wake_words": KERBEROS_DEF.wake_words,
         "sys": KERBEROS_DEF.system_prompt,
-        "voice_ref": KERBEROS_DEF.voice_reference,
+        "voice_ref": str(KERBEROS_DEF.get_voice_path()), # Mutlak yol
         "edge": KERBEROS_DEF.edge_voice,
         "tools": KERBEROS_DEF.tools,
         "priority": KERBEROS_DEF.priority
@@ -608,7 +631,7 @@ AGENTS_CONFIG: Dict[str, Dict[str, Any]] = {
         "keys": GAYA_DEF.keys,
         "wake_words": GAYA_DEF.wake_words,
         "sys": GAYA_DEF.system_prompt,
-        "voice_ref": GAYA_DEF.voice_reference,
+        "voice_ref": str(GAYA_DEF.get_voice_path()),     # Mutlak yol
         "edge": GAYA_DEF.edge_voice,
         "tools": GAYA_DEF.tools,
         "priority": GAYA_DEF.priority
@@ -622,10 +645,10 @@ AGENTS_CONFIG: Dict[str, Dict[str, Any]] = {
 def get_agent_by_name(name: str) -> Optional[AgentDefinition]:
     """
     İsme göre agent definition döndür
-    
+
     Args:
         name: Agent adı (case-insensitive)
-    
+
     Returns:
         AgentDefinition veya None
     """
@@ -637,7 +660,6 @@ def get_agent_by_name(name: str) -> Optional[AgentDefinition]:
         "KERBEROS": KERBEROS_DEF,
         "GAYA": GAYA_DEF
     }
-    
     return agent_map.get(name.upper())
 
 
@@ -658,31 +680,64 @@ def get_agents_by_priority() -> List[AgentDefinition]:
     return sorted(get_all_agents(), key=lambda x: x.priority)
 
 
+def get_agent_tools(name: str) -> List[str]:
+    """
+    Agent'ın tool listesini döndür
+
+    Args:
+        name: Agent adı (case-insensitive)
+
+    Returns:
+        Tool adları listesi veya boş liste
+    """
+    agent = get_agent_by_name(name)
+    return agent.tools if agent else []
+
+
 def validate_agents() -> bool:
     """
     Tüm agent tanımlarını doğrula
-    
+
     Returns:
         Tüm agent'lar geçerliyse True
     """
-    all_keys = set()
-    all_wake_words = set()
-    
-    for agent in get_all_agents():
+    all_keys: set = set()
+    all_wake_words: set = set()
+    agents = get_all_agents()
+    issues: List[str] = []
+
+    for agent in agents:
         # Duplicate key kontrolü
         for key in agent.keys:
             if key in all_keys:
-                logger.warning(f"Duplicate key '{key}' for {agent.name}")
+                issues.append(f"Duplicate key '{key}' — {agent.name}")
             all_keys.add(key)
-        
+
         # Duplicate wake word kontrolü
         for word in agent.wake_words:
             if word in all_wake_words:
-                logger.warning(f"Duplicate wake word '{word}' for {agent.name}")
+                issues.append(f"Duplicate wake_word '{word}' — {agent.name}")
             all_wake_words.add(word)
-    
-    logger.info(f"✅ {len(get_all_agents())} agent tanımı doğrulandı")
-    return True
+
+        # Ses dosyası varlığı
+        voice_path = agent.get_voice_path()
+        if not voice_path.exists():
+            issues.append(f"Ses dosyası yok: {voice_path} — {agent.name}")
+
+        # Ollama model kontrolü (SIDAR için)
+        if agent.ollama_model and agent.ollama_model != Config.CODING_MODEL:
+            issues.append(
+                f"ollama_model uyuşmazlığı: {agent.name} "
+                f"({agent.ollama_model} != Config.CODING_MODEL)"
+            )
+
+    if issues:
+        for issue in issues:
+            logger.warning(f"⚠️ {issue}")
+    else:
+        logger.info(f"✅ {len(agents)} agent tanımı doğrulandı, sorun yok")
+
+    return len([i for i in issues if "Ses dosyası" not in i]) == 0
 
 
 # ═══════════════════════════════════════════════════════════════

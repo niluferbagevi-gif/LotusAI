@@ -1,3 +1,17 @@
+"""
+LotusAI managers/operations.py - Operations Manager
+Sürüm: 2.6.0 (Dinamik Erişim Seviyesi Senkronu & Mimari Optimizasyon)
+Açıklama: Saha, Stok, Rezervasyon ve Menü Yönetimi
+
+Özellikler:
+- Stok Yönetimi: Ürün girişi, çıkışı ve kritik seviye takibi.
+- Rezervasyon: Kayıt, onaylama, iptal ve WhatsApp entegrasyonu.
+- Akıllı Menü: Dinamik öneri sistemi.
+- Paket Servis: DeliveryManager üzerinden bot kontrolü ve durum takibi.
+- Veri Güvenliği: RLock ile eşzamanlılık, otomatik yedekli çalışma ve Config.DATA_DIR entegrasyonu.
+- Erişim seviyesi kontrolleri (restricted/sandbox/full)
+"""
+
 import json
 import logging
 import threading
@@ -7,44 +21,23 @@ from pathlib import Path
 from datetime import datetime
 from typing import Dict, List, Any, Optional, Union
 
-# --- YAPILANDIRMA VE FALLBACK ---
-try:
-    from config import Config, AccessLevel
-except ImportError:
-    class Config:
-        WORK_DIR = os.getcwd()
-        STATIC_DIR = Path("static")
-        USE_GPU = False
-    class AccessLevel:
-        RESTRICTED = "restricted"
-        SANDBOX = "sandbox"
-        FULL = "full"
+# ═══════════════════════════════════════════════════════════════
+# CONFIG
+# ═══════════════════════════════════════════════════════════════
+from config import Config, AccessLevel
 
 # --- LOGLAMA ---
 logger = logging.getLogger("LotusAI.Operations")
 
-# --- GPU KONTROLÜ (Config Entegreli) ---
-HAS_GPU = False
-DEVICE = "cpu"
-USE_GPU_CONFIG = getattr(Config, "USE_GPU", False)
+# --- GPU KONTROLÜ (Hafifletilmiş Config Entegrasyonu) ---
+# Torch kütüphanesine gerek kalmadan sadece donanım bayrağını kullanıyoruz
+HAS_GPU = getattr(Config, "USE_GPU", False)
+DEVICE = "cuda" if HAS_GPU else "cpu"
 
-if USE_GPU_CONFIG:
-    try:
-        import torch
-        if torch.cuda.is_available():
-            HAS_GPU = True
-            DEVICE = "cuda"
-            try:
-                gpu_name = torch.cuda.get_device_name(0)
-                logger.info(f"🚀 OperationsManager GPU Aktif: {gpu_name}")
-            except:
-                logger.info("🚀 OperationsManager GPU Aktif")
-        else:
-            logger.info("ℹ️ Operations: Config GPU açık ancak donanım bulunamadı. CPU kullanılacak.")
-    except ImportError:
-        logger.info("ℹ️ PyTorch yüklü değil, işlemler CPU modunda.")
+if HAS_GPU:
+    logger.info("🚀 OperationsManager GPU/Donanım Hızlandırma farkındalığıyla aktif")
 else:
-    logger.info("ℹ️ Operasyon işlemleri CPU modunda (Config ayarı).")
+    logger.info("ℹ️ Operasyon işlemleri CPU modunda.")
 
 # Paket servis modülünü güvenli şekilde içe aktar
 try:
@@ -61,7 +54,7 @@ class OperationsManager:
     Yetenekler:
     - Stok Yönetimi: Ürün girişi, çıkışı ve kritik seviye takibi.
     - Rezervasyon: Kayıt, onaylama, iptal ve WhatsApp entegrasyonu.
-    - Akıllı Menü: GPU/AI destekli dinamik öneri sistemi.
+    - Akıllı Menü: Durumsal dinamik öneri sistemi.
     - Paket Servis: DeliveryManager üzerinden bot kontrolü ve durum takibi.
     - Veri Güvenliği: RLock ile eşzamanlılık ve otomatik yedekli çalışma.
     - Erişim seviyesi kontrolleri (restricted/sandbox/full)
@@ -74,22 +67,23 @@ class OperationsManager:
         Args:
             access_level: Erişim seviyesi (restricted, sandbox, full)
         """
-        # Değişiklik: Eğer parametre girilmezse doğrudan Config'den oku
         self.access_level = access_level or getattr(Config, "ACCESS_LEVEL", "sandbox")
         
-        # Yollar
-        default_work_dir = getattr(Config, "WORK_DIR", os.getcwd())
-        self.work_dir = Path(default_work_dir)
-        self.db_file = self.work_dir / "lotus/lotus_operasyon.json"
-        self.menu_file = self.work_dir / "lotus/lotus_menu.json"
-        self.backup_dir = self.work_dir / "backups" / "operations"
+        # Yollar (Merkezi Config yapısına bağlandı)
+        self.work_dir = Config.WORK_DIR
+        self.db_file = Config.DATA_DIR / "lotus_operasyon.json"
+        self.menu_file = Config.DATA_DIR / "lotus_menu.json"
+        self.backup_dir = Config.DATA_DIR / "operations_backups"
         
         try:
+            Config.DATA_DIR.mkdir(parents=True, exist_ok=True)
             self.backup_dir.mkdir(parents=True, exist_ok=True)
-            self.db_file.parent.mkdir(parents=True, exist_ok=True)
         except Exception as e:
             logger.error(f"Dizin oluşturma hatası: {e}")
         
+        # Eski veri taşıma işlemi (Geriye dönük uyumluluk)
+        self._migrate_old_db()
+
         # Çoklu ajan erişimi için Reentrant Lock
         self.lock = threading.RLock()
         
@@ -106,7 +100,25 @@ class OperationsManager:
         self.menu_data = self._load_menu()
         
         gpu_status = f"GPU Aktif ({self.device})" if self.has_gpu else "CPU Modu"
-        logger.info(f"✅ Operasyon Yöneticisi aktif. Donanım: {gpu_status}, Erişim: {self.access_level}")
+        logger.info(f"✅ Operasyon Yöneticisi aktif. Donanım: {gpu_status}, Erişim: {self.access_level.upper()}")
+
+    def _migrate_old_db(self) -> None:
+        """Eski dizin yapısındaki JSON veritabanlarını yeni DATA_DIR'e taşır"""
+        old_db = self.work_dir / "lotus/lotus_operasyon.json"
+        if old_db.exists() and not self.db_file.exists():
+            try:
+                shutil.move(str(old_db), str(self.db_file))
+                logger.info(f"📦 Eski operasyon DB yeni merkeze taşındı: {self.db_file}")
+            except Exception as e:
+                logger.warning(f"⚠️ Eski DB taşıma hatası: {e}")
+
+        old_menu = self.work_dir / "lotus/lotus_menu.json"
+        if old_menu.exists() and not self.menu_file.exists():
+            try:
+                shutil.move(str(old_menu), str(self.menu_file))
+                logger.info(f"📦 Eski menü dosyası yeni merkeze taşındı: {self.menu_file}")
+            except Exception as e:
+                logger.warning(f"⚠️ Eski menü taşıma hatası: {e}")
 
     def _init_delivery(self):
         """Paket servis modülünü başlatır."""
@@ -218,11 +230,11 @@ class OperationsManager:
         return "\n".join(lines)
 
     def get_recommendation(self, weather_context: str = "") -> str:
-        """Hava durumu ve saate göre GPU/AI destekli akıllı öneri sunar. (Her erişim seviyesinde kullanılabilir)"""
+        """Hava durumu ve saate göre dinamik akıllı öneri sunar. (Her erişim seviyesinde kullanılabilir)"""
         hour = datetime.now().hour
         weather = weather_context.lower()
         
-        prefix = "🤖 [AI Önerisi]: " if self.has_gpu else ""
+        prefix = "🤖 [AI Önerisi]: " if self.has_gpu else "💡 [Sistem Önerisi]: "
         
         if any(k in weather for k in ["soğuk", "kar", "yağmur"]):
             return f"{prefix}Hava dışarıda biraz sert. İçinizi ısıtacak bir 'Sıcak Sahlep' veya 'Cortado' öneririm."
@@ -302,6 +314,23 @@ class OperationsManager:
                 return True
             return False
 
+    def get_reservations_summary(self) -> str:
+        """Bugünkü rezervasyonları listeler (Her erişim seviyesinde kullanılabilir)."""
+        db = self._load_db()
+        res_list = db.get("rezervasyonlar", [])
+        
+        today = datetime.now().strftime("%Y-%m-%d")
+        today_res = [r for r in res_list if today in str(r.get("time", ""))]
+        
+        if not today_res:
+            return "Bugün için kayıtlı rezervasyon bulunmamaktadır."
+            
+        lines = []
+        for r in today_res:
+            lines.append(f"#{r['id']} - {r['name']} ({r['pax']} Kişi) - Saat: {r['time']}")
+            
+        return "\n".join(lines)
+
     # --- STOK YÖNETİMİ ---
 
     def update_stock(self, item_name: str, amount: float, operation: str = "add") -> bool:
@@ -335,6 +364,20 @@ class OperationsManager:
         """Kritik seviyenin altına düşen ürünleri listeler. (Her erişim seviyesinde kullanılabilir)"""
         db = self._load_db()
         return [f"{name} ({data['miktar']})" for name, data in db["stok"].items() if data['miktar'] < threshold]
+
+    def get_stock_summary(self) -> str:
+        """Mevcut stok listesini metin olarak döner. (Her erişim seviyesinde kullanılabilir)"""
+        db = self._load_db()
+        stocks = db.get("stok", {})
+        
+        if not stocks:
+            return "Stokta kayıtlı ürün bulunmuyor."
+            
+        lines = []
+        for name, data in stocks.items():
+            lines.append(f"📦 {name}: {data['miktar']}")
+            
+        return "\n".join(lines)
 
     def process_invoice_items(self, items_list: List[Dict]) -> str:
         """

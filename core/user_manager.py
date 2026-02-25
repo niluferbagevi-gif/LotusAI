@@ -1,5 +1,5 @@
 """
-LotusAI User Management System
+LotusAI core/user_manager.py - User Management System
 Sürüm: 2.6.0 (Dinamik Erişim Seviyesi Senkronu)
 Açıklama: Kullanıcı yönetimi, yetkilendirme ve kimlik profilleri
 
@@ -10,7 +10,7 @@ Açıklama: Kullanıcı yönetimi, yetkilendirme ve kimlik profilleri
 - Thread-safe operations
 - GPU-aware identity management
 - Audit logging
-- Erişim seviyesi bilgisi (sistem modu için)
+- Merkezi dizin yönetimi (Config entegrasyonu)
 """
 
 import json
@@ -213,23 +213,24 @@ class UserManager:
         Args:
             access_level: Erişim seviyesi (restricted, sandbox, full)
         """
-        # Değişiklik: Eğer parametre girilmezse doğrudan Config'den oku
         self.access_level = access_level or Config.ACCESS_LEVEL
         
-        # Paths
+        # Paths (Merkezi Config yapısına bağlandı)
         self.work_dir = Config.WORK_DIR
-        self.db_file = self.work_dir / "lotus/users_db.json"
+        self.db_file = Config.DATA_DIR / "users_db.json"
         self.backup_file = self.db_file.with_suffix(".json.backup")
-        self.audit_log_file = self.work_dir / "users_audit.log"
+        self.audit_log_file = Config.LOG_DIR / "users_audit.log"
         
         # Thread safety
         self._lock = threading.RLock()
         
-        # Ensure directory
-        self.work_dir.mkdir(parents=True, exist_ok=True)
-        # Create lotus data directory if not exists
-        (self.work_dir / "lotus").mkdir(parents=True, exist_ok=True)
+        # Dizinlerin var olduğundan emin ol (Config'den gelmeyenler için tedbir)
+        Config.DATA_DIR.mkdir(parents=True, exist_ok=True)
+        Config.LOG_DIR.mkdir(parents=True, exist_ok=True)
         
+        # Eski Veritabanı Migrasyon Kontrolü (Geriye dönük uyumluluk)
+        self._migrate_old_db()
+
         # GPU detection
         self.device = self._detect_hardware()
         
@@ -241,6 +242,16 @@ class UserManager:
         
         logger.info(f"✅ UserManager başlatıldı (Device: {self.device.upper()}, Erişim: {self.access_level})")
     
+    def _migrate_old_db(self) -> None:
+        """Eski dizin yapısındaki veritabanını yeni yapıya taşır"""
+        old_db_file = self.work_dir / "lotus/users_db.json"
+        if old_db_file.exists() and not self.db_file.exists():
+            try:
+                shutil.move(str(old_db_file), str(self.db_file))
+                logger.info(f"📦 Eski veritabanı yeni merkezi konuma taşındı: {self.db_file}")
+            except Exception as e:
+                logger.warning(f"⚠️ Eski veritabanı taşıma hatası: {e}")
+
     def _detect_hardware(self) -> str:
         """
         GPU tespiti

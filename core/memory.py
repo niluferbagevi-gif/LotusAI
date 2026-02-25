@@ -1,5 +1,5 @@
 """
-LotusAI Memory Management System
+LotusAI core/memory.py - Memory Management System
 Sürüm: 2.6.0 (Dinamik Erişim Seviyesi Senkronu)
 Açıklama: Hybrid hafıza sistemi (SQLite + ChromaDB) ve RAG implementasyonu
 Özellikler:
@@ -10,6 +10,7 @@ Açıklama: Hybrid hafıza sistemi (SQLite + ChromaDB) ve RAG implementasyonu
 - Thread-safe operasyonlar
 - Ollama embedding desteği (nomic-embed-text) — AI_PROVIDER='ollama' için
 - Erişim seviyesi kontrolleri (restricted/sandbox/full)
+- Merkezi Dizin Entegrasyonu (Config.DATA_DIR & CHROMA_PERSIST_DIR)
 """
 import sqlite3
 import logging
@@ -268,8 +269,8 @@ class MemoryManager:
     ┌─────────────────────────────────────────────┐
     │          Memory Manager                     │
     ├─────────────────┬───────────────────────────┤
-    │   SQLite        │   ChromaDB (Vector DB)    │
-    │   (Fast Access) │   (Semantic Search)       │
+    │  SQLite         │  ChromaDB (Vector DB)     │
+    │  (Fast Access)  │  (Semantic Search)        │
     ├─────────────────┼───────────────────────────┤
     │ • Chat History  │ • Chat Embeddings         │
     │ • File Tracking │ • Document Embeddings     │
@@ -297,14 +298,13 @@ class MemoryManager:
         Args:
             access_level: Erişim seviyesi (restricted, sandbox, full)
         """
-        # Değişiklik: Eğer parametre girilmezse veya None gelirse doğrudan Config'den oku
         self.access_level = access_level or Config.ACCESS_LEVEL
         
-        # Paths
+        # Merkezi Config yapılandırmasına tam uyum
         self.work_dir = Config.WORK_DIR
-        self.db_path = self.work_dir / "lotus_vector_db" / "lotus_system.db"
-        self.docs_path = self.work_dir / "documents"
-        self.vector_db_path = self.work_dir / "lotus_vector_db"
+        self.db_path = Config.DATA_DIR / "lotus_system.db"  # user_db ile aynı veri dizini
+        self.docs_path = Config.WORK_DIR / "documents"      # RAG için kullanıcı dökümanları
+        self.vector_db_path = Path(Config.CHROMA_PERSIST_DIR).resolve() # .env'deki Chroma yolu
         
         # Thread safety
         self.lock = threading.RLock()  # Reentrant lock
@@ -312,6 +312,7 @@ class MemoryManager:
         # Create directories
         self.docs_path.mkdir(parents=True, exist_ok=True)
         self.vector_db_path.mkdir(parents=True, exist_ok=True)
+        Config.DATA_DIR.mkdir(parents=True, exist_ok=True)
         
         # Initialize SQLite
         self._init_sqlite()

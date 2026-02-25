@@ -1,13 +1,13 @@
 """
-LotusAI System Health Manager
-Sürüm: 2.6.0 (Dinamik Erişim Seviyesi Senkronu)
+LotusAI managers/system_health.py - System Health Manager
+Sürüm: 2.6.0 (Dinamik Erişim Seviyesi Senkronu & Safe Sensör)
 Açıklama: Sunucu ve donanım sağlık yönetimi
 
 Özellikler:
-- CPU/RAM/Disk izleme
+- CPU/RAM/Disk izleme (Hata toleranslı)
 - GPU monitoring (NVIDIA)
 - Network tracking
-- Process analysis
+- Process analysis (Güvenlik filtreli)
 - Uptime tracking
 - Critical alerts
 - Erişim seviyesi desteği
@@ -119,7 +119,7 @@ class SystemHealthManager:
     - Process analysis: Yoğun işlem tespiti
     - Uptime: Çalışma süresi takibi
     - Alerts: Kritik eşik uyarıları
-    - Erişim seviyesine duyarlı raporlama (opsiyonel)
+    - Erişim seviyesine duyarlı raporlama (kısıtlı modda process gizliliği)
     
     Sistemin tüm donanım kaynaklarını izler ve raporlar.
     """
@@ -139,7 +139,6 @@ class SystemHealthManager:
             system_state: SystemState objesi (opsiyonel)
             access_level: Erişim seviyesi (restricted, sandbox, full)
         """
-        # Değişiklik: Eğer parametre girilmezse doğrudan Config'den oku
         self.access_level = access_level or Config.ACCESS_LEVEL
         
         # Thread safety
@@ -265,7 +264,7 @@ class SystemHealthManager:
     def get_detailed_report(self) -> str:
         """
         Detaylı rapor - Tüm erişim seviyelerinde kullanılabilir.
-        (İsteğe bağlı olarak kısıtlı modda bazı detaylar filtrelenebilir)
+        (Kısıtlı modda diğer çalışan programların detayları filtrelenir)
         
         Returns:
             Formatlanmış teknik rapor
@@ -286,6 +285,9 @@ class SystemHealthManager:
                 
                 warning = " (KRİTİK!)" if status == HealthStatus.CRITICAL else ""
                 
+                # Süreç sayısı kısıtlı modda gizlenir (Güvenlik ihlalini önler)
+                process_count_str = "Gizli (Kısıtlı Mod)" if self.access_level == AccessLevel.RESTRICTED else str(len(psutil.pids()))
+                
                 # Build report
                 report_lines = [
                     f"🖥️ LOTUSAI SİSTEM SAĞLIK RAPORU {status.value}{warning}",
@@ -298,10 +300,10 @@ class SystemHealthManager:
                     f"💾 Disk: %{system_metrics.disk_percent}",
                     f"🌐 Network: ↑{system_metrics.network_upload:.1f} KB/s "
                     f"↓{system_metrics.network_download:.1f} KB/s",
-                    f"📑 Processes: {len(psutil.pids())}"
+                    f"📑 Processes: {process_count_str}"
                 ]
                 
-                # GPU info (her erişim seviyesinde gösterilebilir, ancak istenirse kısıtlanabilir)
+                # GPU info
                 if system_metrics.gpu_info:
                     report_lines.append("─" * 40)
                     report_lines.append("🎮 GPU DURUMU (NVIDIA):")
@@ -313,23 +315,24 @@ class SystemHealthManager:
                             f"VRAM: {gpu.vram_used:.0f}/{gpu.vram_total:.0f} MB"
                         )
                         
-                        if gpu.process_count > 0:
+                        # Process sayısını sadece tam yetki/sandbox ise göster
+                        if gpu.process_count > 0 and self.access_level != AccessLevel.RESTRICTED:
                             report_lines[-1] += f" | {gpu.process_count} İşlem"
                 
-                # Resource-heavy processes (opsiyonel olarak kısıtlanabilir)
-                # Şimdilik herkese açık
-                if (system_metrics.cpu_percent > self.CPU_WARNING or
-                    system_metrics.ram_percent > self.RAM_WARNING):
-                    
-                    report_lines.append("─" * 40)
-                    
-                    top_cpu = self._get_top_resource_process("cpu")
-                    if top_cpu:
-                        report_lines.append(f"🔥 En Yoğun CPU: {top_cpu}")
-                    
-                    top_ram = self._get_top_resource_process("ram")
-                    if top_ram:
-                        report_lines.append(f"📦 En Yoğun RAM: {top_ram}")
+                # Resource-heavy processes (SADECE SANDBOX/FULL MODDA GÖSTERİLİR)
+                if self.access_level != AccessLevel.RESTRICTED:
+                    if (system_metrics.cpu_percent > self.CPU_WARNING or
+                        system_metrics.ram_percent > self.RAM_WARNING):
+                        
+                        report_lines.append("─" * 40)
+                        
+                        top_cpu = self._get_top_resource_process("cpu")
+                        if top_cpu:
+                            report_lines.append(f"🔥 En Yoğun CPU: {top_cpu}")
+                        
+                        top_ram = self._get_top_resource_process("ram")
+                        if top_ram:
+                            report_lines.append(f"📦 En Yoğun RAM: {top_ram}")
                 
                 self.metrics.detailed_reports += 1
                 
@@ -345,16 +348,18 @@ class SystemHealthManager:
         cpu = psutil.cpu_percent(interval=0.1)
         mem = psutil.virtual_memory()
         
-        # Disk
-        work_dir = Config.WORK_DIR
-        drive_path = os.path.splitdrive(
-            os.path.abspath(str(work_dir))
-        )[0]
-        
-        if not drive_path:
-            drive_path = "/"  # Linux/Unix
-        
-        disk = psutil.disk_usage(drive_path).percent
+        # Disk (Güvenli Kontrol Eklendi)
+        disk_percent = 0.0
+        try:
+            work_dir = Config.WORK_DIR
+            drive_path = os.path.splitdrive(os.path.abspath(str(work_dir)))[0]
+            
+            if not drive_path:
+                drive_path = "/"  # Linux/Unix
+            
+            disk_percent = psutil.disk_usage(drive_path).percent
+        except Exception as e:
+            logger.debug(f"Disk okuma hatası: {e}")
         
         # Network
         net_upload, net_download = self._get_network_speed()
@@ -370,7 +375,7 @@ class SystemHealthManager:
         return SystemMetrics(
             cpu_percent=cpu,
             ram_percent=mem.percent,
-            disk_percent=disk,
+            disk_percent=disk_percent,
             network_upload=net_upload,
             network_download=net_download,
             uptime=uptime,
@@ -453,6 +458,10 @@ class SystemHealthManager:
         """
         try:
             current_net_io = psutil.net_io_counters()
+            
+            # Ağ arayüzü yoksa veya hata varsa
+            if not current_net_io:
+                return 0.0, 0.0
             
             if not self.last_net_io:
                 self.last_net_io = current_net_io

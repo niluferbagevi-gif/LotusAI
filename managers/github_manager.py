@@ -1,6 +1,6 @@
 """
-LotusAI GitHub Manager
-Sürüm: 2.6.0 (Dinamik Erişim Seviyesi Senkronu)
+LotusAI managers/github_manager.py - GitHub Manager
+Sürüm: 2.6.0 (Dinamik Erişim Seviyesi ve Güvenlik Entegrasyonu)
 Açıklama: Bulut tabanlı GitHub depo yönetimi ve kod analizi
 
 Özellikler:
@@ -8,7 +8,7 @@ Açıklama: Bulut tabanlı GitHub depo yönetimi ve kod analizi
 - Depo (Repository) dosya ağacını çıkarma
 - Dosya içeriği okuma (Cloud tabanlı)
 - Son commit'leri (değişiklik geçmişini) izleme
-- Erişim seviyesi kontrolleri
+- Erişim seviyesi kontrolleri (OpenClaw)
 """
 
 import logging
@@ -57,6 +57,11 @@ class GithubManager:
     - Belirtilen reponun (örn: niluferbagevi-gif/LotusAI) dosya yapısını listeler.
     - Repodaki herhangi bir dosyanın güncel kaynak kodunu okur.
     - Repoya atılan son commit'leri analiz edip "kim ne değiştirdi" bilgisini sunar.
+    
+    Erişim Seviyesi (OpenClaw):
+    - restricted: Sadece halka açık (public) verileri ve salt okunur işlemleri yapabilir.
+    - sandbox: (Şimdilik read-only, gelecekte PR açma eklenebilir)
+    - full: (Şimdilik read-only, gelecekte push yetkisi eklenebilir)
     """
     
     def __init__(self, access_level: Optional[str] = None):
@@ -66,6 +71,7 @@ class GithubManager:
         Args:
             access_level: Erişim seviyesi (restricted, sandbox, full)
         """
+        # Erişim seviyesini parametreden veya Config'den al
         self.access_level = access_level or getattr(Config, "ACCESS_LEVEL", "sandbox")
         
         # Config'den bilgileri al
@@ -74,13 +80,15 @@ class GithubManager:
         
         self.g = None
         self.repo = None
+        self.is_connected = False
         
         if GITHUB_AVAILABLE:
             if self.token:
                 try:
                     self.g = Github(self.token)
                     self.repo = self.g.get_repo(self.repo_name)
-                    logger.info(f"✅ GithubManager aktif. Bağlanılan Repo: {self.repo_name}")
+                    self.is_connected = True
+                    logger.info(f"✅ GithubManager aktif. Bağlanılan Repo: {self.repo_name} (Erişim: {self.access_level})")
                 except GithubException as e:
                     logger.error(f"❌ GitHub API bağlantı hatası (Token geçersiz olabilir): {e.data}")
                 except Exception as e:
@@ -91,6 +99,7 @@ class GithubManager:
                     # Token olmadan anonim bağlanmayı dene (saatte 60 istek limiti vardır)
                     self.g = Github()
                     self.repo = self.g.get_repo(self.repo_name)
+                    self.is_connected = True
                     logger.info(f"ℹ️ GithubManager anonim modda bağlandı: {self.repo_name}")
                 except Exception as e:
                     logger.error(f"❌ Anonim GitHub bağlantısı başarısız: {e}")
@@ -98,7 +107,28 @@ class GithubManager:
     @property
     def is_active(self) -> bool:
         """Manager'ın repoya başarılı bir şekilde bağlanıp bağlanmadığını kontrol eder."""
-        return self.repo is not None
+        return self.is_connected and self.repo is not None
+
+    def _check_permission(self, operation: str) -> bool:
+        """
+        İşlem için yetki kontrolü yapar.
+        Şu anki sürümde GitHub Manager sadece 'okuma' (read) işlemleri yaptığı için
+        tüm modlarda (restricted dahil) izin veriyoruz.
+        Ancak gelecekte 'write' (yazma/push) eklenirse burası kısıtlayacak.
+        """
+        # Okuma işlemleri her seviyede serbest
+        if operation in ["read", "list", "history"]:
+            return True
+            
+        # Yazma işlemleri (push, create file vb.) - Gelecek özellik
+        if operation in ["write", "push", "create"]:
+            if self.access_level == AccessLevel.RESTRICTED:
+                logger.warning(f"🚫 Kısıtlı modda '{operation}' işlemi engellendi.")
+                return False
+            # Sandbox veya Full ise izin verilebilir (Token varsa)
+            return True
+            
+        return False
 
     # ───────────────────────────────────────────────────────────
     # REPO OPERATIONS
@@ -113,6 +143,9 @@ class GithubManager:
         Returns:
             Dosya ve klasörlerin listesi (string formatında)
         """
+        if not self._check_permission("list"):
+            return "❌ Erişim seviyeniz bu işlemi yapmaya yetmiyor."
+
         if not self.is_active:
             return "❌ GitHub reposuna bağlantı kurulamadı."
             
@@ -146,6 +179,9 @@ class GithubManager:
         Returns:
             Dosyanın metin içeriği
         """
+        if not self._check_permission("read"):
+            return "❌ Erişim seviyeniz bu işlemi yapmaya yetmiyor."
+
         if not self.is_active:
             return "❌ GitHub reposuna bağlantı kurulamadı."
             
@@ -173,6 +209,9 @@ class GithubManager:
         Returns:
             Commit listesi (string formatında)
         """
+        if not self._check_permission("history"):
+            return "❌ Erişim seviyeniz bu işlemi yapmaya yetmiyor."
+
         if not self.is_active:
             return "❌ GitHub reposuna bağlantı kurulamadı."
             

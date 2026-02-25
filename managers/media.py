@@ -1,5 +1,5 @@
 """
-LotusAI Media Manager
+LotusAI managers/media.py - Media Manager
 Sürüm: 2.6.0 (Dinamik Erişim Seviyesi Senkronu)
 Açıklama: Medya, içerik ve sosyal medya yönetimi
 
