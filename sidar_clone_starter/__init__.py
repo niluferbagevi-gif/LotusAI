@@ -1,0 +1,1 @@
+# Sidar-like starter package
