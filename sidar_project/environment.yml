@@ -1,0 +1,94 @@
+# ═══════════════════════════════════════════════════════════════
+# Sidar Project — Conda Environment
+# Version: 1.0.0
+# Python: 3.11 (LotusAI ile uyumlu)
+# ═══════════════════════════════════════════════════════════════
+
+name: sidar-ai
+
+channels:
+  - pytorch
+  - nvidia
+  - conda-forge
+  - defaults
+
+dependencies:
+  # ─────────────────────────────────────────────────────────────
+  # Temel Python & Araçlar
+  # ─────────────────────────────────────────────────────────────
+  - python=3.11
+  - pip
+  - git
+  - setuptools
+  - packaging
+
+  # ─────────────────────────────────────────────────────────────
+  # CUDA & PyTorch (GPU Desteği)
+  # GPU yoksa: torch CPU sürümü otomatik indirilir
+  # ─────────────────────────────────────────────────────────────
+  - cudatoolkit=11.8
+  - pytorch-cuda=11.8
+  - pytorch
+  - torchvision
+
+  # ─────────────────────────────────────────────────────────────
+  # pip Bağımlılıkları
+  # ─────────────────────────────────────────────────────────────
+  - pip:
+      # ─────────────────────────────────────────────────────
+      # Temel Yardımcılar
+      # ─────────────────────────────────────────────────────
+      - python-dotenv>=1.0.0
+      - requests>=2.31.0
+      - colorama>=0.4.6
+
+      # ─────────────────────────────────────────────────────
+      # Sistem İzleme
+      # ─────────────────────────────────────────────────────
+      - psutil>=5.9.5
+      - GPUtil>=1.4.0
+      - pynvml>=11.5.0
+
+      # ─────────────────────────────────────────────────────
+      # AI Sağlayıcıları
+      # Ollama: https://ollama.ai adresinden ayrıca kurulur
+      # ─────────────────────────────────────────────────────
+      - ollama>=0.1.6
+      - google-generativeai>=0.7.0
+
+      # ─────────────────────────────────────────────────────
+      # GitHub Entegrasyonu
+      # ─────────────────────────────────────────────────────
+      - PyGithub>=2.1.0
+
+      # ─────────────────────────────────────────────────────
+      # Geliştirme & Test
+      # ─────────────────────────────────────────────────────
+      - pytest>=7.4.0
+      - pytest-cov>=4.1.0
+      - black>=23.0.0
+      - flake8>=6.0.0
+      - mypy>=1.5.0
+
+# ═══════════════════════════════════════════════════════════════
+# KURULUM ADIMLARI
+# ═══════════════════════════════════════════════════════════════
+#
+# 1. Ortamı oluştur:
+#    conda env create -f environment.yml
+#
+# 2. Ortamı etkinleştir:
+#    conda activate sidar-ai
+#
+# 3. GPU desteğini doğrula:
+#    python -c "import torch; print(torch.cuda.is_available())"
+#
+# 4. Sidar'ı başlat:
+#    python main.py
+#
+# 5. Ortamı güncelle:
+#    conda env update -f environment.yml --prune
+#
+# 6. Ortamı kaldır:
+#    conda env remove -n sidar-ai
+# ═══════════════════════════════════════════════════════════════
